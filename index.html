@@ -163,17 +163,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .entretien-urgent{border-color:var(--red2)}
 .inasti-box{background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .wa-preview{background:var(--bg3);border-radius:var(--radius-sm);padding:14px;font-size:0.8rem;line-height:1.7;color:var(--text);border:1px solid var(--border);margin-top:10px;white-space:pre-wrap;max-height:200px;overflow-y:auto}
-#pin-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+#pin-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;touch-action:manipulation}
 .pin-logo{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:var(--gold);margin-bottom:4px}
 .pin-tagline{font-size:0.7rem;color:var(--text3);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:40px}
 .pin-dots{display:flex;gap:16px;margin-bottom:32px}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all 0.2s}
 .pin-dot.filled{background:var(--gold);border-color:var(--gold)}
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:280px}
-.pin-btn{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:700;color:var(--text);cursor:pointer;transition:all 0.15s;text-align:center}
-.pin-btn:active,.pin-btn.pressed{background:var(--gold);color:#000;border-color:var(--gold)}
+.pin-btn{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:700;color:var(--text);cursor:pointer;transition:all 0.15s;text-align:center;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.pin-btn:active{background:var(--gold);color:#000;border-color:var(--gold)}
 .pin-err{color:var(--red2);font-size:0.8rem;margin-top:12px;min-height:20px;text-align:center}
-.pin-skip{color:var(--text3);font-size:0.75rem;margin-top:16px;cursor:pointer;text-decoration:underline}
+.pin-skip{color:var(--text3);font-size:0.75rem;margin-top:16px;cursor:pointer;text-decoration:underline;touch-action:manipulation;padding:12px;}
 .fab{position:fixed;bottom:calc(var(--nav-h) + 16px);right:max(16px, calc(50% - 224px));width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(232,160,32,0.45);z-index:99;font-size:1.5rem;color:#000;font-weight:900}
 .fab:active{transform:scale(0.92)}
 </style>
@@ -184,9 +184,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="pin-logo">&#x2708; Facciolini</div>
   <div class="pin-tagline">Mobility Management v5.2</div>
   <div class="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
-  <div class="pin-pad" id="pin-pad-el"></div>
+  <div class="pin-pad">
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('1')" onclick="pp('1')">1</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('2')" onclick="pp('2')">2</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('3')" onclick="pp('3')">3</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('4')" onclick="pp('4')">4</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('5')" onclick="pp('5')">5</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('6')" onclick="pp('6')">6</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('7')" onclick="pp('7')">7</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('8')" onclick="pp('8')">8</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('9')" onclick="pp('9')">9</button>
+    <button class="pin-btn" style="font-size:0.8rem" ontouchstart="event.preventDefault();pp('C')" onclick="pp('C')">Eff.</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('0')" onclick="pp('0')">0</button>
+    <button class="pin-btn" ontouchstart="event.preventDefault();pp('D')" onclick="pp('D')">&#x232B;</button>
+  </div>
   <div class="pin-err" id="pin-err"></div>
-  <div class="pin-skip" onclick="unlockApp()">Passer / Configurer PIN</div>
+  <div class="pin-skip" ontouchstart="event.preventDefault();unlockApp()" onclick="unlockApp()">Passer / Configurer PIN</div>
 </div>
 <div id="app-wrapper"><div id="app" style="display:none">
 <div class="topbar">
@@ -693,25 +706,9 @@ function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commis
 function getInastiAlerte(){const now=new Date();const y=now.getFullYear();for(const e of [{label:'T1',m:3,j:31},{label:'T2',m:6,j:31},{label:'T3',m:9,j:31},{label:'T4',m:12,j:31}]){const d=new Date(y,e.m-1,e.j);const diff=Math.round((d-now)/86400000);if(diff>=0&&diff<=45)return{label:e.label,date:d.toLocaleDateString('fr-BE',{day:'2-digit',month:'long'}),diff};}return null;}
 let pinBuf='';
 function pp(v){if(v==='C'){pinBuf='';updDots();return;}if(v==='D'){pinBuf=pinBuf.slice(0,-1);updDots();return;}if(pinBuf.length>=4)return;pinBuf+=v;updDots();if(pinBuf.length===4)setTimeout(checkPin,120);}
-function updDots(){for(let i=0;i<4;i++)g('pd'+i).classList.toggle('filled',i<pinBuf.length);}
-function checkPin(){if(!db.settings.pin){unlockApp();return;}if(pinBuf===db.settings.pin)unlockApp();else{g('pin-err').textContent='PIN incorrect';pinBuf='';updDots();setTimeout(()=>g('pin-err').textContent='',2000);}}
-function unlockApp(){g('pin-screen').style.display='none';g('app').style.display='block';renderAll();}
-(function initPinPad(){
-  const pad=g('pin-pad-el');if(!pad)return;
-  const keys=['1','2','3','4','5','6','7','8','9','C','0','D'];
-  const labels={'C':'Eff.','D':'⌫'};
-  keys.forEach(k=>{
-    const btn=document.createElement('button');
-    btn.className='pin-btn';
-    btn.textContent=labels[k]||k;
-    if(k==='C')btn.style.fontSize='0.8rem';
-    // utiliser touchstart pour réactivité mobile
-    const handler=function(e){e.preventDefault();e.stopPropagation();pp(k);btn.classList.add('pressed');setTimeout(()=>btn.classList.remove('pressed'),150);};
-    btn.addEventListener('touchstart',handler,{passive:false});
-    btn.addEventListener('click',handler);
-    pad.appendChild(btn);
-  });
-})();
+function updDots(){for(let i=0;i<4;i++){const d=g('pd'+i);if(d)d.classList.toggle('filled',i<pinBuf.length);}}
+function checkPin(){if(!db.settings.pin){unlockApp();return;}if(pinBuf===db.settings.pin)unlockApp();else{const e=g('pin-err');if(e)e.textContent='PIN incorrect';pinBuf='';updDots();setTimeout(()=>{const e=g('pin-err');if(e)e.textContent='';},2000);}}
+function unlockApp(){const ps=g('pin-screen');if(ps)ps.style.display='none';const ap=g('app');if(ap)ap.style.display='block';renderAll();}
 function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));g('page-'+name).classList.add('active');if(btn)btn.classList.add('active');renderAll();}
 function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}renderAll();}
 function renderAll(){const now=new Date();sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));sv('tb-month',MOIS_S[curMonth]+' '+curYear);renderDash();renderRes();renderFin();renderClients();renderPartners();renderParams();}
