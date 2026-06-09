@@ -171,7 +171,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .pin-dot.filled{background:var(--gold);border-color:var(--gold)}
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:280px}
 .pin-btn{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:700;color:var(--text);cursor:pointer;transition:all 0.15s;text-align:center}
-.pin-btn:active{background:var(--gold);color:#000;border-color:var(--gold)}
+.pin-btn:active,.pin-btn.pressed{background:var(--gold);color:#000;border-color:var(--gold)}
 .pin-err{color:var(--red2);font-size:0.8rem;margin-top:12px;min-height:20px;text-align:center}
 .pin-skip{color:var(--text3);font-size:0.75rem;margin-top:16px;cursor:pointer;text-decoration:underline}
 .fab{position:fixed;bottom:calc(var(--nav-h) + 16px);right:max(16px, calc(50% - 224px));width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(232,160,32,0.45);z-index:99;font-size:1.5rem;color:#000;font-weight:900}
@@ -184,12 +184,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="pin-logo">&#x2708; Facciolini</div>
   <div class="pin-tagline">Mobility Management v5.2</div>
   <div class="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
-  <div class="pin-pad">
-    <button class="pin-btn" onclick="pp('1')">1</button><button class="pin-btn" onclick="pp('2')">2</button><button class="pin-btn" onclick="pp('3')">3</button>
-    <button class="pin-btn" onclick="pp('4')">4</button><button class="pin-btn" onclick="pp('5')">5</button><button class="pin-btn" onclick="pp('6')">6</button>
-    <button class="pin-btn" onclick="pp('7')">7</button><button class="pin-btn" onclick="pp('8')">8</button><button class="pin-btn" onclick="pp('9')">9</button>
-    <button class="pin-btn" onclick="pp('C')" style="font-size:0.8rem">Eff.</button><button class="pin-btn" onclick="pp('0')">0</button><button class="pin-btn" onclick="pp('D')">&#x232B;</button>
-  </div>
+  <div class="pin-pad" id="pin-pad-el"></div>
   <div class="pin-err" id="pin-err"></div>
   <div class="pin-skip" onclick="unlockApp()">Passer / Configurer PIN</div>
 </div>
@@ -701,6 +696,22 @@ function pp(v){if(v==='C'){pinBuf='';updDots();return;}if(v==='D'){pinBuf=pinBuf
 function updDots(){for(let i=0;i<4;i++)g('pd'+i).classList.toggle('filled',i<pinBuf.length);}
 function checkPin(){if(!db.settings.pin){unlockApp();return;}if(pinBuf===db.settings.pin)unlockApp();else{g('pin-err').textContent='PIN incorrect';pinBuf='';updDots();setTimeout(()=>g('pin-err').textContent='',2000);}}
 function unlockApp(){g('pin-screen').style.display='none';g('app').style.display='block';renderAll();}
+(function initPinPad(){
+  const pad=g('pin-pad-el');if(!pad)return;
+  const keys=['1','2','3','4','5','6','7','8','9','C','0','D'];
+  const labels={'C':'Eff.','D':'⌫'};
+  keys.forEach(k=>{
+    const btn=document.createElement('button');
+    btn.className='pin-btn';
+    btn.textContent=labels[k]||k;
+    if(k==='C')btn.style.fontSize='0.8rem';
+    // utiliser touchstart pour réactivité mobile
+    const handler=function(e){e.preventDefault();e.stopPropagation();pp(k);btn.classList.add('pressed');setTimeout(()=>btn.classList.remove('pressed'),150);};
+    btn.addEventListener('touchstart',handler,{passive:false});
+    btn.addEventListener('click',handler);
+    pad.appendChild(btn);
+  });
+})();
 function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));g('page-'+name).classList.add('active');if(btn)btn.classList.add('active');renderAll();}
 function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}renderAll();}
 function renderAll(){const now=new Date();sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));sv('tb-month',MOIS_S[curMonth]+' '+curYear);renderDash();renderRes();renderFin();renderClients();renderPartners();renderParams();}
