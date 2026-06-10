@@ -1306,7 +1306,109 @@ function resetApp(){
   localStorage.clear();
   location.reload();
 }
-function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=evt=>{try{const d=JSON.parse(evt.target.result);if(d.reservations||d.charges){if(confirm("Restaurer ces données ?")){db={...db,...d};fixDb();save();renderAll();alert('✅ Données restaurées !');}}else alert('Fichier invalide');}catch(err){alert('Erreur: '+err.message);}};reader.readAsText(file);e.target.value='';}
+function doImport(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(evt){
+    try{
+      var d=JSON.parse(evt.target.result);
+      if(!d.reservations&&!d.charges){alert('Fichier invalide');return;}
+      if(!confirm("Importer ces données ?\n\nRéservations: "+(d.reservations||[]).length+"\nClients: "+(d.clients||[]).length))return;
+
+      // Détection ancienne app (utilise clientId au lieu de clientNom)
+      var isOldFormat=d.reservations&&d.reservations.length>0&&d.reservations[0].clientId!==undefined;
+
+      if(isOldFormat){
+        // Construire map clientId -> client
+        var clientMap={};
+        (d.clients||[]).forEach(function(c){clientMap[c.id]=c;});
+
+        // Migrer les réservations
+        db.reservations=(d.reservations||[]).map(function(r){
+          var client=clientMap[r.clientId]||{};
+          var distR=parseFloat(r.distance||0); // ancienne app n'avait pas distanceRetour séparé
+          return {
+            id:r.id||genId(),
+            clientNom:client.nom||r.clientNom||'Client',
+            clientTel:client.tel||r.clientTel||'',
+            langue:client.langue||'fr',
+            vehicule:r.vehicule||0,
+            passagers:r.passagers||1,
+            source:'direct',
+            partnerType:'direct',
+            commission:0,
+            facturePaye:false,
+            commissionPayee:false,
+            type:r.type||'aller',
+            service:r.service||'depose',
+            dateAller:r.dateAller||'',
+            heure:r.heure||'',
+            dateRetour:r.dateRetour||'',
+            heureRetour:r.heureRetour||'',
+            depart:r.depart||'',
+            arrivee:r.arrivee||'',
+            distance:r.distance||0,
+            distanceRetour:r.type==='ar-diff'?distR:0,
+            departRetour:r.type==='ar-diff'?r.arrivee||'':'',
+            arriveeRetour:r.type==='ar-diff'?r.depart||'':'',
+            depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,
+            kmPickup:parseFloat(r.kmPickup||0),
+            kmPickupRetour:0,
+            kmVideAller:r.vide1?parseFloat(r.km1||0):0,
+            kmVideAllerType:r.vide1?'manuel':'aucun',
+            kmVideRetour:r.vide2?parseFloat(r.km2||0):0,
+            kmVideRetourType:r.vide2?'manuel':'aucun',
+            vol:r.vol||'',
+            prix:r.prix||0,
+            paiement:r.paiement||'cash',
+            vmtRecu:r.vmtRecu||r.payeConfirme||false,
+            peages:r.peages||0,
+            parking:r.parking||0,
+            acompte:0,
+            notes:r.notes||'',
+            duree:r.duree||90
+          };
+        });
+
+        // Migrer les clients
+        db.clients=(d.clients||[]).map(function(c){
+          return {
+            id:c.id||genId(),
+            nom:c.nom||'',
+            tel:c.tel||'',
+            email:c.email||'',
+            adresse:c.adresse||'',
+            lat:c.lat||null,
+            lon:c.lon||null,
+            langue:c.langue||'fr',
+            notes:c.notes||'',
+            blacklist:c.blacklist||false,
+            blRaison:c.blRaison||''
+          };
+        });
+
+      } else {
+        // Format v5.x natif
+        db.reservations=(d.reservations||[]).map(function(r){return migrateR(r);});
+        db.clients=d.clients||[];
+      }
+
+      // Carburant, charges, km communs aux deux formats
+      if(d.carburant&&d.carburant.length)db.carburant=d.carburant;
+      if(d.charges&&d.charges.length)db.charges=d.charges;
+      if(d.kmReels&&d.kmReels.length)db.kmReels=d.kmReels;
+      if(d.frais&&d.frais.length)db.frais=d.frais;
+      if(d.settings&&d.settings.objectif)db.settings.objectif=d.settings.objectif;
+      if(d.settings&&d.settings.homeAddress)db.settings.homeAddress=d.settings.homeAddress;
+      if(d.favAddresses&&d.favAddresses.length)db.favAddresses=d.favAddresses;
+
+      fixDb();save();renderAll();
+      alert('✅ Import réussi !\n\n'+db.reservations.length+' courses\n'+db.clients.length+' clients\n'+db.carburant.length+' pleins carburant'+(isOldFormat?'\n\n(Ancienne app — données converties)':''));
+    }catch(err){alert('Erreur: '+err.message);}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
 function selectChip(el,hiddenId,val){const c=el.closest('.chips');if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');const h=g(hiddenId);if(h)h.value=val;}
 function setChips(contId,hiddenId,val){const c=g(contId);if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',(x.getAttribute('onclick')||'').includes("'"+val+"'")));const h=g(hiddenId);if(h)h.value=val;}
 load();
