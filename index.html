@@ -159,6 +159,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .status-today{background:rgba(232,160,32,0.15);color:var(--gold);border:1px solid rgba(232,160,32,0.35);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
 .status-upcoming{background:rgba(45,125,210,0.12);color:var(--blue2);border:1px solid rgba(45,125,210,0.3);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
 .status-done{background:rgba(13,184,107,0.1);color:var(--green2);border:1px solid rgba(13,184,107,0.25);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
+.status-confirme{background:rgba(13,184,107,0.12);color:var(--green2);border:1px solid rgba(13,184,107,0.3);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
+.status-enroute{background:rgba(232,160,32,0.2);color:var(--gold);border:1px solid rgba(232,160,32,0.5);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700;animation:pulse 1.5s infinite}
+.status-annule{background:rgba(224,48,64,0.12);color:var(--red2);border:1px solid rgba(224,48,64,0.3);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
 .entretien-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
 .entretien-urgent{border-color:var(--red2)}
 .inasti-box{background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
@@ -643,8 +647,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div id="dr-content"></div>
 <div class="modal-actions" style="margin-top:16px">
   <button class="btn btn-outline" onclick="closeModal('m-detail-res')">Fermer</button>
+  <button class="btn btn-green btn-sm" id="dr-rappel-btn" style="display:none">&#x1f4ac; Rappel J-1</button>
   <button class="btn btn-outline btn-sm" id="dr-edit-btn">Modifier</button>
   <button class="btn btn-red btn-sm" id="dr-del-btn">Supprimer</button>
+</div>
+<div style="margin-top:12px">
+  <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Changer le statut</div>
+  <div style="display:flex;flex-wrap:wrap;gap:7px">
+    <button class="btn btn-ghost btn-xs" id="dr-s-confirme" onclick="setStatut(currentDetailId,'confirme')">✓ Confirmer</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-enroute" onclick="setStatut(currentDetailId,'enroute')">🚗 En route</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-termine" onclick="setStatut(currentDetailId,'termine')">✅ Terminer</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-annule" onclick="setStatut(currentDetailId,'annule')" style="color:var(--red2)">❌ Annuler</button>
+  </div>
 </div>
 </div></div>
 
@@ -798,7 +812,7 @@ function renderRes(){
     html+='<div style="text-align:right"><div style="font-weight:800;font-size:1.1rem;color:var(--gold)">'+fmt(r.prix)+'</div><div style="margin-top:3px">'+getStatusBadge(r)+'</div></div></div>';
     html+='<div style="font-size:0.79rem;color:var(--text2);margin-bottom:6px">'+(r.depart||'—').substring(0,26)+' → '+(r.arrivee||'—').substring(0,26)+'</div>';
     if(r.type==='ar-diff'&&r.arriveeRetour)html+='<div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">↩ '+(r.departRetour||r.arrivee||'').substring(0,22)+' → '+r.arriveeRetour.substring(0,22)+'</div>';
-    html+='<div style="display:flex;flex-wrap:wrap;gap:5px">';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">';
     html+='<span class="badge badge-blue">'+tLabel+'</span>';
     html+='<span class="badge '+(benef>=0?'badge-green':'badge-red')+'">'+(benef>=0?'+':'')+fmt(benef)+'</span>';
     if(kmC>0)html+='<span class="badge badge-gray">📍'+kmC.toFixed(0)+'km</span>';
@@ -806,7 +820,13 @@ function renderRes(){
     if(isP)html+='<span class="badge badge-orange">🤝 '+r.source+'</span>';
     if(r.vol)html+='<span class="badge badge-gold">✈ '+r.vol+'</span>';
     if(r.paiement==='virement'&&!r.vmtRecu)html+='<span class="badge badge-red">💸 ⏳</span>';
-    html+='</div></div>';
+    html+='</div>';
+    // Bouton rappel J-1 pour courses à venir
+    var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
+    if(diff2>=0&&diff2<=3&&r.clientTel){
+      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id)">💬 Envoyer rappel'+( diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)')+'</button>';
+    }
+    html+='</div>';
   });
   el.innerHTML=html;
 }
@@ -1191,16 +1211,80 @@ function sendWA(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(
 function sendSMS(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.location.href=tel?'sms:'+tel+'?body='+encodeURIComponent(msg):'sms:?body='+encodeURIComponent(msg);}
 function copyMsg(){navigator.clipboard?.writeText(acC['wa-msg']||'').then(()=>alert('Message copié !'));}
 function showDetailRes(id){
-  const r=db.reservations.find(x=>x.id===id);if(!r)return;
-  const v=getV(r.vehicule),kmC=getKmClient(r),kmR=getKmReels(r),benef=getBenef(r),benefR=getBenefReel(r);
-  const tLabel={aller:'Aller simple','ar-jour':'A/R même jour','ar-diff':'A/R date différente'}[r.type]||r.type;
+  currentDetailId=id;
+  var r=db.reservations.find(function(x){return x.id===id;});if(!r)return;
+  var v=getV(r.vehicule),kmC=getKmClient(r),kmR=getKmReels(r),benef=getBenef(r),benefR=getBenefReel(r);
+  var tLabel={aller:'Aller simple','ar-jour':'A/R même jour','ar-diff':'A/R date différente'}[r.type]||r.type;
   sv('dr-title',r.clientNom||'Course');
-  const dc=g('dr-content');
-  if(dc)dc.innerHTML='<div class="dr"><span class="dr-label">Client</span><span class="dr-val">'+r.clientNom+(r.clientTel?' <a href="tel:'+r.clientTel+'" style="color:var(--blue2)">'+r.clientTel+'</a>':'')+'</span></div><div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div><div class="dr"><span class="dr-label">Source</span><span class="dr-val">'+(r.source==='direct'?'Direct':'🤝 '+r.source)+'</span></div>'+(r.source!=='direct'?'<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">'+(r.partnerType==='commission'?'Commission: -'+fmt(r.commission):'Prépayé')+'</span></div>':'')+'<div class="dr"><span class="dr-label">Aller</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+(r.heure||'')+'</span></div>'+(r.type==='ar-diff'&&r.dateRetour?'<div class="dr"><span class="dr-label">Retour</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>':'')+'<div class="dr"><span class="dr-label">Trajet aller</span><span class="dr-val">'+(r.depart||'—')+' → '+(r.arrivee||'—')+'</span></div>'+(r.type==='ar-diff'&&r.arriveeRetour?'<div class="dr"><span class="dr-label">Trajet retour</span><span class="dr-val">'+(r.departRetour||r.arrivee||'—')+' → '+r.arriveeRetour+'</span></div>':'')+(r.vol?'<div class="dr"><span class="dr-label">Vol</span><span class="dr-val"><a href="https://www.flightradar24.com/data/flights/'+r.vol.toLowerCase()+'" target="_blank" style="color:var(--blue2)">✈ '+r.vol+' →</a></span></div>':'')+'<div class="divider"></div><div class="dr"><span class="dr-label">Km facturés client</span><span class="dr-val c-blue">'+fmtKm(kmC)+'</span></div><div class="dr"><span class="dr-label">Km réels totaux</span><span class="dr-val c-purple">'+fmtKm(kmR)+'</span></div>'+(parseFloat(r.kmPickup||0)>0?'<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Pickup aller</span><span class="dr-val c-text2">'+fmtKm(r.kmPickup)+'</span></div>':'')+(parseFloat(r.kmVideAller||0)>0?'<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Retour vide J1</span><span class="dr-val c-text2">'+fmtKm(r.kmVideAller)+'</span></div>':'')+(r.type==='ar-diff'&&parseFloat(r.kmPickupRetour||0)>0?'<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Pickup retour J2</span><span class="dr-val c-text2">'+fmtKm(r.kmPickupRetour)+'</span></div>':'')+(r.type!=='aller'&&parseFloat(r.kmVideRetour||0)>0?'<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Retour vide J2</span><span class="dr-val c-text2">'+fmtKm(r.kmVideRetour)+'</span></div>':'')+'<div class="divider"></div><div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-family:\'Playfair Display\',serif;font-size:1.05rem">'+fmt(r.prix)+'</span></div><div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+({cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[r.paiement]||r.paiement)+(r.paiement==='virement'?(r.vmtRecu?' ✅':' ⏳'):'')+'</span>'+(r.paiement==='virement'&&!r.vmtRecu?'<button class="btn btn-green btn-xs" onclick="markVmt(\''+r.id+'\')">✓ Reçu</button>':'')+'</div>'+(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0?'<div class="dr"><span class="dr-label">Péages+P.</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>':'')+(parseFloat(r.commission||0)>0?'<div class="dr"><span class="dr-label">Commission</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>':'')+'<div class="divider"></div><div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-family:\'Playfair Display\',serif">'+fmt(benef)+'</span></div><div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>'+(r.notes?'<div class="divider"></div><div style="font-size:0.8rem;color:var(--text2)">'+r.notes+'</div>':'');
-  const deb=g('dr-edit-btn');if(deb)deb.onclick=()=>{closeModal('m-detail-res');editRes(id);};
-  const ddb=g('dr-del-btn');if(ddb)ddb.onclick=()=>{if(confirm("Supprimer cette course ?")){db.reservations=db.reservations.filter(x=>x.id!==id);save();closeModal('m-detail-res');renderAll();}};
+  var dc=g('dr-content');
+  if(dc){
+    var h='';
+    // Heure de départ recommandée
+    if(r.heure&&parseFloat(r.distance||0)>0){
+      var dist=parseFloat(r.distance||0)+parseFloat(r.kmPickup||0);
+      var vitMoy=90; // km/h vitesse moyenne
+      var tempsTrajet=Math.ceil(dist/vitMoy*60); // minutes
+      var marge=30; // 30 min de marge
+      var totalMin=tempsTrajet+marge;
+      var parts=r.heure.split(':');
+      var heureRdv=parseInt(parts[0])*60+parseInt(parts[1]);
+      var heureDep=heureRdv-totalMin;
+      if(heureDep<0)heureDep+=1440;
+      var hD=Math.floor(heureDep/60),mD=heureDep%60;
+      var heureDepStr=(hD<10?'0':'')+hD+'h'+(mD<10?'0':'')+mD;
+      h+='<div class="alert alert-gold" style="flex-direction:column;align-items:stretch;margin-bottom:12px">';
+      h+='<div style="font-weight:700;font-size:0.85rem;margin-bottom:4px">🕐 Partir de Carnières à <span style="font-size:1.1rem">'+heureDepStr+'</span></div>';
+      h+='<div style="font-size:0.73rem;opacity:0.8">'+Math.round(dist)+'km · ~'+tempsTrajet+'min de trajet + 30min marge</div>';
+      h+='</div>';
+    }
+    // Statut actuel
+    h+='<div style="margin-bottom:12px">'+getStatusBadge(r)+'</div>';
+    h+='<div class="dr"><span class="dr-label">Client</span><span class="dr-val">'+r.clientNom;
+    if(r.clientTel)h+=' <a href="tel:'+r.clientTel+'" style="color:var(--blue2)">'+r.clientTel+'</a>';
+    h+='</span></div>';
+    h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';
+    if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
+    h+='<div class="dr"><span class="dr-label">Aller</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
+    if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">Retour</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
+    h+='<div class="dr"><span class="dr-label">Trajet</span><span class="dr-val">'+(r.depart||'—').substring(0,22)+' → '+(r.arrivee||'—').substring(0,22)+'</span></div>';
+    if(r.type==='ar-diff'&&r.arriveeRetour)h+='<div class="dr"><span class="dr-label">Retour</span><span class="dr-val">'+(r.departRetour||r.arrivee||'—').substring(0,22)+' → '+r.arriveeRetour.substring(0,22)+'</span></div>';
+    if(r.vol)h+='<div class="dr"><span class="dr-label">Vol</span><span class="dr-val"><a href="https://www.flightradar24.com/data/flights/'+r.vol.toLowerCase()+'" target="_blank" style="color:var(--blue2)">✈ '+r.vol+' (FlightRadar →)</a></span></div>';
+    h+='<div class="divider"></div>';
+    h+='<div class="dr"><span class="dr-label">Km facturés</span><span class="dr-val c-blue">'+fmtKm(kmC)+'</span></div>';
+    h+='<div class="dr"><span class="dr-label">Km réels</span><span class="dr-val c-purple">'+fmtKm(kmR)+'</span></div>';
+    if(parseFloat(r.kmPickup||0)>0)h+='<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Pickup aller</span><span class="dr-val c-text2">'+fmtKm(r.kmPickup)+'</span></div>';
+    if(parseFloat(r.kmVideAller||0)>0)h+='<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Retour vide J1</span><span class="dr-val c-text2">'+fmtKm(r.kmVideAller)+'</span></div>';
+    if(r.type==='ar-diff'&&parseFloat(r.kmPickupRetour||0)>0)h+='<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Pickup J2</span><span class="dr-val c-text2">'+fmtKm(r.kmPickupRetour)+'</span></div>';
+    if(r.type!=='aller'&&parseFloat(r.kmVideRetour||0)>0)h+='<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Retour vide J2</span><span class="dr-val c-text2">'+fmtKm(r.kmVideRetour)+'</span></div>';
+    h+='<div class="divider"></div>';
+    h+='<div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-size:1.05rem;font-weight:800">'+fmt(r.prix)+'</span></div>';
+    var payLabel={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[r.paiement]||r.paiement;
+    h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(r.paiement==='virement'?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(r.paiement==='virement'&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
+    if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
+    if(parseFloat(r.commission||0)>0)h+='<div class="dr"><span class="dr-label">Commission</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>';
+    h+='<div class="divider"></div>';
+    h+='<div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1rem;font-weight:800">'+fmt(benef)+'</span></div>';
+    h+='<div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
+    if(r.notes)h+='<div class="divider"></div><div style="font-size:0.8rem;color:var(--text2);line-height:1.5">'+r.notes+'</div>';
+    dc.innerHTML=h;
+  }
+  var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
+  var ddb=g('dr-del-btn');if(ddb)ddb.onclick=function(){if(confirm("Supprimer cette course ?")){db.reservations=db.reservations.filter(function(x){return x.id!==id;});save();closeModal('m-detail-res');renderAll();}};
+  // Highlight statut actuel
+  ['confirme','enroute','termine','annule'].forEach(function(s){
+    var btn=g('dr-s-'+s);
+    if(btn)btn.style.borderColor=r.statut===s?'var(--gold)':'';
+  });
+  // Bouton rappel
+  var drb=g('dr-rappel-btn');
+  if(drb){
+    var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
+    if(diff2>=0&&diff2<=3){drb.style.display='inline-flex';drb.onclick=function(){sendRappel(id);};}
+    else drb.style.display='none';
+  }
   openModal('m-detail-res');
 }
+
 function editRes(id){
   const r=db.reservations.find(x=>x.id===id);if(!r)return;
   g('res-edit-id').value=id;sv('res-modal-title','Modifier course');resetResForm();
@@ -1228,7 +1312,82 @@ function editRes(id){
   acC['kmC']=kmC;acC['kmR']=kmR;
   updResType();toggleVmt();updVideAller();updVideRetour();curStep=1;updResSteps();openModal('m-res');
 }
-function getStatusBadge(r){const today=new Date();today.setHours(0,0,0,0);const d=new Date(r.dateAller);d.setHours(0,0,0,0);const diff=(d-today)/86400000;if(diff===0)return'<span class="status-today">🔥 Aujourd\'hui</span>';if(diff>0)return'<span class="status-upcoming">Dans '+Math.ceil(diff)+'j</span>';return'<span class="status-done">✓ Terminée</span>';}
+var currentDetailId=null;
+function setStatut(id,statut){
+  var r=db.reservations.find(function(x){return x.id===id;});
+  if(!r)return;
+  r.statut=statut;
+  save();
+  // Mettre à jour le badge dans le modal sans le fermer
+  var labels={confirme:'✓ Confirmée',enroute:'🚗 En route',termine:'✅ Terminée',annule:'❌ Annulée'};
+  var classes={confirme:'status-confirme',enroute:'status-enroute',termine:'status-done',annule:'status-annule'};
+  // Highlight le bouton actif
+  ['confirme','enroute','termine','annule'].forEach(function(s){
+    var btn=g('dr-s-'+s);
+    if(btn)btn.style.borderColor=s===statut?'var(--gold)':'';
+  });
+  renderRes();renderDash();
+}
+function sendRappel(id){
+  var r=db.reservations.find(function(x){return x.id===id;});
+  if(!r)return;
+  var lang=r.langue||'fr';
+  var date=new Date(r.dateAller);
+  var dateStr=date.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'});
+  var heure=r.heure||'';
+  var dep=r.depart||'';
+  var arr=r.arrivee||'';
+  var prix=parseFloat(r.prix||0);
+  var acompte=parseFloat(r.acompte||0);
+  var solde=r.type==='ar-diff'?(acompte>0?prix-acompte:prix/2):0;
+  var diff=Math.round((date.setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
+  var quand=diff===0?'aujourd\'hui':diff===1?'demain':'dans '+diff+' jours';
+  var msg='';
+  if(lang==='en'){
+    msg='Hello '+r.clientNom+' 👋\n\n';
+    msg+='Just a reminder for your transfer '+quand+':\n\n';
+    msg+='📅 '+dateStr+' at '+heure+'\n';
+    msg+='🚗 Pickup: '+dep+'\n';
+    msg+='📍 Drop-off: '+arr+'\n';
+    if(r.vol)msg+='✈️ Flight: '+r.vol+'\n';
+    if(solde>0)msg+='\n💶 Balance to pay on arrival: '+fmt(solde)+'\n';
+    msg+='\nSee you soon!\nFacciolini Mobility 🚗\n📞 '+MOI.tel;
+  } else if(lang==='nl'){
+    msg='Hallo '+r.clientNom+' 👋\n\n';
+    msg+='Herinnering voor uw transfer '+quand+':\n\n';
+    msg+='📅 '+dateStr+' om '+heure+'\n';
+    msg+='🚗 Ophalen: '+dep+'\n';
+    msg+='📍 Bestemming: '+arr+'\n';
+    if(r.vol)msg+='✈️ Vlucht: '+r.vol+'\n';
+    if(solde>0)msg+='\n💶 Saldo te betalen bij aankomst: '+fmt(solde)+'\n';
+    msg+='\nTot binnenkort!\nFacciolini Mobility 🚗\n📞 '+MOI.tel;
+  } else {
+    msg='Bonjour '+r.clientNom+' 👋\n\n';
+    msg+='Petit rappel pour votre transfert '+quand+' :\n\n';
+    msg+='📅 '+dateStr+' à '+heure+'\n';
+    msg+='🚗 Départ : '+dep+'\n';
+    msg+='📍 Arrivée : '+arr+'\n';
+    if(r.vol)msg+='✈️ Vol : '+r.vol+'\n';
+    if(solde>0)msg+='\n💶 Solde à régler à l\'arrivée : '+fmt(solde)+'\n';
+    msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel;
+  }
+  var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
+  window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+function getStatusBadge(r){
+  // Statut manuel prioritaire
+  if(r.statut==='annule')return '<span class="status-annule">❌ Annulée</span>';
+  if(r.statut==='enroute')return '<span class="status-enroute">🚗 En route</span>';
+  if(r.statut==='termine')return '<span class="status-done">✅ Terminée</span>';
+  if(r.statut==='confirme')return '<span class="status-confirme">✓ Confirmée</span>';
+  // Statut automatique par date
+  var today=new Date();today.setHours(0,0,0,0);
+  var d=new Date(r.dateAller);d.setHours(0,0,0,0);
+  var diff=(d-today)/86400000;
+  if(diff===0)return '<span class="status-today">🔥 Aujourd\'hui</span>';
+  if(diff>0)return '<span class="status-upcoming">Dans '+Math.ceil(diff)+'j</span>';
+  return '<span class="status-done">✓ Terminée</span>';
+}
 function setResFilter(f,el){resFilter=f;document.querySelectorAll('#page-res .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
 function delCarb(id){if(confirm("Supprimer ce plein ?")){db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
 function delFrais2(id){if(confirm("Supprimer ce frais ?")){db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
