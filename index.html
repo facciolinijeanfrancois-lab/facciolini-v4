@@ -330,6 +330,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-outline btn-full" onclick="exportBackup()" style="margin-bottom:8px">&#x1f4be; Sauvegarder donn&#xe9;es</button>
   <button class="btn btn-outline btn-full" onclick="document.getElementById('import-file').click()">&#x1f4c2; Restaurer donn&#xe9;es</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
+  <button class="btn btn-red btn-full" style="margin-top:8px" onclick="resetApp()">&#x1f5d1; R&#xe9;initialiser l'application</button>
   <div style="text-align:center;padding:28px;color:var(--text3);font-size:0.7rem;margin-top:8px;line-height:1.8">
     <div style="font-family:Playfair Display,serif;font-size:0.95rem;color:var(--text2);margin-bottom:4px">Facciolini Mobility</div>
     Version 5.2 &middot; Jean-Fran&#xe7;ois Facciolini<br>BCE 1033.793.336 &middot; Carni&#xe8;res, Belgique
@@ -1299,6 +1300,12 @@ function genNoteFrais(){
 function exportNoteCSV(){const res=getMonthRes(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Prix;Péages;Parking;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',r.commission||0,r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.prix,r.peages||0,r.parking||0,getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
 function exportBackup(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
+function resetApp(){
+  if(!confirm("Effacer TOUTES les données (ancienne et nouvelle app) ?\n\nCette action est irréversible."))return;
+  if(!confirm("Dernière confirmation — tout sera supprimé."))return;
+  localStorage.clear();
+  location.reload();
+}
 function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=evt=>{try{const d=JSON.parse(evt.target.result);if(d.reservations||d.charges){if(confirm("Restaurer ces données ?")){db={...db,...d};fixDb();save();renderAll();alert('✅ Données restaurées !');}}else alert('Fichier invalide');}catch(err){alert('Erreur: '+err.message);}};reader.readAsText(file);e.target.value='';}
 function selectChip(el,hiddenId,val){const c=el.closest('.chips');if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');const h=g(hiddenId);if(h)h.value=val;}
 function setChips(contId,hiddenId,val){const c=g(contId);if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',(x.getAttribute('onclick')||'').includes("'"+val+"'")));const h=g(hiddenId);if(h)h.value=val;}
