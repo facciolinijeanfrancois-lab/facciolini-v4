@@ -222,7 +222,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div style="font-size:0.7rem;color:var(--text3);margin-top:6px" id="d-obj-txt"></div>
   </div>
   <div class="sg2">
-    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice net</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div></div>
+    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice comptable</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div></div>
     <div class="stat"><div class="stat-label">Courses</div><div class="stat-val c-blue" id="d-nb-res">0</div><div class="stat-sub" id="d-nb-sub">ce mois</div></div>
     <div class="stat"><div class="stat-label">Km clients</div><div class="stat-val c-blue" id="d-km">0</div><div class="stat-sub">facturables</div></div>
     <div class="stat"><div class="stat-label">Km r&#xe9;els</div><div class="stat-val c-purple" id="d-km-reel">&#x2014;</div><div class="stat-sub">compteur</div></div>
@@ -755,6 +755,7 @@ function renderDash(){
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0);
   const fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
   const benef=res.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
+  const benefReel=res.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
   const marge=recettes>0?Math.round(benef/recettes*100):0;
   const enc=getEncaisseMois(curMonth,curYear),obj=db.settings.objectif;
   const pct=Math.min(100,Math.round(enc/obj*100));
@@ -762,7 +763,10 @@ function renderDash(){
   sv('d-gains',fmt(enc));sv('d-obj-target',obj);
   if(g('d-obj-prog'))g('d-obj-prog').style.width=pct+'%';
   sv('d-obj-txt',enc>=obj?'🎉 Objectif atteint !':'Il reste '+fmt(obj-enc)+' — '+pct+'%');
-  sv('d-benef',fmt(benef),'stat-val '+(benef>=0?'c-green':'c-red'));sv('d-marge','Marge '+marge+'%');
+  sv('d-benef',fmt(benef),'stat-val '+(benef>=0?'c-green':'c-red'));
+  sv('d-marge','Marge '+marge+'% · Adam');
+  const brEl=g('d-benef-reel');
+  if(brEl){brEl.textContent='Réel: '+fmt(benefReel);brEl.style.color=benefReel>=0?'var(--green2)':'var(--red2)';}
   sv('d-nb-res',res.length);sv('d-nb-sub',res.length+' course'+(res.length>1?'s':''));
   sv('d-km',fmtKm(totalKmC));sv('d-km-reel',kmReel!==null?Math.round(kmReel)+' km':(totalKmR>0?'~'+Math.round(totalKmR)+' km':'—'));
   sv('d-diesel',fmt(diesel));sv('d-litres',carbs.reduce((s,c)=>s+parseFloat(c.litres||0),0).toFixed(1)+' L');
