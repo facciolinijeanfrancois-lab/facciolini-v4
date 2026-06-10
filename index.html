@@ -222,7 +222,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div style="font-size:0.7rem;color:var(--text3);margin-top:6px" id="d-obj-txt"></div>
   </div>
   <div class="sg2">
-    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice comptable</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div></div>
+    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice comptable</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div><div class="stat-sub" id="d-comp-prev" style="margin-top:3px;font-size:0.68rem;font-weight:700"></div></div>
     <div class="stat"><div class="stat-label">Courses</div><div class="stat-val c-blue" id="d-nb-res">0</div><div class="stat-sub" id="d-nb-sub">ce mois</div></div>
     <div class="stat"><div class="stat-label">Km clients</div><div class="stat-val c-blue" id="d-km">0</div><div class="stat-sub">facturables</div></div>
     <div class="stat"><div class="stat-label">Km r&#xe9;els</div><div class="stat-val c-purple" id="d-km-reel">&#x2014;</div><div class="stat-sub">compteur</div></div>
@@ -246,14 +246,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="chip" onclick="setResFilter('today',this)">Aujourd&#x27;hui</div>
     <div class="chip" onclick="setResFilter('veille',this)">&#x1f514; Veille J-1</div>
     <div class="chip" onclick="setResFilter('done',this)">Termin&#xe9;es</div>
+    <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
   </div>
+  <div style="margin-bottom:10px"><input type="text" class="fi" id="res-search" placeholder="&#x1f50d; Rechercher client, adresse..." oninput="renderRes()" style="padding:11px 14px"></div>
   <div id="res-list"></div>
 </div>
 <div class="page" id="page-fin">
   <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="fin-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div class="sec"><span class="sec-title">Finances</span><button class="btn btn-outline btn-sm" onclick="genNoteFrais()">&#x1f4c4; Note frais</button></div>
   <div class="km-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; relev&#xe9; compteur</span><button class="btn btn-ghost btn-xs" onclick="openKmModal()">Saisir</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; relev&#xe9; compteur</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openKmModal(0)">&#x1f697; Seat</button><button class="btn btn-ghost btn-xs" onclick="openKmModal(1)">&#x1f690; Talento</button></div></div>
     <div class="fr">
       <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">D&#xe9;but du mois</div><div style="font-weight:700;color:var(--text)" id="km-debut-display">&#x2014;</div></div>
       <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">Fin du mois</div><div style="font-weight:700;color:var(--text)" id="km-fin-display">&#x2014;</div></div>
@@ -533,7 +535,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="fg"><label class="fl">Parking (&#x20ac;)</label><input type="number" class="fi" id="r-parking" value="0" step="0.01" oninput="updCalc()"></div>
   </div>
   <div class="fg"><label class="fl">Acompte &#xe0; l'aller (&#x20ac;)</label><input type="number" class="fi" id="r-acompte" value="0" step="0.01" oninput="updAcompte()"><div id="r-solde-hint" style="display:none;margin-top:8px"></div></div>
-  <div class="fg"><label class="fl">Notes</label><textarea class="ft" id="r-notes" placeholder="Infos suppl&#xe9;mentaires..."></textarea></div>
+  <div class="fg"><label class="fl">Notes client (dans le message WhatsApp)</label><textarea class="ft" id="r-notes" placeholder="Infos pour le client..."></textarea></div>
+  <div class="fg"><label class="fl">&#x1f512; Note interne (priv&#xe9;e, jamais envoy&#xe9;e)</label><textarea class="ft" id="r-notes-interne" placeholder="Remarques perso, infos confidentielles..." style="min-height:60px"></textarea></div>
   <div class="card card-sm" style="background:var(--bg3)">
     <div class="dr"><span class="dr-label">Km factur&#xe9;s client</span><span class="dr-val c-blue" id="prev-km-client">&#x2014;</span></div>
     <div class="dr"><span class="dr-label">Km r&#xe9;els totaux</span><span class="dr-val c-purple" id="prev-km-reels">&#x2014;</span></div>
@@ -603,7 +606,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <!-- MODAL KM -->
 <div class="overlay" id="m-km"><div class="modal">
 <div class="modal-handle"></div><div class="modal-title">&#x1f4cd; Relev&#xe9; compteur</div>
-<div class="alert alert-blue">Km du compteur Seat Leon au d&#xe9;but et &#xe0; la fin du mois.</div>
+<div class="fg"><label class="fl">V&#xe9;hicule</label>
+  <div class="chips" id="km-vehicule-chips">
+    <div class="chip active" onclick="selectChip(this,'km-vehicule','0')">&#x1f697; Seat Leon</div>
+    <div class="chip" onclick="selectChip(this,'km-vehicule','1')">&#x1f690; Talento</div>
+  </div>
+  <input type="hidden" id="km-vehicule" value="0">
+</div>
 <div class="fg"><label class="fl">Mois</label><input type="month" class="fi" id="km-mois"></div>
 <div class="fr"><div class="fg"><label class="fl">Km d&#xe9;but</label><input type="number" class="fi" id="km-debut" placeholder="Ex: 48775" oninput="updKmPreview()"></div><div class="fg"><label class="fl">Km fin</label><input type="number" class="fi" id="km-fin" placeholder="Ex: 54219" oninput="updKmPreview()"></div></div>
 <div id="km-calc-preview" style="margin-top:8px;font-size:0.9rem;color:var(--blue2);font-weight:700;text-align:center;font-family:Playfair Display,serif"></div>
@@ -734,7 +743,7 @@ function fixDb(){
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function fmt(n){return parseFloat(n||0).toFixed(2).replace('.',',')+' €';}
 function fmtKm(n){return parseFloat(n||0).toFixed(1).replace('.',',')+' km';}
-function roundTo(n,r){return Math.round(n/(r||5))*(r||5);}
+function roundTo(n,r){return Math.ceil(n/(r||5))*(r||5);}
 function g(id){return document.getElementById(id);}
 function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!==undefined)el.className=cls;}
 function getKmClient(r){let km=parseFloat(r.distance||0);if(r.type==='ar-jour')km+=parseFloat(r.distanceRetour||r.distance||0);else if(r.type==='ar-diff')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
@@ -742,11 +751,11 @@ function getKmReels(r){let km=parseFloat(r.kmPickup||0)+parseFloat(r.distance||0
 function getBenef(r){const v=getV(r.vehicule);return parseFloat(r.prix||0)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getBenefReel(r){const v=getV(r.vehicule);return parseFloat(r.prix||0)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getV(idx){return db.settings.vehicles[parseInt(idx||0)]||db.settings.vehicles[0];}
-function getMonthRes(m,y){return db.reservations.filter(r=>{const da=new Date(r.dateAller);if(da.getMonth()===m&&da.getFullYear()===y)return true;if(r.type==='ar-diff'&&r.dateRetour){const dr=new Date(r.dateRetour);if(dr.getMonth()===m&&dr.getFullYear()===y)return true;}return false;});}
+function getMonthRes(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);if(da.getMonth()===m&&da.getFullYear()===y)return true;if(r.type==='ar-diff'&&r.dateRetour){const dr=new Date(r.dateRetour);if(dr.getMonth()===m&&dr.getFullYear()===y)return true;}return false;});}
 function getMonthCarb(m,y){return db.carburant.filter(c=>{const d=new Date(c.date);return d.getMonth()===m&&d.getFullYear()===y;});}
 function getMonthFrais(m,y){return db.frais.filter(f=>{const d=new Date(f.date);return d.getMonth()===m&&d.getFullYear()===y;});}
 function getYearKm(y){return db.reservations.filter(r=>new Date(r.dateAller).getFullYear()===y).reduce((s,r)=>s+getKmClient(r),0);}
-function getKmReelsMois(m,y){const ms=y+'-'+String(m+1).padStart(2,'0');const e=db.kmReels.find(k=>k.mois===ms);if(!e||!e.debut||!e.fin)return null;return parseFloat(e.fin)-parseFloat(e.debut);}
+function getKmReelsMois(m,y,veh){const ms=y+'-'+String(m+1).padStart(2,'0');const vIdx=parseInt(veh||0);const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===vIdx);if(!e||!e.debut||!e.fin)return null;return parseFloat(e.fin)-parseFloat(e.debut);}
 function getEncaisseAller(r){const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);if(r.type==='aller'||r.type==='ar-jour')return p;return a>0?a:Math.round(p/2*100)/100;}
 function getEncaisseRetour(r){const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);if(r.type==='aller'||r.type==='ar-jour')return 0;return a>0?Math.round((p-a)*100)/100:Math.round(p/2*100)/100;}
 function getEncaisseMois(m,y){return db.reservations.reduce((s,r)=>{const da=new Date(r.dateAller);const dr=r.type==='ar-diff'&&r.dateRetour?new Date(r.dateRetour):null;let enc=0;if(da.getMonth()===m&&da.getFullYear()===y)enc+=getEncaisseAller(r);if(dr&&dr.getMonth()===m&&dr.getFullYear()===y)enc+=getEncaisseRetour(r);return s+enc;},0);}
@@ -783,6 +792,18 @@ function renderDash(){
   sv('d-obj-txt',enc>=obj?'🎉 Objectif atteint !':'Il reste '+fmt(obj-enc)+' — '+pct+'%');
   sv('d-benef',fmt(benef),'stat-val '+(benef>=0?'c-green':'c-red'));
   sv('d-marge','Marge '+marge+'% · Adam');
+  // Comparaison mois précédent
+  let prevM=curMonth-1,prevY=curYear;if(prevM<0){prevM=11;prevY--;}
+  const prevRes=getMonthRes(prevM,prevY);
+  const prevEnc=getEncaisseMois(prevM,prevY);
+  const diffEnc=enc-prevEnc;
+  const diffNb=res.length-prevRes.length;
+  const compEl=g('d-comp-prev');
+  if(compEl){
+    const sign=diffEnc>=0?'+':'';
+    compEl.textContent=sign+fmt(diffEnc)+' vs '+MOIS_S[prevM];
+    compEl.style.color=diffEnc>=0?'var(--green2)':'var(--red2)';
+  }
   const brEl=g('d-benef-reel');
   if(brEl){brEl.textContent='Réel: '+fmt(benefReel);brEl.style.color=benefReel>=0?'var(--green2)':'var(--red2)';}
   sv('d-nb-res',res.length);sv('d-nb-sub',res.length+' course'+(res.length>1?'s':''));
@@ -832,8 +853,13 @@ function renderRes(){
   if(resFilter==='upcoming')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});
   else if(resFilter==='today')res=db.reservations.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});
   else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d.getTime()===demain.getTime();});}
-  else if(resFilter==='done')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today;});
+  else if(resFilter==='done')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});
+  else if(resFilter==='annule')res=db.reservations.filter(function(r){return r.statut==='annule';});
   else res=getMonthRes(curMonth,curYear);
+  // Recherche texte
+  var searchEl=document.getElementById('res-search');
+  var search=searchEl?searchEl.value.toLowerCase().trim():'';
+  if(search){res=res.filter(function(r){return (r.clientNom||'').toLowerCase().includes(search)||(r.depart||'').toLowerCase().includes(search)||(r.arrivee||'').toLowerCase().includes(search)||(r.vol||'').toLowerCase().includes(search)||(r.notes||'').toLowerCase().includes(search);});}
   res=res.sort(function(a,b){return new Date(b.dateAller)-new Date(a.dateAller);});
   var el=document.getElementById('res-list');if(!el)return;
   if(!res.length){el.innerHTML='<div class="empty"><div class="empty-icon">🚗</div><div class="empty-title">Aucune course</div><div class="empty-text">Appuyez sur + pour ajouter</div></div>';return;}
@@ -1102,6 +1128,7 @@ function updResType(){
 function openNewRes(){g('res-edit-id').value='';sv('res-modal-title','Nouvelle course');sv('res-modal-subtitle','');resetResForm();curStep=1;updResSteps();openModal('m-res');}
 function resetResForm(){
   acC={};
+  const niElR=g('r-notes-interne');if(niElR)niElR.value='';
   ['r-client-nom','r-client-tel','r-depart','r-dep-lat','r-dep-lon','r-arrivee','r-arr-lat','r-arr-lon','r-distance','r-vol','r-notes','r-date-retour','r-heure-retour','r-commission','r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','r-distance-retour','r-km-pickup','r-km-pickup-retour','r-km-vide-aller','r-km-vide-retour','r-distance-retour-jour','r-heure-retour-jour'].forEach(id=>{const el=g(id);if(el)el.value='';});
   ['r-peages','r-parking','r-acompte'].forEach(id=>{const el=g(id);if(el)el.value='0';});
   const rp=g('r-passagers');if(rp)rp.value=1;const rv=g('r-vehicule');if(rv)rv.value='0';const rm=g('r-vmt-recu');if(rm)rm.checked=false;
@@ -1245,7 +1272,7 @@ function saveReservation(){
     kmVideRetour:kvr,kmVideRetourType:g('r-vide-retour-type')?.value||'maison',
     vol:g('r-vol').value.toUpperCase(),prix:g('r-prix').value,paiement:g('r-paiement').value,
     vmtRecu:g('r-vmt-recu').checked,peages:g('r-peages').value,parking:g('r-parking').value,
-    acompte:parseFloat(g('r-acompte')?.value||0),notes:g('r-notes').value,
+    acompte:parseFloat(g('r-acompte')?.value||0),notes:g('r-notes').value,notesInternes:g('r-notes-interne')?.value||'',
     duree:dist>0?Math.round(dist/60*60)+30:90
   };
   const editId=g('res-edit-id').value;
@@ -1337,7 +1364,8 @@ function showDetailRes(id){
     h+='<div class="divider"></div>';
     h+='<div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1rem;font-weight:800">'+fmt(benef)+'</span></div>';
     h+='<div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
-    if(r.notes)h+='<div class="divider"></div><div style="font-size:0.8rem;color:var(--text2);line-height:1.5">'+r.notes+'</div>';
+    if(r.notes)h+='<div class="divider"></div><div style="font-size:0.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Note client</div><div style="font-size:0.82rem;color:var(--text2);line-height:1.5">'+r.notes+'</div>';
+    if(r.notesInternes)h+='<div style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-xs);padding:10px;margin-top:8px"><div style="font-size:0.68rem;color:var(--purple2);font-weight:700;margin-bottom:3px">🔒 NOTE INTERNE</div><div style="font-size:0.82rem;color:var(--text2)">'+r.notesInternes+'</div></div>';
     dc.innerHTML=h;
   }
   var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
@@ -1376,7 +1404,7 @@ function editRes(id){
   if(r.kmVideRetourType==='manuel'){const el=g('r-km-vide-retour');if(el)el.value=r.kmVideRetour||0;}
   acC['kva-auto']=r.kmVideAller||0;acC['kvr-auto']=r.kmVideRetour||0;acC['kpr-auto']=r.kmPickupRetour||0;
   g('r-prix').value=r.prix||'';setChips('r-paiement-chips','r-paiement',r.paiement||'cash');
-  g('r-vmt-recu').checked=r.vmtRecu||false;g('r-peages').value=r.peages||0;g('r-parking').value=r.parking||0;g('r-acompte').value=r.acompte||0;g('r-notes').value=r.notes||'';
+  g('r-vmt-recu').checked=r.vmtRecu||false;g('r-peages').value=r.peages||0;g('r-parking').value=r.parking||0;g('r-acompte').value=r.acompte||0;g('r-notes').value=r.notes||'';const niEl=g('r-notes-interne');if(niEl)niEl.value=r.notesInternes||'';
   let kmC=parseFloat(r.distance||0);if(r.type!=='aller')kmC+=parseFloat(r.distanceRetour||r.distance||0);
   let kmR=parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);
   if(r.type==='ar-diff')kmR+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);
@@ -1511,16 +1539,37 @@ function saveCarb(){
   if(!c.date||!c.prix){alert('Date et prix requis');return;}
   db.carburant.push(c);save();closeModal('m-carburant');renderFin();
 }
-function openKmModal(){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0');g('km-mois').value=ms;const e=db.kmReels.find(k=>k.mois===ms);g('km-debut').value=e?.debut||'';g('km-fin').value=e?.fin||'';g('km-calc-preview').textContent='';openModal('m-km');}
+function openKmModal(vIdx){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0');g('km-mois').value=ms;const veh=vIdx||0;if(g('km-vehicule'))g('km-vehicule').value=veh;setChips('km-vehicule-chips','km-vehicule',String(veh));const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===parseInt(veh));g('km-debut').value=e?.debut||'';g('km-fin').value=e?.fin||'';g('km-calc-preview').textContent='';openModal('m-km');}
 function updKmPreview(){const d=parseFloat(g('km-debut').value||0),f=parseFloat(g('km-fin').value||0);if(f>d)sv('km-calc-preview','→ '+Math.round(f-d)+' km réels ce mois');}
-function saveKm(){const mois=g('km-mois').value,debut=parseFloat(g('km-debut').value||0),fin=parseFloat(g('km-fin').value||0);if(!mois||!debut||!fin){alert('Tous les champs requis');return;}if(fin<=debut){alert('Km fin doit être > km début');return;}const idx=db.kmReels.findIndex(k=>k.mois===mois);if(idx!==-1)db.kmReels[idx]={mois,debut,fin};else db.kmReels.push({mois,debut,fin});save();closeModal('m-km');renderAll();}
+function saveKm(){const mois=g('km-mois').value,debut=parseFloat(g('km-debut').value||0),fin=parseFloat(g('km-fin').value||0),vehicule=parseInt(g('km-vehicule')?.value||0);if(!mois||!debut||!fin){alert('Tous les champs requis');return;}if(fin<=debut){alert('Km fin doit être > km début');return;}const idx=db.kmReels.findIndex(k=>k.mois===mois&&parseInt(k.vehicule||0)===vehicule);if(idx!==-1)db.kmReels[idx]={mois,debut,fin,vehicule};else db.kmReels.push({mois,debut,fin,vehicule});save();closeModal('m-km');renderAll();}
 function saveFavAddr(){const nom=g('fav-nom').value.trim(),adresse=g('fav-adresse').value.trim();if(!nom||!adresse){alert('Nom et adresse requis');return;}db.favAddresses.push({id:genId(),nom,adresse,lat:parseFloat(g('fav-lat').value)||null,lon:parseFloat(g('fav-lon').value)||null});g('fav-nom').value='';g('fav-adresse').value='';save();closeModal('m-fav');renderParams();}
 async function acSearch(input,dropId,role){const q=input.value.trim(),drop=g(dropId);clearTimeout(acTimers[role]);if(q.length<3){drop.style.display='none';return;}acTimers[role]=setTimeout(async()=>{try{const url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=5&lang=fr&bbox=2.3,49.4,6.5,51.5';const resp=await fetch(url);const data=await resp.json();const results=data.features||[];if(!results.length){drop.style.display='none';return;}drop.innerHTML=results.map(r=>{const p=r.properties,coords=r.geometry.coordinates;const main=[p.name,p.street?(p.housenumber?p.street+' '+p.housenumber:p.street):null].filter(Boolean).join(', ')||p.name||'';const city=p.city||p.town||p.village||'',country=p.country||'';const full=[main,city,country].filter(Boolean).join(', ');const safe=full.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return'<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+coords[1]+','+coords[0]+')"><div class="ac-main">'+(main||city)+'</div>'+(city?'<div class="ac-sub">'+city+', '+country+'</div>':'')+'</div>';}).join('');drop.style.display='block';}catch(e){drop.style.display='none';}},350);}
 function acSel(role,display,lat,lon){acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};const map={'r-depart':['r-depart','r-dep-lat','r-dep-lon','ac-r-dep'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon','ac-r-arr'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','ac-r-dep-ret'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','ac-r-arr-ret'],'c-adresse':['c-adresse','c-lat','c-lon','ac-c-adr'],'home':['home-adr','home-lat','home-lon','ac-home'],'fav-addr':['fav-adresse','fav-lat','fav-lon','ac-fav']};const m=map[role];if(m){const e0=g(m[0]);if(e0)e0.value=display;const e1=g(m[1]);if(e1)e1.value=lat;const e2=g(m[2]);if(e2)e2.value=lon;const e3=g(m[3]);if(e3)e3.style.display='none';}if(role==='r-depart'||role==='r-arrivee'){if(acC['r-depart']&&acC['r-arrivee'])calcDist();}if(role==='r-depart-retour'||role==='r-arrivee-retour'){if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();}setTimeout(()=>calcKmVideAuto(),500);}
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('#ac-client-drop')){document.querySelectorAll('.ac-drop').forEach(d=>d.style.display='none');const acd=g('ac-client-drop');if(acd)acd.style.display='none';}});
 async function calcDist(){const dep=acC['r-depart'],arr=acC['r-arrivee'];if(!dep||!arr)return;const ld=g('dist-loading'),ok=g('dist-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance');if(de)de.value=km;sv('dist-km',km+' km');sv('dist-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}}
 async function calcDistRetour(){const dep=acC['r-depart-retour'],arr=acC['r-arrivee-retour'];if(!dep||!arr)return;const ld=g('dist-ret-loading'),ok=g('dist-ret-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance-retour');if(de)de.value=km;sv('dist-ret-km',km+' km');sv('dist-ret-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-ret-loading');if(ld)ld.style.display='none';}}
-function exportICS(r){const fmtDT=(ds,hs)=>{if(!ds)return'';const d=new Date(ds+'T'+(hs||'08:00')+':00');return d.getFullYear().toString()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'00';};const start=fmtDT(r.dateAller,r.heure);const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));const end=dEnd.getFullYear().toString()+String(dEnd.getMonth()+1).padStart(2,'0')+String(dEnd.getDate()).padStart(2,'0')+'T'+String(dEnd.getHours()).padStart(2,'0')+String(dEnd.getMinutes()).padStart(2,'0')+'00';const esc=s=>String(s||'').replace(/[\\,;]/g,' ').replace(/\n/g,'\\n');const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'@facciolini\r\nSUMMARY:✈ '+(r.heure||'')+' '+(r.arrivee||'').split(',')[0]+' - '+r.clientNom+'\r\nDESCRIPTION:'+esc(r.clientNom+' · '+r.depart+' → '+r.arrivee+' · '+fmt(r.prix)+(r.vol?' · Vol: '+r.vol:''))+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(r.depart)+'\r\nEND:VEVENT\r\nEND:VCALENDAR';const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='course_'+r.dateAller+'_'+(r.clientNom||'course')+'.ics';a.click();}
+function exportICS(r){
+  const fmtDT=(ds,hs)=>{if(!ds)return'';const d=new Date(ds+'T'+(hs||'08:00')+':00');return d.getFullYear().toString()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'00';};
+  const esc=s=>String(s||'').replace(/[\\,;]/g,' ').replace(/\n/g,'\\n');
+  const start=fmtDT(r.dateAller,r.heure);
+  const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
+  dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
+  const end=dEnd.getFullYear().toString()+String(dEnd.getMonth()+1).padStart(2,'0')+String(dEnd.getDate()).padStart(2,'0')+'T'+String(dEnd.getHours()).padStart(2,'0')+String(dEnd.getMinutes()).padStart(2,'0')+'00';
+  let events='BEGIN:VEVENT\r\nUID:fm-'+r.id+'-aller@facciolini\r\nSUMMARY:✈ '+(r.heure||'')+' '+(r.arrivee||'').split(',')[0]+' - '+r.clientNom+'\r\nDESCRIPTION:'+esc(r.clientNom+' · '+r.depart+' → '+r.arrivee+' · '+fmt(r.prix)+(r.vol?' · Vol: '+r.vol:''))+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(r.depart)+'\r\nEND:VEVENT';
+  if(r.type==='ar-diff'&&r.dateRetour&&r.heureRetour){
+    const startR=fmtDT(r.dateRetour,r.heureRetour);
+    const dEndR=new Date(r.dateRetour+'T'+r.heureRetour+':00');
+    dEndR.setMinutes(dEndR.getMinutes()+(parseInt(r.duree)||90));
+    const endR=dEndR.getFullYear().toString()+String(dEndR.getMonth()+1).padStart(2,'0')+String(dEndR.getDate()).padStart(2,'0')+'T'+String(dEndR.getHours()).padStart(2,'0')+String(dEndR.getMinutes()).padStart(2,'0')+'00';
+    const depRet=r.departRetour||r.arrivee||'';
+    const arrRet=r.arriveeRetour||r.depart||'';
+    events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:🛬 '+r.heureRetour+' '+arrRet.split(',')[0]+' - '+r.clientNom+' (retour)\r\nDESCRIPTION:'+esc(r.clientNom+' · '+depRet+' → '+arrRet+' · Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)))+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
+  }
+  const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='course_'+r.dateAller+'_'+(r.clientNom||'course')+'.ics';a.click();
+}
 function genNoteFrais(){
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
   const recettes=res.reduce((s,r)=>s+parseFloat(r.prix||0),0),enc=getEncaisseMois(curMonth,curYear);
