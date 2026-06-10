@@ -276,7 +276,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="dr"><span class="dr-label">Taux de charge</span><span class="dr-val" id="f-taux-charge">&#x2014;</span></div>
     <div class="dr" style="border-bottom:none"><span class="dr-label">Km annuels</span><span class="dr-val" id="f-km-a">0 km</span></div>
   </div>
-  <div class="sec"><span class="sec-title">Carburant Q8</span><button class="btn btn-outline btn-sm" onclick="openCarbModal()">+ Plein</button></div>
+  <div class="sec"><span class="sec-title">Carburant</span><button class="btn btn-outline btn-sm" onclick="openCarbModal()">+ Plein</button></div>
+  <div style="display:flex;gap:7px;margin-bottom:10px">
+    <div class="chip active" id="carb-f-tous" onclick="setCarbFilter('tous',this)">Tous</div>
+    <div class="chip" id="carb-f-0" onclick="setCarbFilter('0',this)">&#x1f697; Seat</div>
+    <div class="chip" id="carb-f-1" onclick="setCarbFilter('1',this)">&#x1f690; Talento</div>
+  </div>
   <div class="sg2" style="margin-bottom:10px">
     <div class="stat"><div class="stat-label">D&#xe9;pens&#xe9;</div><div class="stat-val c-orange" id="f-carb-dep">0 &#x20ac;</div></div>
     <div class="stat"><div class="stat-label">Litres</div><div class="stat-val" id="f-carb-lit">0 L</div></div>
@@ -581,7 +586,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 
 <!-- MODAL CARBURANT -->
 <div class="overlay" id="m-carburant"><div class="modal">
-<div class="modal-handle"></div><div class="modal-title">Nouveau plein Q8</div>
+<div class="modal-handle"></div><div class="modal-title">Nouveau plein</div>
+<div class="fg"><label class="fl">V&#xe9;hicule</label>
+  <div class="chips" id="carb-vehicule-chips">
+    <div class="chip active" onclick="selectChip(this,'carb-vehicule','0')">&#x1f697; Seat Leon</div>
+    <div class="chip" onclick="selectChip(this,'carb-vehicule','1')">&#x1f690; Talento</div>
+  </div>
+  <input type="hidden" id="carb-vehicule" value="0">
+</div>
 <div class="fr"><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="carb-date"></div><div class="fg"><label class="fl">Km compteur</label><input type="number" class="fi" id="carb-km" placeholder="Ex: 54219"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Litres</label><input type="number" class="fi" id="carb-litres" placeholder="Ex: 47.73" step="0.01"></div><div class="fg"><label class="fl">Prix total (&#x20ac;)</label><input type="number" class="fi" id="carb-prix" placeholder="Ex: 102.24" step="0.01"></div></div>
 <div class="fg"><label class="fl">Station</label><input type="text" class="fi" id="carb-station" placeholder="Q8, Total..."></div>
@@ -691,7 +703,7 @@ const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zavent
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
 let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.40,long:1.50,min:50,round:5,camion:20},vip:{seuil:4,reduc:10}}};
-let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous';
+let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous';
 let acTimers={},acC={};
 function save(){try{localStorage.setItem('fm_v52',JSON.stringify(db));}catch(e){alert('Erreur sauvegarde');}}
 function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,...r};}
@@ -911,15 +923,21 @@ function renderFin(){
   sv('f-km-c',fmtKm(totalKmC));sv('f-km-reel-det',kmReel!==null?Math.round(kmReel)+' km':(totalKmR>0?'~'+Math.round(totalKmR)+' km':'—'));
   sv('f-km-vide',totalKmR>0?fmtKm(totalKmR-totalKmC):'—');sv('f-taux-charge',totalKmR>0?Math.round(totalKmC/totalKmR*100)+'%':'—');sv('f-km-a',fmtKm(getYearKm(curYear)));
   const litres=carbs.reduce((s,c)=>s+parseFloat(c.litres||0),0);
-  sv('f-carb-dep',fmt(diesel));sv('f-carb-lit',litres.toFixed(1)+' L');sv('f-carb-px',litres>0?(diesel/litres).toFixed(3).replace('.',',')+' €/L':'—');
-  const carbsKm=[...db.carburant].filter(c=>c.km).sort((a,b)=>parseFloat(a.km)-parseFloat(b.km));
+  // Stats carburant par véhicule
+  const carbsFiltered=carbFilter==='tous'?carbs:carbs.filter(c=>String(c.vehicule||0)===carbFilter);
+  const dieselF=carbsFiltered.reduce((s,c)=>s+parseFloat(c.prix||0),0);
+  const litresF=carbsFiltered.reduce((s,c)=>s+parseFloat(c.litres||0),0);
+  sv('f-carb-dep',fmt(dieselF));sv('f-carb-lit',litresF.toFixed(1)+' L');sv('f-carb-px',litresF>0?(dieselF/litresF).toFixed(3).replace('.',',')+' €/L':'—');
+  // Conso réelle sur le véhicule filtré
+  const vIdx=carbFilter==='tous'?null:parseInt(carbFilter);
+  const carbsKm=[...db.carburant].filter(c=>c.km&&(vIdx===null||parseInt(c.vehicule||0)===vIdx)).sort((a,b)=>parseFloat(a.km)-parseFloat(b.km));
   let conso='—';if(carbsKm.length>=2){const l=carbsKm[carbsKm.length-1],p=carbsKm[carbsKm.length-2];const ke=parseFloat(l.km)-parseFloat(p.km),le=parseFloat(l.litres||0);if(ke>0&&le>0)conso=(le/ke*100).toFixed(1).replace('.',',')+' L/100km';}
   sv('f-carb-co',conso);
-  const cSort=[...carbs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const cSort=[...carbsFiltered].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const cl=g('carb-list');
   if(cl){
     if(!cSort.length){cl.innerHTML='<div class="empty" style="padding:20px"><div class="empty-text">Aucun plein ce mois</div></div>';}
-    else{var chtml='';cSort.forEach(function(cv,ci){chtml+='<div class="frais-item"><div><div style="font-weight:600">'+new Date(cv.date).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+(cv.station?' · '+cv.station:'')+'</div><div style="font-size:0.73rem;color:var(--text3)">'+(cv.litres||'?')+' L · '+(cv.km?cv.km+' km':'')+'</div></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--orange2)">'+fmt(cv.prix)+'</span><button class="btn btn-red btn-xs" onclick="delCarb(\''+cv.id+'\')">✕</button></div></div>';});cl.innerHTML=chtml;}
+    else{var chtml='';cSort.forEach(function(cv){var vnom=parseInt(cv.vehicule||0)===1?'🚐':'🚗';chtml+='<div class="frais-item"><div><div style="font-weight:600">'+vnom+' '+new Date(cv.date).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+(cv.station?' · '+cv.station:'')+'</div><div style="font-size:0.73rem;color:var(--text3)">'+(cv.litres||'?')+' L · '+(cv.km?cv.km+' km':'')+'</div></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--orange2)">'+fmt(cv.prix)+'</span><button class="btn btn-red btn-xs" onclick="delCarb(\''+cv.id+'\')">✕</button></div></div>';});cl.innerHTML=chtml;}
   }
   const fi2={entretien:'🔧',pneus:'🛞',controle:'📋',assurance:'🛡',lavage:'🚿',accessoires:'🧴',autre:'📦'};
   const fS=[].concat(frais).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
@@ -1420,6 +1438,7 @@ function getStatusBadge(r){
   return '<span class="status-done">✓ Terminée</span>';
 }
 function setResFilter(f,el){resFilter=f;document.querySelectorAll('#page-res .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
+function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function delCarb(id){if(confirm("Supprimer ce plein ?")){db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
 function delFrais2(id){if(confirm("Supprimer ce frais ?")){db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
 function markVmt(id){const r=db.reservations.find(r=>r.id===id);if(r){r.vmtRecu=true;save();renderAll();}}
@@ -1458,8 +1477,17 @@ function saveVip(){db.settings.vip={seuil:parseInt(g('vip-seuil').value)||4,redu
 function saveCharge(){const c={id:genId(),nom:g('ch-nom').value.trim(),montant:parseFloat(g('ch-montant').value)||0};if(!c.nom){alert('Nom requis');return;}db.charges.push(c);save();closeModal('m-charge');renderParams();}
 function saveEntretien(){const e={id:genId(),type:g('ent-type').value.trim(),kmLast:g('ent-km-last').value,intervalle:parseInt(g('ent-intervalle').value)||0,date:g('ent-date').value,notes:g('ent-notes').value};if(!e.type){alert('Type requis');return;}db.entretien.push(e);save();closeModal('m-entretien');renderParams();}
 function savePinCfg(){const np=g('new-pin').value,cp=g('confirm-pin').value;if(np.length!==4||!/^\d{4}$/.test(np)){g('pin-modal-err').textContent='PIN doit être 4 chiffres';return;}if(np!==cp){g('pin-modal-err').textContent='PIN ne correspond pas';return;}db.settings.pin=np;save();closeModal('m-pin');alert('PIN mis à jour !');}
-function openCarbModal(){g('carb-date').value=new Date().toISOString().split('T')[0];['carb-km','carb-litres','carb-prix','carb-station'].forEach(id=>g(id).value='');openModal('m-carburant');}
-function saveCarb(){const c={id:genId(),date:g('carb-date').value,km:g('carb-km').value,litres:g('carb-litres').value,prix:g('carb-prix').value,station:g('carb-station').value};if(!c.date||!c.prix){alert('Date et prix requis');return;}db.carburant.push(c);save();closeModal('m-carburant');renderFin();}
+function openCarbModal(){
+  g('carb-date').value=new Date().toISOString().split('T')[0];
+  ['carb-km','carb-litres','carb-prix','carb-station'].forEach(id=>g(id).value='');
+  setChips('carb-vehicule-chips','carb-vehicule','0');
+  openModal('m-carburant');
+}
+function saveCarb(){
+  const c={id:genId(),date:g('carb-date').value,km:g('carb-km').value,litres:g('carb-litres').value,prix:g('carb-prix').value,station:g('carb-station').value,vehicule:parseInt(g('carb-vehicule').value||0)};
+  if(!c.date||!c.prix){alert('Date et prix requis');return;}
+  db.carburant.push(c);save();closeModal('m-carburant');renderFin();
+}
 function openKmModal(){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0');g('km-mois').value=ms;const e=db.kmReels.find(k=>k.mois===ms);g('km-debut').value=e?.debut||'';g('km-fin').value=e?.fin||'';g('km-calc-preview').textContent='';openModal('m-km');}
 function updKmPreview(){const d=parseFloat(g('km-debut').value||0),f=parseFloat(g('km-fin').value||0);if(f>d)sv('km-calc-preview','→ '+Math.round(f-d)+' km réels ce mois');}
 function saveKm(){const mois=g('km-mois').value,debut=parseFloat(g('km-debut').value||0),fin=parseFloat(g('km-fin').value||0);if(!mois||!debut||!fin){alert('Tous les champs requis');return;}if(fin<=debut){alert('Km fin doit être > km début');return;}const idx=db.kmReels.findIndex(k=>k.mois===mois);if(idx!==-1)db.kmReels[idx]={mois,debut,fin};else db.kmReels.push({mois,debut,fin});save();closeModal('m-km');renderAll();}
