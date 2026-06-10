@@ -1582,17 +1582,17 @@ function doImport(e){
       // Sauvegarder explicitement
       try{
         localStorage.setItem('fm_v52', JSON.stringify(db));
-        var verify=JSON.parse(localStorage.getItem('fm_v52'));
+        var verified=JSON.parse(localStorage.getItem('fm_v52'));
         renderAll();
         var msg='✅ Import réussi !\n\n';
-        msg+='📋 Réservations: '+verify.reservations.length+'\n';
-        msg+='👥 Clients: '+verify.clients.length+'\n';
-        msg+='⛽ Pleins: '+verify.carburant.length+'\n';
+        msg+='📋 Réservations: '+verified.reservations.length+'\n';
+        msg+='👥 Clients: '+verified.clients.length+'\n';
+        msg+='⛽ Pleins: '+verified.carburant.length+'\n';
         if(isOldFormat)msg+='\n(Ancienne app — données converties)';
         alert(msg);
-        if(verify.clients.length>0){
-          var clientsBtn=document.querySelector('.nav-btn:nth-child(4)');
-          if(clientsBtn)showPage('clients',clientsBtn);
+        if(verified.clients.length>0){
+          var cBtn=document.querySelector('.nav-btn:nth-child(4)');
+          if(cBtn)showPage('clients',cBtn);
         }
       }catch(saveErr){
         alert('Erreur lors de la sauvegarde: '+saveErr.message);
