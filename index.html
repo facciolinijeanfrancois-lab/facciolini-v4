@@ -1127,7 +1127,8 @@ function updResType(){
   const lbl=g('sp4-j2-label');if(lbl)lbl.textContent=type==='ar-jour'?'Retour même jour':'Jour 2 — Retour';
   ['kr-j2-1','kr-j2-2','kr-j2-3'].forEach(id=>{const el=g(id);if(el)el.style.display=type==='ar-diff'?'flex':'none';});
   const pkrFg=g('r-km-pickup-retour-fg');if(pkrFg)pkrFg.style.display=type==='ar-diff'?'block':'none';
-  curStep=1;updResSteps();updCalc();
+  if(curStep===3&&type!=='ar-diff')curStep=2;
+  updResSteps();updCalc();
 }
 function openNewRes(){g('res-edit-id').value='';sv('res-modal-title','Nouvelle course');sv('res-modal-subtitle','');resetResForm();curStep=1;updResSteps();openModal('m-res');}
 function resetResForm(){
