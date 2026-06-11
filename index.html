@@ -454,6 +454,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="fg"><label class="fl">Date retour</label><input type="date" class="fi" id="r-date-retour"></div>
     <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour"></div>
   </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-inverse" onclick="setRetourInverse()" style="flex:1;font-size:0.78rem">&#x21c4; Inverser aller (Arr&#x2192;D&#xe9;p)</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-meme" onclick="setRetourMeme()" style="flex:1;font-size:0.78rem">&#x3d; M&#xea;mes adresses que l&apos;aller</button>
+  </div>
   <div class="fg">
     <label class="fl">D&#xe9;part retour</label>
     <div id="fav-chips-dep-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
@@ -1566,22 +1570,79 @@ function acSel(role,display,lat,lon){acC[role]={lat:parseFloat(lat),lon:parseFlo
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('#ac-client-drop')){document.querySelectorAll('.ac-drop').forEach(d=>d.style.display='none');const acd=g('ac-client-drop');if(acd)acd.style.display='none';}});
 async function calcDist(){const dep=acC['r-depart'],arr=acC['r-arrivee'];if(!dep||!arr)return;const ld=g('dist-loading'),ok=g('dist-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance');if(de)de.value=km;sv('dist-km',km+' km');sv('dist-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}}
 async function calcDistRetour(){const dep=acC['r-depart-retour'],arr=acC['r-arrivee-retour'];if(!dep||!arr)return;const ld=g('dist-ret-loading'),ok=g('dist-ret-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance-retour');if(de)de.value=km;sv('dist-ret-km',km+' km');sv('dist-ret-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-ret-loading');if(ld)ld.style.display='none';}}
+function setRetourInverse(){
+  const dep=g('r-depart')?.value||'',arr=g('r-arrivee')?.value||'';
+  const dLat=g('r-dep-lat')?.value,dLon=g('r-dep-lon')?.value;
+  const aLat=g('r-arr-lat')?.value,aLon=g('r-arr-lon')?.value;
+  if(!dep&&!arr){alert('Remplissez d\'abord les adresses aller');return;}
+  // Retour = arrivée→départ (sens inverse)
+  const depRet=g('r-depart-retour'),arrRet=g('r-arrivee-retour');
+  if(depRet)depRet.value=arr;
+  if(arrRet)arrRet.value=dep;
+  if(aLat&&aLon){acC['r-depart-retour']={lat:parseFloat(aLat),lon:parseFloat(aLon)};const e=g('r-dep-ret-lat');if(e)e.value=aLat;const f=g('r-dep-ret-lon');if(f)f.value=aLon;}
+  if(dLat&&dLon){acC['r-arrivee-retour']={lat:parseFloat(dLat),lon:parseFloat(dLon)};const e=g('r-arr-ret-lat');if(e)e.value=dLat;const f=g('r-arr-ret-lon');if(f)f.value=dLon;}
+  if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();
+  setTimeout(()=>calcKmVideAuto(),400);
+}
+function setRetourMeme(){
+  const dep=g('r-depart')?.value||'',arr=g('r-arrivee')?.value||'';
+  const dLat=g('r-dep-lat')?.value,dLon=g('r-dep-lon')?.value;
+  const aLat=g('r-arr-lat')?.value,aLon=g('r-arr-lon')?.value;
+  if(!dep&&!arr){alert('Remplissez d\'abord les adresses aller');return;}
+  // Retour = mêmes adresses que l'aller (départ=départ, arrivée=arrivée)
+  const depRet=g('r-depart-retour'),arrRet=g('r-arrivee-retour');
+  if(depRet)depRet.value=dep;
+  if(arrRet)arrRet.value=arr;
+  if(dLat&&dLon){acC['r-depart-retour']={lat:parseFloat(dLat),lon:parseFloat(dLon)};const e=g('r-dep-ret-lat');if(e)e.value=dLat;const f=g('r-dep-ret-lon');if(f)f.value=dLon;}
+  if(aLat&&aLon){acC['r-arrivee-retour']={lat:parseFloat(aLat),lon:parseFloat(aLon)};const e=g('r-arr-ret-lat');if(e)e.value=aLat;const f=g('r-arr-ret-lon');if(f)f.value=aLon;}
+  if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();
+  setTimeout(()=>calcKmVideAuto(),400);
+}
 function exportICS(r){
   const fmtDT=(ds,hs)=>{if(!ds)return'';const d=new Date(ds+'T'+(hs||'08:00')+':00');return d.getFullYear().toString()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'00';};
   const esc=s=>String(s||'').replace(/[\\,;]/g,' ').replace(/\n/g,'\\n');
+  // Extraire nom court aéroport (ex: "Brussels Airport, Zaventem" → "Brussels Airport")
+  const shortAddr=s=>(s||'').split(',')[0].trim();
+  // Infos client depuis db
+  const cl=db.clients.find(c=>c.nom===r.clientNom)||{};
+  // Construire bloc notes client
+  const noteClient=[
+    '👤 '+r.clientNom,
+    r.clientTel?'📞 '+r.clientTel:'',
+    cl.email?'✉️ '+cl.email:'',
+    cl.adresse?'🏠 '+cl.adresse:'',
+    r.depart?'📍 Prise en charge: '+r.depart:'',
+    cl.notes?'📝 '+cl.notes:'',
+  ].filter(Boolean).join('\\n');
+  const noteCommon=[
+    noteClient,
+    r.vol?'✈️ Vol: '+r.vol:'',
+    r.notes?'📋 Notes: '+r.notes:'',
+    '💶 Prix total: '+fmt(r.prix),
+    r.type!=='aller'?'💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)):'',
+    r.passagers>1?'👥 Passagers: '+r.passagers:'',
+  ].filter(Boolean).join('\\n');
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
   const end=dEnd.getFullYear().toString()+String(dEnd.getMonth()+1).padStart(2,'0')+String(dEnd.getDate()).padStart(2,'0')+'T'+String(dEnd.getHours()).padStart(2,'0')+String(dEnd.getMinutes()).padStart(2,'0')+'00';
-  let events='BEGIN:VEVENT\r\nUID:fm-'+r.id+'-aller@facciolini\r\nSUMMARY:✈ '+(r.heure||'')+' '+(r.arrivee||'').split(',')[0]+' - '+r.clientNom+'\r\nDESCRIPTION:'+esc(r.clientNom+' · '+r.depart+' → '+r.arrivee+' · '+fmt(r.prix)+(r.vol?' · Vol: '+r.vol:''))+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(r.depart)+'\r\nEND:VEVENT';
-  if(r.type==='ar-diff'&&r.dateRetour&&r.heureRetour){
-    const startR=fmtDT(r.dateRetour,r.heureRetour);
-    const dEndR=new Date(r.dateRetour+'T'+r.heureRetour+':00');
+  // SUMMARY aller : 🛫 HH:MM NomAéroport - NomClient
+  const summaryAller='🛫 '+(r.heure||'')+' '+shortAddr(r.arrivee)+' — '+r.clientNom;
+  const descAller=esc(noteCommon+'\\n\\n🛫 ALLER\\n📅 '+r.dateAller+' à '+(r.heure||'')+'\\n🚗 Départ: '+r.depart+'\\n📍 Arrivée: '+r.arrivee);
+  let events='BEGIN:VEVENT\r\nUID:fm-'+r.id+'-aller@facciolini\r\nSUMMARY:'+summaryAller+'\r\nDESCRIPTION:'+descAller+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(r.depart)+'\r\nEND:VEVENT';
+  if((r.type==='ar-diff'||r.type==='ar-jour')&&r.heureRetour){
+    const dateR=r.type==='ar-diff'?r.dateRetour:r.dateAller;
+    const startR=fmtDT(dateR,r.heureRetour);
+    const dEndR=new Date(dateR+'T'+r.heureRetour+':00');
     dEndR.setMinutes(dEndR.getMinutes()+(parseInt(r.duree)||90));
     const endR=dEndR.getFullYear().toString()+String(dEndR.getMonth()+1).padStart(2,'0')+String(dEndR.getDate()).padStart(2,'0')+'T'+String(dEndR.getHours()).padStart(2,'0')+String(dEndR.getMinutes()).padStart(2,'0')+'00';
-    const depRet=r.departRetour||r.arrivee||'';
-    const arrRet=r.arriveeRetour||r.depart||'';
-    events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:🛬 '+r.heureRetour+' '+arrRet.split(',')[0]+' - '+r.clientNom+' (retour)\r\nDESCRIPTION:'+esc(r.clientNom+' · '+depRet+' → '+arrRet+' · Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)))+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
+    const depRet=r.type==='ar-diff'?(r.departRetour||r.arrivee||''):r.arrivee||'';
+    const arrRet=r.type==='ar-diff'?(r.arriveeRetour||r.depart||''):r.depart||'';
+    // SUMMARY retour : 🛬 HH:MM NomAéroport - NomClient
+    const summaryRetour='🛬 '+r.heureRetour+' '+shortAddr(depRet)+' — '+r.clientNom;
+    const solde=fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0));
+    const descRetour=esc(noteClient+'\\n\\n🛬 RETOUR\\n📅 '+dateR+' à '+r.heureRetour+'\\n🚗 Départ: '+depRet+'\\n🏠 Arrivée: '+arrRet+'\\n💶 Solde à encaisser: '+solde+(r.vol?'\\n✈️ Vol retour: '+r.vol:'')+(r.notes?'\\n📋 '+r.notes:''));
+    events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:'+summaryRetour+'\r\nDESCRIPTION:'+descRetour+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
   }
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
   const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
