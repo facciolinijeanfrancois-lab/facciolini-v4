@@ -1601,35 +1601,40 @@ function setRetourMeme(){
 }
 function exportICS(r){
   const fmtDT=(ds,hs)=>{if(!ds)return'';const d=new Date(ds+'T'+(hs||'08:00')+':00');return d.getFullYear().toString()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'00';};
-  const esc=s=>String(s||'').replace(/[\\,;]/g,' ').replace(/\n/g,'\\n');
-  // Extraire nom court aéroport (ex: "Brussels Airport, Zaventem" → "Brussels Airport")
-  const shortAddr=s=>(s||'').split(',')[0].trim();
-  // Infos client depuis db
+  const esc=s=>String(s||'').replace(/[\\,;]/g,' ');
+  const escDesc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  // Nom court aéroport : "Zaventem" ou "Charleroi" ou 1er segment
+  const shortAero=s=>{
+    const v=String(s||'').toLowerCase();
+    if(v.includes('zaventem')||v.includes('bruxelles-national')||v.includes('brussels'))return'Zaventem';
+    if(v.includes('charleroi'))return'Charleroi';
+    if(v.includes('liège')||v.includes('liege'))return'Liège';
+    if(v.includes('amsterdam'))return'Amsterdam';
+    if(v.includes('paris'))return'Paris CDG';
+    return (s||'').split(',')[0].trim();
+  };
   const cl=db.clients.find(c=>c.nom===r.clientNom)||{};
-  // Construire bloc notes client
-  const noteClient=[
+  const tel=r.clientTel||cl.tel||cl.gsm||'';
+  // Notes ALLER propres, une info par ligne
+  const linesAller=[
     '👤 '+r.clientNom,
-    r.clientTel?'📞 '+r.clientTel:'',
-    cl.email?'✉️ '+cl.email:'',
-    cl.adresse?'🏠 '+cl.adresse:'',
-    r.depart?'📍 Prise en charge: '+r.depart:'',
-    cl.notes?'📝 '+cl.notes:'',
-  ].filter(Boolean).join('\\n');
-  const noteCommon=[
-    noteClient,
-    r.vol?'✈️ Vol: '+r.vol:'',
-    r.notes?'📋 Notes: '+r.notes:'',
-    '💶 Prix total: '+fmt(r.prix),
-    r.type!=='aller'?'💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)):'',
-    r.passagers>1?'👥 Passagers: '+r.passagers:'',
-  ].filter(Boolean).join('\\n');
+    tel?'📞 '+tel:'',
+    '🕐 Prise en charge: '+(r.heure||''),
+    r.depart?'🏠 Adresse: '+r.depart:'',
+    '✈️ Dépose: '+shortAero(r.arrivee),
+    r.passagers?'👥 Passagers: '+r.passagers:'',
+    r.vol?'🛩️ Vol: '+r.vol:'',
+    '💰 Prix: '+fmt(r.prix),
+    '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)),
+    r.notes?'📋 '+r.notes:'',
+  ].filter(Boolean);
+  const descAller=escDesc(linesAller.join('\n'));
+  // Titre ALLER : 🛫 HH:MM - Zaventem - NomClient
+  const summaryAller='🛫 '+(r.heure||'')+' - '+shortAero(r.arrivee)+' - '+r.clientNom;
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
   const end=dEnd.getFullYear().toString()+String(dEnd.getMonth()+1).padStart(2,'0')+String(dEnd.getDate()).padStart(2,'0')+'T'+String(dEnd.getHours()).padStart(2,'0')+String(dEnd.getMinutes()).padStart(2,'0')+'00';
-  // SUMMARY aller : 🛫 HH:MM NomAéroport - NomClient
-  const summaryAller='🛫 '+(r.heure||'')+' '+shortAddr(r.arrivee)+' — '+r.clientNom;
-  const descAller=esc(noteCommon+'\\n\\n🛫 ALLER\\n📅 '+r.dateAller+' à '+(r.heure||'')+'\\n🚗 Départ: '+r.depart+'\\n📍 Arrivée: '+r.arrivee);
   let events='BEGIN:VEVENT\r\nUID:fm-'+r.id+'-aller@facciolini\r\nSUMMARY:'+summaryAller+'\r\nDESCRIPTION:'+descAller+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(r.depart)+'\r\nEND:VEVENT';
   if((r.type==='ar-diff'||r.type==='ar-jour')&&r.heureRetour){
     const dateR=r.type==='ar-diff'?r.dateRetour:r.dateAller;
@@ -1639,10 +1644,23 @@ function exportICS(r){
     const endR=dEndR.getFullYear().toString()+String(dEndR.getMonth()+1).padStart(2,'0')+String(dEndR.getDate()).padStart(2,'0')+'T'+String(dEndR.getHours()).padStart(2,'0')+String(dEndR.getMinutes()).padStart(2,'0')+'00';
     const depRet=r.type==='ar-diff'?(r.departRetour||r.arrivee||''):r.arrivee||'';
     const arrRet=r.type==='ar-diff'?(r.arriveeRetour||r.depart||''):r.depart||'';
-    // SUMMARY retour : 🛬 HH:MM NomAéroport - NomClient
-    const summaryRetour='🛬 '+r.heureRetour+' '+shortAddr(depRet)+' — '+r.clientNom;
     const solde=fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0));
-    const descRetour=esc(noteClient+'\\n\\n🛬 RETOUR\\n📅 '+dateR+' à '+r.heureRetour+'\\n🚗 Départ: '+depRet+'\\n🏠 Arrivée: '+arrRet+'\\n💶 Solde à encaisser: '+solde+(r.vol?'\\n✈️ Vol retour: '+r.vol:'')+(r.notes?'\\n📋 '+r.notes:''));
+    // Notes RETOUR propres, une info par ligne
+    const linesRetour=[
+      '👤 '+r.clientNom,
+      tel?'📞 '+tel:'',
+      '🕐 Heure de vol: '+r.heureRetour,
+      '🛬 Prise en charge: '+shortAero(depRet),
+      arrRet?'🏠 Dépose: '+arrRet:'',
+      r.passagers?'👥 Passagers: '+r.passagers:'',
+      r.vol?'🛩️ Vol: '+r.vol:'',
+      '💰 Prix: '+fmt(r.prix),
+      '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+solde,
+      r.notes?'📋 '+r.notes:'',
+    ].filter(Boolean);
+    const descRetour=escDesc(linesRetour.join('\n'));
+    // Titre RETOUR : 🛬 HH:MM - Zaventem - NomClient
+    const summaryRetour='🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+r.clientNom;
     events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:'+summaryRetour+'\r\nDESCRIPTION:'+descRetour+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
   }
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
