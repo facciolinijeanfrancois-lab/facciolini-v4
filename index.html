@@ -316,6 +316,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div id="partner-history"></div>
 </div>
 <div class="page" id="page-params">
+  <div id="backup-alert" style="display:none;background:rgba(240,112,32,0.1);border:1px solid rgba(240,112,32,0.3);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:0.8rem;color:var(--orange2);font-weight:600"></div>
   <div class="sec" style="padding-top:8px"><span class="sec-title">Param&#xe8;tres</span></div>
   <div class="stitle">Mon profil</div>
   <div class="sitem"><div class="sitem-left"><div class="sitem-label">Adresse maison</div><div class="sitem-sub" id="p-home">Rue Saint-Eloi 173, Carni&#xe8;res</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-home')">Modifier</button></div>
@@ -902,6 +903,9 @@ function renderRes(){
     if(isP)html+='<span class="badge badge-orange">🤝 '+r.source+'</span>';
     if(r.vol)html+='<span class="badge badge-gold">✈ '+r.vol+'</span>';
     if(r.paiement==='virement'&&!r.vmtRecu)html+='<span class="badge badge-red">💸 ⏳</span>';
+    if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
+    if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
+    if(r.passagers&&parseInt(r.passagers)>1)html+='<span class="badge badge-gray">👥'+r.passagers+'</span>';
     html+='</div>';
     // Bouton rappel J-1 pour courses à venir
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
@@ -921,7 +925,7 @@ function renderClients(){
   var html='';
   clients.forEach(function(cl){
     var n=cntRes(cl.nom),vip=isVip(cl.nom);
-    var gains=db.reservations.filter(function(r){return r.clientNom===cl.nom;}).reduce(function(s,r){return s+parseFloat(r.prix||0);},0);
+    var gains=db.reservations.filter(function(r){return r.clientNom===cl.nom&&r.statut!=='annule';}).reduce(function(s,r){return s+parseFloat(r.prix||0);},0);
     var cid=cl.id;
     html+='<div class="item" data-id="'+cid+'" onclick="showDetailClient(this.dataset.id)">';
     if(cl.blacklist)html+='<div class="item-accent" style="background:var(--red2)"></div>';
@@ -1063,6 +1067,12 @@ function marquerCommissionPayee(p){if(!confirm('Commissions de '+p+' reversées 
 function marquerFacturePaye(p){if(!confirm('Courses de '+p+' facturées ?'))return;db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='prepaye')r.facturePaye=true;});save();renderAll();}
 function renderParams(){
   var s=db.settings;
+  // Alerte backup
+  var lastBk=localStorage.getItem('fm_last_backup');var bakEl=g('backup-alert');
+  if(bakEl){var daysSince=lastBk?Math.round((Date.now()-parseInt(lastBk))/86400000):999;
+  bakEl.style.display=daysSince>7?'block':'none';
+  bakEl.textContent=daysSince>7?'⚠️ Dernier backup : '+(lastBk?daysSince+'j ago':'jamais')+' — Pensez à exporter !'  :'';
+  }
   var sv2=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
   sv2('p-home',s.homeAddress&&s.homeAddress.adresse||'Non configuré');
   s.vehicles.forEach(function(v,i){sv2('p-v'+(i+1)+'-name',(i===0?'🚗 ':'🚐 ')+v.nom);sv2('p-v'+(i+1)+'-sub',v.cout.toFixed(2).replace('.',',')+' €/km · '+v.conso+'L/100km');});
@@ -1404,6 +1414,10 @@ function showDetailRes(id){
     h+='<div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
     if(r.notes)h+='<div class="divider"></div><div style="font-size:0.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Note client</div><div style="font-size:0.82rem;color:var(--text2);line-height:1.5">'+r.notes+'</div>';
     if(r.notesInternes)h+='<div style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-xs);padding:10px;margin-top:8px"><div style="font-size:0.68rem;color:var(--purple2);font-weight:700;margin-bottom:3px">🔒 NOTE INTERNE</div><div style="font-size:0.82rem;color:var(--text2)">'+r.notesInternes+'</div></div>';
+    if(r.depart){var depEnc=encodeURIComponent(r.depart);h+='<div style="display:flex;gap:8px;margin-top:14px">';
+    h+='<a href="waze://?q='+depEnc+'" class="btn btn-outline btn-sm" style="flex:1;text-align:center">🗺️ Waze</a>';
+    h+='<a href="https://www.google.com/maps/dir/?api=1&destination='+depEnc+'" target="_blank" class="btn btn-outline btn-sm" style="flex:1;text-align:center">📍 Maps</a>';
+    h+='</div>';}
     dc.innerHTML=h;
   }
   var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
@@ -1531,6 +1545,8 @@ function sendRappel(id){
   document.body.appendChild(popup);
   document.getElementById('rappel-wa-btn').onclick=function(){popup.remove();window.open(waUrl,'_blank');};
   document.getElementById('rappel-sms-btn').onclick=function(){popup.remove();window.location.href=smsUrl;};
+  document.getElementById('rappel-wa-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx].rappelEnvoye=new Date().toISOString();save();renderRes();}}},true);
+  document.getElementById('rappel-sms-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx].rappelEnvoye=new Date().toISOString();save();renderRes();}}},true);
   document.getElementById('rappel-cancel-btn').onclick=function(){popup.remove();};
 }
 function getStatusBadge(r){
@@ -1538,6 +1554,7 @@ function getStatusBadge(r){
   if(r.statut==='annule')return '<span class="status-annule">❌ Annulée</span>';
   if(r.statut==='enroute')return '<span class="status-enroute">🚗 En route</span>';
   if(r.statut==='termine')return '<span class="status-done">✅ Terminée</span>';
+  if(r.statut==='confirme')return '<span class="status-confirme">✓ Confirmée</span>';
   if(r.statut==='confirme')return '<span class="status-confirme">✓ Confirmée</span>';
   // Statut automatique par date
   var today=new Date();today.setHours(0,0,0,0);
@@ -1547,7 +1564,7 @@ function getStatusBadge(r){
   if(diff>0)return '<span class="status-upcoming">Dans '+Math.ceil(diff)+'j</span>';
   return '<span class="status-done">✓ Terminée</span>';
 }
-function setResFilter(f,el){resFilter=f;document.querySelectorAll('#page-res .chip:not(.chip-pay)').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
+function setResFilter(f,el){resFilter=f;payFilter='tous';document.querySelectorAll('#page-res .chip:not(.chip-pay)').forEach(c=>c.classList.remove('active'));el.classList.add('active');document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.toggle('active',c.textContent.includes('Tous')||c.getAttribute('onclick')?.includes("'tous'")));renderRes();}
 function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
 function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='upcoming')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='done')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
@@ -1561,7 +1578,7 @@ function saveClient(){const editId=g('c-edit-id').value,bl=g('c-blacklist').chec
 function showDetailClient(id){
   const c=db.clients.find(x=>x.id===id);if(!c)return;
   const n=cntRes(c.nom),vip=isVip(c.nom);
-  const gains=db.reservations.filter(r=>r.clientNom===c.nom).reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const gains=db.reservations.filter(r=>r.clientNom===c.nom&&r.statut!=='annule').reduce((s,r)=>s+parseFloat(r.prix||0),0);
   const last=db.reservations.filter(r=>r.clientNom===c.nom).sort((a,b)=>new Date(b.dateAller)-new Date(a.dateAller)).slice(0,3);
   sv('dc-title',c.nom+(vip?' ⭐':'')+(c.blacklist?' ⛔':''));
   const dc=g('dc-content');
@@ -1600,7 +1617,7 @@ function saveCarb(){
   if(!c.date||!c.prix){alert('Date et prix requis');return;}
   db.carburant.push(c);save();closeModal('m-carburant');renderFin();
 }
-function openKmModal(vIdx){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0');g('km-mois').value=ms;const veh=vIdx||0;if(g('km-vehicule'))g('km-vehicule').value=veh;setChips('km-vehicule-chips','km-vehicule',String(veh));const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===parseInt(veh));g('km-debut').value=e?.debut||'';g('km-fin').value=e?.fin||'';g('km-calc-preview').textContent='';openModal('m-km');}
+function openKmModal(vIdx){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0');g('km-mois').value=ms;const veh=parseInt(vIdx)||0;if(g('km-vehicule'))g('km-vehicule').value=veh;setChips('km-vehicule-chips','km-vehicule',String(veh));const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===parseInt(veh));g('km-debut').value=e?.debut||'';g('km-fin').value=e?.fin||'';g('km-calc-preview').textContent='';openModal('m-km');}
 function updKmPreview(){const d=parseFloat(g('km-debut').value||0),f=parseFloat(g('km-fin').value||0);if(f>d)sv('km-calc-preview','→ '+Math.round(f-d)+' km réels ce mois');}
 function saveKm(){const mois=g('km-mois').value,debut=parseFloat(g('km-debut').value||0),fin=parseFloat(g('km-fin').value||0),vehicule=parseInt(g('km-vehicule')?.value||0);if(!mois||!debut||!fin){alert('Tous les champs requis');return;}if(fin<=debut){alert('Km fin doit être > km début');return;}const idx=db.kmReels.findIndex(k=>k.mois===mois&&parseInt(k.vehicule||0)===vehicule);if(idx!==-1)db.kmReels[idx]={mois,debut,fin,vehicule};else db.kmReels.push({mois,debut,fin,vehicule});save();closeModal('m-km');renderAll();}
 function saveFavAddr(){const nom=g('fav-nom').value.trim(),adresse=g('fav-adresse').value.trim();if(!nom||!adresse){alert('Nom et adresse requis');return;}db.favAddresses.push({id:genId(),nom,adresse,lat:parseFloat(g('fav-lat').value)||null,lon:parseFloat(g('fav-lon').value)||null});g('fav-nom').value='';g('fav-adresse').value='';save();closeModal('m-fav');renderParams();}
@@ -1723,9 +1740,9 @@ function genNoteFrais(){
   if(nc)nc.innerHTML='<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:0.73rem;color:var(--text2);line-height:1.7">'+MOI.nom+' · BCE '+MOI.bce+'<br>'+MOI.adresse+'<br>'+MOI.email+' · '+MOI.tel+'</div><div class="dr"><span class="dr-label">Facturé</span><span class="dr-val c-gold">'+fmt(recettes)+'</span></div><div class="dr"><span class="dr-label">Encaissé ce mois</span><span class="dr-val c-green">'+fmt(enc)+'</span></div><div class="dr"><span class="dr-label">Courses</span><span class="dr-val">'+res.length+'</span></div><div class="dr"><span class="dr-label">Km clients facturés</span><span class="dr-val c-blue">'+fmtKm(tKC)+'</span></div><div class="dr"><span class="dr-label">Km réels totaux</span><span class="dr-val c-purple">'+(kmReel?Math.round(kmReel)+' km (compteur)':fmtKm(tKR)+' (estimé)')+'</span></div><div class="dr"><span class="dr-label">Km annuels</span><span class="dr-val">'+fmtKm(getYearKm(curYear))+'</span></div><div class="divider"></div><div class="dr"><span class="dr-label">Carburant</span><span class="dr-val c-red">- '+fmt(diesel)+'</span></div><div class="dr"><span class="dr-label">Péages</span><span class="dr-val c-red">- '+fmt(peages)+'</span></div><div class="dr"><span class="dr-label">Parkings</span><span class="dr-val c-red">- '+fmt(parkings)+'</span></div><div class="dr"><span class="dr-label">Commissions</span><span class="dr-val c-red">- '+fmt(commissions)+'</span></div><div class="dr"><span class="dr-label">Frais exceptionnels</span><span class="dr-val c-red">- '+fmt(fraisT)+'</span></div>'+frais.map(f=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">'+(fi[f.type]||'📦')+' '+(f.desc||f.type)+(f.fournisseur?' · '+f.fournisseur:'')+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(f.montant)+'</span></div>').join('')+'<div class="dr"><span class="dr-label">Charges fixes</span><span class="dr-val c-red">- '+fmt(charges)+'</span></div>'+db.charges.map(c=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">· '+c.nom+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(c.montant)+'</span></div>').join('')+'<div class="divider"></div><div class="dr" style="background:var(--bg3);border-radius:var(--radius-xs);padding:12px"><span class="dr-label" style="font-weight:700;color:var(--text);font-size:0.95rem">BÉNÉFICE COMPTABLE</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1.2rem;font-family:\'Playfair Display\',serif">'+fmt(benef)+'</span></div><div class="dr" style="padding:10px 0"><span class="dr-label" style="color:var(--text2)">Bénéfice réel (km réels)</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div><div class="divider"></div><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Détail des courses</div>'+res.map(r=>{const kmC=getKmClient(r),kmR=getKmReels(r);return'<div class="dr"><span class="dr-label">'+new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+' · '+(r.clientNom||'—')+'<br><span style="font-size:0.7rem;color:var(--text3)">'+(r.depart||'').substring(0,16)+'→'+(r.arrivee||'').substring(0,16)+' · '+fmtKm(kmC)+' / '+fmtKm(kmR)+' réels'+(r.source!=='direct'?' · '+r.source:'')+'</span></span><span class="dr-val">'+fmt(r.prix)+(parseFloat(r.commission||0)>0?'<br><span style="font-size:0.68rem;color:var(--red2)">comm.-'+fmt(r.commission)+'</span>':'')+'</span></div>';}).join('');
   openModal('m-note-frais');
 }
-function exportNoteCSV(){const res=getMonthRes(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Prix;Péages;Parking;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',r.commission||0,r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.prix,r.peages||0,r.parking||0,getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
+function exportNoteCSV(){const res=getMonthRes(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Prix;Acompte;Solde;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const solde=r.type==='ar-diff'?parseFloat(r.prix||0)-parseFloat(r.acompte||0):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',r.commission||0,r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.prix,r.acompte||0,solde.toFixed(2),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
-function exportBackup(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
+function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
 function resetApp(){
   if(!confirm("Effacer TOUTES les données (ancienne et nouvelle app) ?\n\nCette action est irréversible."))return;
   if(!confirm("Dernière confirmation — tout sera supprimé."))return;
