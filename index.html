@@ -727,8 +727,26 @@ const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:1500
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
 let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.40,long:1.50,min:50,round:5,camion:20},vip:{seuil:4,reduc:10}}};
 let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous',payFilter='tous',clientSort='alpha',partnerHistFilter='tous';
-let acTimers={},acC={};
-function save(){try{localStorage.setItem('fm_v52',JSON.stringify(db));}catch(e){alert('Erreur sauvegarde');}}
+let acTimers={},acC={},calcTimers={};
+function save(){
+  try{
+    const data=JSON.stringify(db);
+    // Vérif taille (localStorage ~5MB)
+    const sizeKb=Math.round(data.length/1024);
+    if(sizeKb>4000){
+      console.warn('localStorage proche de la limite: '+sizeKb+'KB');
+      // Alerter seulement si > 4.5MB
+      if(sizeKb>4500)alert('⚠️ Données volumineuses ('+sizeKb+'KB). Faites un backup et pensez à archiver les anciennes courses.');
+    }
+    localStorage.setItem('fm_v52',data);
+  }catch(e){
+    if(e.name==='QuotaExceededError'){
+      alert('❌ Mémoire pleine ! Exportez un backup immédiatement puis supprimez les anciennes courses.');
+    }else{
+      alert('Erreur sauvegarde: '+e.message);
+    }
+  }
+}
 function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,...r};}
 function load(){const keys=['fm_v52','facciolini_v51','facciolini_v5'];for(const k of keys){const d=localStorage.getItem(k);if(d){try{const p=JSON.parse(d);db={...db,...p};fixDb();return;}catch(e){}}}const d4=localStorage.getItem('facciolini_v4');if(d4){try{const old=JSON.parse(d4);db.reservations=(old.reservations||[]).map(r=>migrateR(r));db.carburant=old.carburant||[];db.charges=(old.charges||[]).map(c=>{if(c.nom&&c.nom.toLowerCase().includes('comptable')&&parseFloat(c.montant)>50)return{...c,montant:50};return c;});db.kmReels=old.kmReels||[];if(old.settings)db.settings={...db.settings,...old.settings};fixDb();save();return;}catch(e){}}fixDb();}
 function fixDb(){
@@ -782,9 +800,57 @@ function pp(v){if(v==='C'){pinBuf='';updDots();return;}if(v==='D'){pinBuf=pinBuf
 function updDots(){for(let i=0;i<4;i++){const d=g('pd'+i);if(d)d.classList.toggle('filled',i<pinBuf.length);}}
 function checkPin(){if(!db.settings.pin){unlockApp();return;}if(pinBuf===db.settings.pin)unlockApp();else{const e=g('pin-err');if(e)e.textContent='PIN incorrect';pinBuf='';updDots();setTimeout(()=>{const e=g('pin-err');if(e)e.textContent='';},2000);}}
 function unlockApp(){const ps=g('pin-screen');if(ps)ps.style.display='none';const ap=g('app');if(ap)ap.style.display='block';renderAll();}
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));g('page-'+name).classList.add('active');if(btn)btn.classList.add('active');renderAll();}
-function changeMonth(d){curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}renderAll();}
-function renderAll(){const now=new Date();sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));sv('tb-month',MOIS_S[curMonth]+' '+curYear);renderDash();renderRes();renderFin();renderClients();renderPartners();renderParams();}
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  g('page-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  // Rendre uniquement la page ouverte + dash pour les stats
+  const now=new Date();
+  sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
+  sv('tb-month',MOIS_S[curMonth]+' '+curYear);
+  if(name==='dash')renderDash();
+  else if(name==='res'){renderDash();renderRes();}
+  else if(name==='fin'){renderDash();renderFin();}
+  else if(name==='clients')renderClients();
+  else if(name==='partners')renderPartners();
+  else if(name==='params')renderParams();
+}
+function changeMonth(d){
+  curMonth+=d;
+  if(curMonth>11){curMonth=0;curYear++;}
+  if(curMonth<0){curMonth=11;curYear--;}
+  // Forcer re-render complet au changement de mois
+  const now=new Date();
+  sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
+  sv('tb-month',MOIS_S[curMonth]+' '+curYear);
+  renderDash();renderRes();renderFin();
+}
+function renderAll(){
+  const now=new Date();
+  sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
+  sv('tb-month',MOIS_S[curMonth]+' '+curYear);
+  // Toujours rendre le dash et la page active
+  renderDash();
+  const active=document.querySelector('.page.active');
+  const pid=active?active.id:'';
+  if(pid==='page-res'||!pid)renderRes();
+  if(pid==='page-fin')renderFin();
+  if(pid==='page-clients')renderClients();
+  if(pid==='page-partners')renderPartners();
+  if(pid==='page-params')renderParams();
+  // Les pages non actives se rendront à l'ouverture via showPage
+}
+function renderActive(){
+  const active=document.querySelector('.page.active');
+  const pid=active?active.id:'page-dash';
+  if(pid==='page-dash')renderDash();
+  else if(pid==='page-res')renderRes();
+  else if(pid==='page-fin')renderFin();
+  else if(pid==='page-clients')renderClients();
+  else if(pid==='page-partners')renderPartners();
+  else if(pid==='page-params')renderParams();
+}
 
 
 function renderDash(){
@@ -1170,7 +1236,7 @@ function updResType(){
 }
 function openNewRes(){g('res-edit-id').value='';sv('res-modal-title','Nouvelle course');sv('res-modal-subtitle','');resetResForm();curStep=1;updResSteps();openModal('m-res');}
 function resetResForm(){
-  acC={};
+  acC={};calcTimers={};
   const niElR=g('r-notes-interne');if(niElR)niElR.value='';
   ['r-client-nom','r-client-tel','r-depart','r-dep-lat','r-dep-lon','r-arrivee','r-arr-lat','r-arr-lon','r-distance','r-vol','r-notes','r-date-retour','r-heure-retour','r-commission','r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','r-distance-retour','r-km-pickup','r-km-pickup-retour','r-km-vide-aller','r-km-vide-retour','r-distance-retour-jour','r-heure-retour-jour'].forEach(id=>{const el=g(id);if(el)el.value='';});
   ['r-peages','r-parking','r-acompte'].forEach(id=>{const el=g(id);if(el)el.value='0';});
@@ -1495,7 +1561,7 @@ function setStatut(id,statut){
     var btn=g('dr-s-'+s);
     if(btn)btn.style.borderColor=s===statut?'var(--gold)':'';
   });
-  renderRes();renderDash();
+  renderDash();renderRes();
 }
 function sendRappel(id){
   var r=db.reservations.find(function(x){return x.id===id;});
@@ -1589,7 +1655,7 @@ function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cas
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function delCarb(id){if(confirm("Supprimer ce plein ?")){db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
 function delFrais2(id){if(confirm("Supprimer ce frais ?")){db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
-function markVmt(id){const r=db.reservations.find(r=>r.id===id);if(r){r.vmtRecu=true;save();renderAll();}}
+function markVmt(id){const r=db.reservations.find(r=>r.id===id);if(r){r.vmtRecu=true;save();renderDash();renderRes();}}
 
 
 function openClientModal(editId){const c=editId?db.clients.find(x=>x.id===editId):null;sv('client-modal-title',c?'Modifier client':'Nouveau client');g('c-edit-id').value=editId||'';g('c-nom').value=c?.nom||'';g('c-tel').value=c?.tel||'';g('c-email').value=c?.email||'';g('c-adresse').value=c?.adresse||'';g('c-notes').value=c?.notes||'';g('c-blacklist').checked=c?.blacklist||false;g('c-bl-raison').value=c?.blRaison||'';g('c-bl-fg').style.display=c?.blacklist?'block':'none';setChips('c-langue-chips','c-langue',c?.langue||'fr');openModal('m-client');}
@@ -1643,8 +1709,14 @@ function saveFavAddr(){const nom=g('fav-nom').value.trim(),adresse=g('fav-adress
 async function acSearch(input,dropId,role){const q=input.value.trim(),drop=g(dropId);clearTimeout(acTimers[role]);if(q.length<3){drop.style.display='none';return;}acTimers[role]=setTimeout(async()=>{try{const url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=5&lang=fr&bbox=2.3,49.4,6.5,51.5';const resp=await fetch(url);const data=await resp.json();const results=data.features||[];if(!results.length){drop.style.display='none';return;}drop.innerHTML=results.map(r=>{const p=r.properties,coords=r.geometry.coordinates;const main=[p.name,p.street?(p.housenumber?p.street+' '+p.housenumber:p.street):null].filter(Boolean).join(', ')||p.name||'';const city=p.city||p.town||p.village||'',country=p.country||'';const full=[main,city,country].filter(Boolean).join(', ');const safe=full.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return'<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+coords[1]+','+coords[0]+')"><div class="ac-main">'+(main||city)+'</div>'+(city?'<div class="ac-sub">'+city+', '+country+'</div>':'')+'</div>';}).join('');drop.style.display='block';}catch(e){drop.style.display='none';}},350);}
 function acSel(role,display,lat,lon){acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};const map={'r-depart':['r-depart','r-dep-lat','r-dep-lon','ac-r-dep'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon','ac-r-arr'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','ac-r-dep-ret'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','ac-r-arr-ret'],'c-adresse':['c-adresse','c-lat','c-lon','ac-c-adr'],'home':['home-adr','home-lat','home-lon','ac-home'],'fav-addr':['fav-adresse','fav-lat','fav-lon','ac-fav']};const m=map[role];if(m){const e0=g(m[0]);if(e0)e0.value=display;const e1=g(m[1]);if(e1)e1.value=lat;const e2=g(m[2]);if(e2)e2.value=lon;const e3=g(m[3]);if(e3)e3.style.display='none';}if(role==='r-depart'||role==='r-arrivee'){if(acC['r-depart']&&acC['r-arrivee'])calcDist();if(role==='r-depart')setTimeout(()=>calcKmPickupAuto(),300);}if(role==='r-depart-retour'||role==='r-arrivee-retour'){if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();}setTimeout(()=>calcKmVideAuto(),500);}
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('#ac-client-drop')){document.querySelectorAll('.ac-drop').forEach(d=>d.style.display='none');const acd=g('ac-client-drop');if(acd)acd.style.display='none';}});
-async function calcDist(){const dep=acC['r-depart'],arr=acC['r-arrivee'];if(!dep||!arr)return;const ld=g('dist-loading'),ok=g('dist-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance');if(de)de.value=km;sv('dist-km',km+' km');sv('dist-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}}
-async function calcDistRetour(){const dep=acC['r-depart-retour'],arr=acC['r-arrivee-retour'];if(!dep||!arr)return;const ld=g('dist-ret-loading'),ok=g('dist-ret-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance-retour');if(de)de.value=km;sv('dist-ret-km',km+' km');sv('dist-ret-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-ret-loading');if(ld)ld.style.display='none';}}
+async function calcDist(){clearTimeout(calcTimers['dist']);calcTimers['dist']=setTimeout(async function(){await _calcDist();},300);}
+async function _calcDist(){const dep=acC['r-depart'],arr=acC['r-arrivee'];if(!dep||!arr)return;const ld=g('dist-loading'),ok=g('dist-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance');if(de)de.value=km;sv('dist-km',km+' km');sv('dist-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}}
+async function calcDistRetour(){const dep=acC['r-depart-retour'],arr=acC['r-arrivee-retour'];if(!dep||!arr)return;const ld=g('dist-ret-loading'),ok=g('dist-ret-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance-retour');if(de)de.value=km;sv('dist-ret-km',km+' km');sv('dist-ret-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){
+    const ld=g('dist-ret-loading');if(ld)ld.style.display='none';
+    const ok=g('dist-ret-ok');if(ok){ok.style.display='flex';ok.style.borderColor='var(--orange2)';}
+    const km=g('dist-ret-km');if(km){km.textContent='Calcul manuel';km.style.color='var(--orange2)';}
+    const ti=g('dist-ret-time');if(ti)ti.textContent='Entrez la distance manuellement';
+  }}
 function setRetourInverse(){
   const dep=g('r-depart')?.value||'',arr=g('r-arrivee')?.value||'';
   const dLat=g('r-dep-lat')?.value,dLon=g('r-dep-lon')?.value;
