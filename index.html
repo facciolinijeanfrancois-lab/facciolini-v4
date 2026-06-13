@@ -240,13 +240,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="page" id="page-res">
   <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="res-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div class="sec"><span class="sec-title">Courses</span><button class="btn btn-gold btn-sm" onclick="openNewRes()">+ Nouvelle</button></div>
-  <div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">
+  <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
     <div class="chip active" onclick="setResFilter('tous',this)">Tous</div>
     <div class="chip" onclick="setResFilter('upcoming',this)">&#xc0; venir</div>
     <div class="chip" onclick="setResFilter('today',this)">Aujourd&#x27;hui</div>
     <div class="chip" onclick="setResFilter('veille',this)">&#x1f514; Veille J-1</div>
     <div class="chip" onclick="setResFilter('done',this)">Termin&#xe9;es</div>
     <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
+  </div>
+  <div id="pay-filter-bar" style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+    <div class="chip chip-pay active" onclick="setPayFilter('tous',this)">&#x1f4b0; Tous</div>
+    <div class="chip chip-pay" onclick="setPayFilter('cash',this)">&#x1f4b5; Cash</div>
+    <div class="chip chip-pay" onclick="setPayFilter('carte',this)">&#x1f4b3; Carte</div>
+    <div class="chip chip-pay" onclick="setPayFilter('virement',this)">&#x1f3e6; Virement</div>
+    <div class="chip chip-pay" onclick="setPayFilter('prepaye',this)">&#x1f91d; Pr&#xe9;pay&#xe9;</div>
+    <button id="btn-del-pay-filter" onclick="delPayFiltered()" style="display:none;margin-left:4px;background:var(--red2);color:#fff;border:none;border-radius:20px;padding:5px 12px;font-size:0.78rem;font-weight:700;cursor:pointer">&#x1f5d1; Supprimer</button>
   </div>
   <div style="margin-bottom:10px"><input type="text" class="fi" id="res-search" placeholder="&#x1f50d; Rechercher client, adresse..." oninput="renderRes()" style="padding:11px 14px"></div>
   <div id="res-list"></div>
@@ -716,7 +724,7 @@ const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zavent
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
 let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.40,long:1.50,min:50,round:5,camion:20},vip:{seuil:4,reduc:10}}};
-let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous';
+let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous',payFilter='tous';
 let acTimers={},acC={};
 function save(){try{localStorage.setItem('fm_v52',JSON.stringify(db));}catch(e){alert('Erreur sauvegarde');}}
 function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,...r};}
@@ -864,6 +872,9 @@ function renderRes(){
   var searchEl=document.getElementById('res-search');
   var search=searchEl?searchEl.value.toLowerCase().trim():'';
   if(search){res=res.filter(function(r){return (r.clientNom||'').toLowerCase().includes(search)||(r.depart||'').toLowerCase().includes(search)||(r.arrivee||'').toLowerCase().includes(search)||(r.vol||'').toLowerCase().includes(search)||(r.notes||'').toLowerCase().includes(search);});}
+  // Filtre paiement
+  if(payFilter!=='tous'){res=res.filter(function(r){return (r.paiement||'cash')===payFilter;});}
+  var delBtn=document.getElementById('btn-del-pay-filter');if(delBtn)delBtn.style.display=payFilter!=='tous'&&res.length?'inline-block':'none';
   res=res.sort(function(a,b){return new Date(b.dateAller)-new Date(a.dateAller);});
   var el=document.getElementById('res-list');if(!el)return;
   if(!res.length){el.innerHTML='<div class="empty"><div class="empty-icon">🚗</div><div class="empty-title">Aucune course</div><div class="empty-text">Appuyez sur + pour ajouter</div></div>';return;}
@@ -1511,7 +1522,9 @@ function getStatusBadge(r){
   if(diff>0)return '<span class="status-upcoming">Dans '+Math.ceil(diff)+'j</span>';
   return '<span class="status-done">✓ Terminée</span>';
 }
-function setResFilter(f,el){resFilter=f;document.querySelectorAll('#page-res .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
+function setResFilter(f,el){resFilter=f;document.querySelectorAll('#page-res .chip:not(.chip-pay)').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
+function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
+function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='upcoming')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='done')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function delCarb(id){if(confirm("Supprimer ce plein ?")){db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
 function delFrais2(id){if(confirm("Supprimer ce frais ?")){db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
