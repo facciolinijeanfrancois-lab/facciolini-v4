@@ -1488,6 +1488,7 @@ function saveReservation(){
   if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier Samsung ?"))exportICS(r);},600);}
 }
 function genResSummary(){
+  const vipC=isVip(g('r-client-nom')?.value?.trim()||'');
   const source=g('r-source').value,pt=g('r-partner-type').value,comm=parseFloat(g('r-commission')?.value||0);
   const type=g('r-type').value,prix=parseFloat(g('r-prix')?.value||0),acompte=parseFloat(g('r-acompte')?.value||0);
   const encA=type==='ar-diff'?(acompte>0?acompte:prix/2):prix;
@@ -1507,9 +1508,9 @@ function genResSummary(){
   const heure=g('r-heure-aller').value||'',lang=g('r-langue').value||'fr';
   const fmtDL=(ds,hs)=>ds?new Date(ds).toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})+' à '+hs:'';
   let msg='';
-  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n✈️ OUTBOUND\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETURN\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n🏠 To: '+arrRet;msg+='\n\n💶 Total: '+fmt(prix)+'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR);}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel;}
-  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n✈️ HEENREIS\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 TERUGREIS\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n🏠 Naar: '+arrRet;msg+='\n\n💶 Totaal: '+fmt(prix)+'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR);}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel;}
-  else{msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n✈️ ALLER\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+'\n📍 Arrivée : '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETOUR\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n🏠 Arrivée : '+arrRet;msg+='\n\n💶 Prix total : '+fmt(prix)+'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR);}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel;}
+  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n✈️ OUTBOUND\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETURN\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n🏠 To: '+arrRet;msg+='\n\n💶 Total: '+fmt(prix)+'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR);}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
+  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n✈️ HEENREIS\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 TERUGREIS\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n🏠 Naar: '+arrRet;msg+='\n\n💶 Totaal: '+fmt(prix)+'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR);}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
+  else{msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n✈️ ALLER\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+'\n📍 Arrivée : '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETOUR\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n🏠 Arrivée : '+arrRet;msg+='\n\n💶 Prix total : '+fmt(prix)+'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR);}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
   sv('wa-preview',msg);acC['wa-msg']=msg;acC['wa-tel']=(g('r-client-tel').value||'').replace(/[^+\d]/g,'');
 }
 function sendWA(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
@@ -1673,7 +1674,7 @@ function sendRappel(id){
     msg+='📍 Drop-off: '+arr+'\n';
     if(r.vol)msg+='✈️ Flight: '+r.vol+'\n';
     if(solde>0)msg+='\n💶 Balance to pay on arrival: '+fmt(solde)+'\n';
-    msg+='\nSee you soon!\nFacciolini Mobility 🚗\n📞 '+MOI.tel;
+    msg+='\nSee you soon!\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');
   } else if(lang==='nl'){
     msg='Hallo '+r.clientNom+' 👋\n\n';
     msg+='Herinnering voor uw transfer '+quand+':\n\n';
@@ -1682,7 +1683,7 @@ function sendRappel(id){
     msg+='📍 Bestemming: '+arr+'\n';
     if(r.vol)msg+='✈️ Vlucht: '+r.vol+'\n';
     if(solde>0)msg+='\n💶 Saldo te betalen bij aankomst: '+fmt(solde)+'\n';
-    msg+='\nTot binnenkort!\nFacciolini Mobility 🚗\n📞 '+MOI.tel;
+    msg+='\nTot binnenkort!\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');
   } else {
     msg='Bonjour '+r.clientNom+' 👋\n\n';
     msg+='Petit rappel pour votre transfert '+quand+' :\n\n';
@@ -1691,7 +1692,7 @@ function sendRappel(id){
     msg+='📍 Arrivée : '+arr+'\n';
     if(r.vol)msg+='✈️ Vol : '+r.vol+'\n';
     if(solde>0)msg+='\n💶 Solde à régler à l\'arrivée : '+fmt(solde)+'\n';
-    msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel;
+    msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');
   }
   var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
   var existing=document.getElementById('rappel-choice-popup');
