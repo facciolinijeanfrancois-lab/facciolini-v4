@@ -1767,7 +1767,16 @@ function updKmPreview(){const d=parseFloat(g('km-debut').value||0),f=parseFloat(
 function saveKm(){const mois=g('km-mois').value,debut=parseFloat(g('km-debut').value||0),fin=parseFloat(g('km-fin').value||0),vehicule=parseInt(g('km-vehicule')?.value||0);if(!mois||!debut||!fin){alert('Tous les champs requis');return;}if(fin<=debut){alert('Km fin doit être > km début');return;}const idx=db.kmReels.findIndex(k=>k.mois===mois&&parseInt(k.vehicule||0)===vehicule);if(idx!==-1)db.kmReels[idx]={mois,debut,fin,vehicule};else db.kmReels.push({mois,debut,fin,vehicule});save();closeModal('m-km');renderAll();}
 function saveFavAddr(){const nom=g('fav-nom').value.trim(),adresse=g('fav-adresse').value.trim();if(!nom||!adresse){alert('Nom et adresse requis');return;}db.favAddresses.push({id:genId(),nom,adresse,lat:parseFloat(g('fav-lat').value)||null,lon:parseFloat(g('fav-lon').value)||null});g('fav-nom').value='';g('fav-adresse').value='';save();closeModal('m-fav');renderParams();}
 async function acSearch(input,dropId,role){const q=input.value.trim(),drop=g(dropId);clearTimeout(acTimers[role]);if(q.length<3){drop.style.display='none';return;}acTimers[role]=setTimeout(async()=>{try{const url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=5&lang=fr&bbox=2.3,49.4,6.5,51.5';const resp=await fetch(url);const data=await resp.json();const results=data.features||[];if(!results.length){drop.style.display='none';return;}drop.innerHTML=results.map(r=>{const p=r.properties,coords=r.geometry.coordinates;const main=[p.name,p.street?(p.housenumber?p.street+' '+p.housenumber:p.street):null].filter(Boolean).join(', ')||p.name||'';const city=p.city||p.town||p.village||'',country=p.country||'';const full=[main,city,country].filter(Boolean).join(', ');const safe=full.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return'<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+coords[1]+','+coords[0]+')"><div class="ac-main">'+(main||city)+'</div>'+(city?'<div class="ac-sub">'+city+', '+country+'</div>':'')+'</div>';}).join('');drop.style.display='block';}catch(e){drop.style.display='none';}},350);}
-function acSel(role,display,lat,lon){acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};const map={'r-depart':['r-depart','r-dep-lat','r-dep-lon','ac-r-dep'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon','ac-r-arr'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','ac-r-dep-ret'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','ac-r-arr-ret'],'c-adresse':['c-adresse','c-lat','c-lon','ac-c-adr'],'home':['home-adr','home-lat','home-lon','ac-home'],'fav-addr':['fav-adresse','fav-lat','fav-lon','ac-fav']};const m=map[role];if(m){const e0=g(m[0]);if(e0)e0.value=display;const e1=g(m[1]);if(e1)e1.value=lat;const e2=g(m[2]);if(e2)e2.value=lon;const e3=g(m[3]);if(e3)e3.style.display='none';}if(role==='r-depart'||role==='r-arrivee'){if(acC['r-depart']&&acC['r-arrivee'])calcDist();if(role==='r-depart')setTimeout(()=>calcKmPickupAuto(),300);}if(role==='r-depart-retour'||role==='r-arrivee-retour'){if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();}setTimeout(()=>calcKmVideAuto(),500);}
+function acSel(role,display,lat,lon){
+  acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};
+  // Devis rapide
+  if(role==='dv-depart'||role==='dv-arrivee'){
+    const inp=g(role);if(inp)inp.value=display;
+    const drop=g(role==='dv-depart'?'ac-dv-dep':'ac-dv-arr');if(drop)drop.style.display='none';
+    if(acC['dv-depart']&&acC['dv-arrivee'])calcDevis();
+    return;
+  }
+  const map={'r-depart':['r-depart','r-dep-lat','r-dep-lon','ac-r-dep'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon','ac-r-arr'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','ac-r-dep-ret'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','ac-r-arr-ret'],'c-adresse':['c-adresse','c-lat','c-lon','ac-c-adr'],'home':['home-adr','home-lat','home-lon','ac-home'],'fav-addr':['fav-adresse','fav-lat','fav-lon','ac-fav']};const m=map[role];if(m){const e0=g(m[0]);if(e0)e0.value=display;const e1=g(m[1]);if(e1)e1.value=lat;const e2=g(m[2]);if(e2)e2.value=lon;const e3=g(m[3]);if(e3)e3.style.display='none';}if(role==='r-depart'||role==='r-arrivee'){if(acC['r-depart']&&acC['r-arrivee'])calcDist();if(role==='r-depart')setTimeout(()=>calcKmPickupAuto(),300);}if(role==='r-depart-retour'||role==='r-arrivee-retour'){if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();}setTimeout(()=>calcKmVideAuto(),500);}
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('#ac-client-drop')){document.querySelectorAll('.ac-drop').forEach(d=>d.style.display='none');const acd=g('ac-client-drop');if(acd)acd.style.display='none';}});
 async function calcDist(){clearTimeout(calcTimers['dist']);calcTimers['dist']=setTimeout(async function(){await _calcDist();},300);}
 async function _calcDist(){const dep=acC['r-depart'],arr=acC['r-arrivee'];if(!dep||!arr)return;const ld=g('dist-loading'),ok=g('dist-ok');if(ld)ld.style.display='flex';if(ok)ok.style.display='none';try{const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');const d=await r.json();if(ld)ld.style.display='none';if(d.routes?.[0]){const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;const de=g('r-distance');if(de)de.value=km;sv('dist-km',km+' km');sv('dist-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));if(ok)ok.style.display='flex';updKmRecap();setTimeout(()=>calcKmVideAuto(),200);}}catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}}
@@ -2078,18 +2087,7 @@ function shareDevis(){
   const msg='🚗 Facciolini Mobility\n\nDevis transport :\n📍 '+dep+'\n🏁 '+arr+'\n\n💰 Prix estimé : '+prix+'\n('+detail+')\n\n📞 '+MOI.tel;
   if(navigator.share){navigator.share({text:msg});}else if(navigator.clipboard){navigator.clipboard.writeText(msg).then(()=>alert('Devis copié !'));}
 }
-// Intégrer acSel pour le devis rapide
-const _origAcSel=acSel;
-function acSel(role,display,lat,lon){
-  if(role==='dv-depart'||role==='dv-arrivee'){
-    acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};
-    const inp=g(role);if(inp)inp.value=display;
-    const drop=g(role==='dv-depart'?'ac-dv-dep':'ac-dv-arr');if(drop)drop.style.display='none';
-    if(acC['dv-depart']&&acC['dv-arrivee'])calcDevis();
-    return;
-  }
-  _origAcSel(role,display,lat,lon);
-}
+
 function selectChip(el,hiddenId,val){const c=el.closest('.chips');if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');const h=g(hiddenId);if(h)h.value=val;}
 function setChips(contId,hiddenId,val){const c=g(contId);if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',(x.getAttribute('onclick')||'').includes("'"+val+"'")));const h=g(hiddenId);if(h)h.value=val;}
 load();
