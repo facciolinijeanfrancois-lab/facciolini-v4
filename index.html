@@ -506,14 +506,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text" id="sp4-j2-label">Jour 2 &#x2014; Retour</div><div class="section-divider-line"></div></div>
     <div class="fg" id="r-km-pickup-retour-fg"><label class="fl">Km pour aller chercher au retour (J2)</label><input type="number" class="fi" id="r-km-pickup-retour" placeholder="Calcul&#xe9; auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-retour-hint">Carni&#xe8;res &#x2192; lieu de r&#xe9;cup&#xe9;ration</div></div>
     <div class="fg"><label class="fl">Retour apr&#xe8;s r&#xe9;cup&#xe9;ration</label>
-      <div class="chips" id="r-vide-retour-chips">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px">
+        <div>
+          <div style="font-weight:700;font-size:0.9rem">Retour à vide ?</div>
+          <div style="font-size:0.75rem;color:var(--text3);margin-top:2px" id="r-vide-retour-toggle-sub">Retour vers la maison calculé auto</div>
+        </div>
+        <label class="toggle" style="margin:0">
+          <input type="checkbox" id="r-vide-retour-toggle" checked onchange="updVideRetourToggle()">
+          <div class="tslider"></div>
+        </label>
+      </div>
+      <div id="r-vide-retour-dest" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px">
         <div class="chip active" onclick="selectChip(this,'r-vide-retour-type','maison');updVideRetour()">&#x1f3e0; Maison</div>
-        <div class="chip" onclick="selectChip(this,'r-vide-retour-type','depart');updVideRetour()">&#x1f4cd; Point d&#xe9;part</div>
+        <div class="chip" onclick="selectChip(this,'r-vide-retour-type','depart');updVideRetour()">&#x1f4cd; Point départ</div>
         <div class="chip" onclick="selectChip(this,'r-vide-retour-type','manuel');updVideRetour()">&#x270f;&#xfe0f; Manuel</div>
-        <div class="chip" onclick="selectChip(this,'r-vide-retour-type','aucun');updVideRetour()">&#x274c; Aucun</div>
       </div>
       <input type="hidden" id="r-vide-retour-type" value="maison">
-      <div id="r-vide-retour-calc" style="margin-top:8px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
+      <div id="r-vide-retour-calc" style="margin-top:4px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
     </div>
     <div id="r-vide-retour-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide</label><input type="number" class="fi" id="r-km-vide-retour" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
   </div>
@@ -1253,7 +1262,7 @@ function resetResForm(){
   ['r-vide-retour-manuel-box','r-vide-aller-manuel-box','sp4-retour-section','sp2-ar-jour'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   ['kr-j2-1','kr-j2-2','kr-j2-3'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   const acd=g('ac-client-drop');if(acd)acd.style.display='none';
-  setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-chips','r-vide-retour-type','maison');
+  setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
   const rda=g('r-date-aller');if(rda)rda.value=new Date().toISOString().split('T')[0];
   const rha=g('r-heure-aller');if(rha)rha.value=new Date().toTimeString().slice(0,5);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+p.nom.replace(/\'/g,"\\'")+'\');updSourceUI()">'+p.nom+'</div>').join('');g('r-source').value='direct';}
@@ -1319,7 +1328,40 @@ async function calcKmVideAuto(){
   }else if(typeRet==='aucun'){acC['kvr-auto']=0;updKmRecap();}
 }
 function updVideAller(){const t=g('r-vide-aller-type')?.value||'maison';const mb=g('r-vide-aller-manuel-box');if(mb)mb.style.display=t==='manuel'?'block':'none';if(t==='aucun'){acC['kva-auto']=0;const el=g('r-vide-aller-calc');if(el)el.textContent='';updKmRecap();}else if(t!=='manuel'){const el=g('r-vide-aller-calc');if(el)el.textContent='⏳ Calcul...';calcKmVideAuto();}else{const el=g('r-vide-aller-calc');if(el)el.textContent='';updKmRecap();}}
-function updVideRetour(){const t=g('r-vide-retour-type')?.value||'maison';const mb=g('r-vide-retour-manuel-box');if(mb)mb.style.display=t==='manuel'?'block':'none';if(t==='aucun'){acC['kvr-auto']=0;const el=g('r-vide-retour-calc');if(el)el.textContent='';updKmRecap();}else if(t!=='manuel'){const el=g('r-vide-retour-calc');if(el)el.textContent='⏳ Calcul...';calcKmVideAuto();}else{const el=g('r-vide-retour-calc');if(el)el.textContent='';updKmRecap();}}
+function updVideRetourToggle(){
+  const tog=g('r-vide-retour-toggle');
+  const dest=g('r-vide-retour-dest');
+  const sub=g('r-vide-retour-toggle-sub');
+  const manBox=g('r-vide-retour-manuel-box');
+  if(tog&&!tog.checked){
+    // Pas de retour à vide
+    if(dest)dest.style.display='none';
+    if(manBox)manBox.style.display='none';
+    if(sub)sub.textContent='Pas de retour à vide (client au retour 👍)';
+    const calc=g('r-vide-retour-calc');if(calc)calc.textContent='';
+    acC['kvr-auto']=0;
+    const ht=g('r-vide-retour-type');if(ht)ht.value='aucun';
+    updKmRecap();
+  }else{
+    // Retour à vide actif
+    if(dest)dest.style.display='flex';
+    const t=g('r-vide-retour-type')?.value||'maison';
+    if(t==='aucun'){const ht=g('r-vide-retour-type');if(ht)ht.value='maison';setChips('r-vide-retour-dest','r-vide-retour-type','maison');}
+    if(sub)sub.textContent='Retour vers la maison calculé auto';
+    updVideRetour();
+  }
+}
+function updVideRetour(){
+  const tog=g('r-vide-retour-toggle');
+  if(tog&&!tog.checked){acC['kvr-auto']=0;updKmRecap();return;}
+  const t=g('r-vide-retour-type')?.value||'maison';
+  const mb=g('r-vide-retour-manuel-box');if(mb)mb.style.display=t==='manuel'?'block':'none';
+  const sub=g('r-vide-retour-toggle-sub');
+  if(sub){if(t==='maison')sub.textContent='Retour vers la maison calculé auto';else if(t==='depart')sub.textContent='Retour vers le point de départ';else if(t==='manuel')sub.textContent='Distance entrée manuellement';}
+  if(t==='aucun'){acC['kvr-auto']=0;const el=g('r-vide-retour-calc');if(el)el.textContent='';updKmRecap();}
+  else if(t!=='manuel'){const el=g('r-vide-retour-calc');if(el)el.textContent='⏳ Calcul...';calcKmVideAuto();}
+  else{const el=g('r-vide-retour-calc');if(el)el.textContent='';updKmRecap();}
+}
 function getKvA(){const t=g('r-vide-aller-type')?.value||'maison';if(t==='aucun')return 0;if(t==='manuel')return parseFloat(g('r-km-vide-aller')?.value||0);return acC['kva-auto']||0;}
 function getKvR(){const t=g('r-vide-retour-type')?.value||'maison';if(t==='aucun')return 0;if(t==='manuel')return parseFloat(g('r-km-vide-retour')?.value||0);return acC['kvr-auto']||0;}
 function updKmRecap(){
@@ -1539,7 +1581,7 @@ function editRes(id){
   g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';g('r-distance').value=r.distance||'';g('r-vol').value=r.vol||'';
   if(r.type==='ar-diff'){[['r-date-retour',r.dateRetour||''],['r-heure-retour',r.heureRetour||''],['r-depart-retour',r.departRetour||''],['r-arrivee-retour',r.arriveeRetour||''],['r-distance-retour',r.distanceRetour||'']].forEach(([id,val])=>{const el=g(id);if(el)el.value=val;});if(r.depRetLat)acC['r-depart-retour']={lat:r.depRetLat,lon:r.depRetLon};if(r.arrRetLat)acC['r-arrivee-retour']={lat:r.arrRetLat,lon:r.arrRetLon};}else if(r.type==='ar-jour'){const hj=g('r-heure-retour-jour');if(hj)hj.value=r.heureRetour||'';const dj=g('r-distance-retour-jour');if(dj)dj.value=r.distanceRetour||'';}
   const kp=g('r-km-pickup');if(kp)kp.value=r.kmPickup||'';const kpr=g('r-km-pickup-retour');if(kpr)kpr.value=r.kmPickupRetour||'';
-  setChips('r-vide-aller-chips','r-vide-aller-type',r.kmVideAllerType||'maison');setChips('r-vide-retour-chips','r-vide-retour-type',r.kmVideRetourType||'maison');
+  setChips('r-vide-aller-chips','r-vide-aller-type',r.kmVideAllerType||'maison');const isAucunR=r.kmVideRetourType==='aucun';const togFill=g('r-vide-retour-toggle');if(togFill)togFill.checked=!isAucunR;const destFill=g('r-vide-retour-dest');if(destFill)destFill.style.display=isAucunR?'none':'flex';const subFill=g('r-vide-retour-toggle-sub');if(subFill)subFill.textContent=isAucunR?'Pas de retour à vide (client au retour 👍)':'Retour vers la maison calculé auto';if(!isAucunR)setChips('r-vide-retour-dest','r-vide-retour-type',r.kmVideRetourType||'maison');
   if(r.kmVideAllerType==='manuel'){const el=g('r-km-vide-aller');if(el)el.value=r.kmVideAller||0;}
   if(r.kmVideRetourType==='manuel'){const el=g('r-km-vide-retour');if(el)el.value=r.kmVideRetour||0;}
   acC['kva-auto']=r.kmVideAller||0;acC['kvr-auto']=r.kmVideRetour||0;acC['kpr-auto']=r.kmPickupRetour||0;
