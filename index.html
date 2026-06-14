@@ -470,12 +470,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       </div>
       <div class="fg">
         <label class="fl">Départ retour</label>
-        <div id="fav-chips-dep-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          <div id="fav-chips-dep-ret"></div>
+          <button type="button" class="chip" id="btn-client-addr-dep-ret" onclick="fillClientAddrRetour('depart')" style="display:none;background:rgba(45,125,210,0.12);border-color:var(--blue2);color:var(--blue2)">👤 Adresse client</button>
+        </div>
         <div class="ac-wrap"><input type="text" class="fi" id="r-depart-retour" placeholder="Ex: Brussels Airport..." autocomplete="off" oninput="acSearch(this,'ac-r-dep-ret','r-depart-retour')"><input type="hidden" id="r-dep-ret-lat"><input type="hidden" id="r-dep-ret-lon"><div class="ac-drop" id="ac-r-dep-ret"></div></div>
       </div>
       <div class="fg">
         <label class="fl">Arrivée retour</label>
-        <div id="fav-chips-arr-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          <div id="fav-chips-arr-ret"></div>
+          <button type="button" class="chip" id="btn-client-addr-arr-ret" onclick="fillClientAddrRetour('arrivee')" style="display:none;background:rgba(45,125,210,0.12);border-color:var(--blue2);color:var(--blue2)">👤 Adresse client</button>
+        </div>
         <div class="ac-wrap"><input type="text" class="fi" id="r-arrivee-retour" placeholder="Ex: Baudour, Mons..." autocomplete="off" oninput="acSearch(this,'ac-r-arr-ret','r-arrivee-retour')"><input type="hidden" id="r-arr-ret-lat"><input type="hidden" id="r-arr-ret-lon"><div class="ac-drop" id="ac-r-arr-ret"></div></div>
       </div>
       <div id="dist-ret-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">⏳ Calcul distance retour...</div></div>
@@ -1624,6 +1630,7 @@ function editRes(id){
   // Bagages et sièges
   if(g('r-bagages'))g('r-bagages').value=r.bagages||0;
   if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;
+  setTimeout(showClientAddrBtns,200);
   openModal('m-res');
   setTimeout(()=>{const s=g('res-form-scroll');if(s)s.scrollTop=0;},100);
 }
@@ -1745,6 +1752,35 @@ function updVehiculeAuto(){
     if(hint)hint.style.display='none';
   }
 }
+function fillClientAddrRetour(field){
+  const nom=g('r-client-nom')?.value?.trim();
+  if(!nom)return;
+  const client=db.clients.find(c=>c.nom.toLowerCase()===nom.toLowerCase());
+  if(!client||!client.adresse){alert('Pas d\'adresse enregistrée pour ce client');return;}
+  const inputId=field==='depart'?'r-depart-retour':'r-arrivee-retour';
+  const latId=field==='depart'?'r-dep-ret-lat':'r-arr-ret-lat';
+  const lonId=field==='depart'?'r-dep-ret-lon':'r-arr-ret-lon';
+  const dropId=field==='depart'?'ac-r-dep-ret':'ac-r-arr-ret';
+  const inp=g(inputId);if(inp)inp.value=client.adresse;
+  if(client.lat&&client.lon){
+    const latEl=g(latId);if(latEl)latEl.value=client.lat;
+    const lonEl=g(lonId);if(lonEl)lonEl.value=client.lon;
+    acC[inputId]={lat:parseFloat(client.lat),lon:parseFloat(client.lon)};
+    const drop=g(dropId);if(drop)drop.style.display='none';
+    if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();
+  }
+}
+function showClientAddrBtns(){
+  const nom=g('r-client-nom')?.value?.trim();
+  const client=nom?db.clients.find(c=>c.nom.toLowerCase()===nom.toLowerCase()):null;
+  const hasAddr=client&&client.adresse;
+  const b1=g('btn-client-addr-dep-ret');if(b1)b1.style.display=hasAddr?'inline-flex':'none';
+  const b2=g('btn-client-addr-arr-ret');if(b2)b2.style.display=hasAddr?'inline-flex':'none';
+  if(hasAddr&&client){
+    if(b1)b1.title='Domicile: '+client.adresse;
+    if(b2)b2.title='Domicile: '+client.adresse;
+  }
+}
 function updVolField(){
   const service=g('r-service')?.value||'depose';
   const volFg=g('r-vol-fg');
@@ -1832,7 +1868,7 @@ function showDetailClient(id){
   openModal('m-detail-client');
 }
 function acClient(input){const q=input.value.toLowerCase(),drop=g('ac-client-drop');if(q.length<2){drop.style.display='none';return;}const m=db.clients.filter(c=>!c.blacklist&&(c.nom.toLowerCase().includes(q)||(c.tel||'').includes(q))).slice(0,6);if(!m.length){drop.style.display='none';return;}drop.innerHTML=m.map(c=>'<div class="ac-item" onclick="fillClient(\''+c.id+'\')"><div class="ac-main">'+c.nom+(isVip(c.nom)?' ⭐':'')+'</div><div class="ac-sub">'+(c.tel||'')+(c.adresse?' · '+c.adresse.substring(0,30):'')+'</div></div>').join('');drop.style.display='block';}
-function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';if(c.adresse&&!g('r-depart').value){g('r-depart').value=c.adresse;if(c.lat&&c.lon){acC['r-depart']={lat:c.lat,lon:c.lon};if(acC['r-arrivee'])calcDist();}}updCalc();}
+function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';if(c.adresse&&!g('r-depart').value){g('r-depart').value=c.adresse;if(c.lat&&c.lon){acC['r-depart']={lat:c.lat,lon:c.lon};if(acC['r-arrivee'])calcDist();}}updCalc();setTimeout(showClientAddrBtns,100);}
 function openFraisModal(editId){sv('frais-modal-title',editId?'Modifier frais':'Nouveau frais');g('frais-edit-id').value=editId||'';const f=editId?db.frais.find(x=>x.id===editId):null;g('frais-desc').value=f?.desc||'';g('frais-date').value=f?.date||new Date().toISOString().split('T')[0];g('frais-montant').value=f?.montant||'';g('frais-fournisseur').value=f?.fournisseur||'';setChips('frais-type-chips','frais-type',f?.type||'entretien');openModal('m-frais');}
 function saveFrais(){const editId=g('frais-edit-id').value;const f={id:editId||genId(),type:g('frais-type').value,desc:g('frais-desc').value.trim(),date:g('frais-date').value,montant:parseFloat(g('frais-montant').value)||0,fournisseur:g('frais-fournisseur').value.trim()};if(!f.montant||!f.date){alert('Date et montant requis');return;}if(editId){const i=db.frais.findIndex(x=>x.id===editId);if(i!==-1)db.frais[i]=f;}else db.frais.push(f);save();closeModal('m-frais');renderFin();}
 function openPartnerModal(editId){sv('partner-modal-title',editId?'Modifier partenaire':'Nouveau partenaire');g('partner-edit-id').value=editId||'';const p=editId?db.partners.find(x=>x.id===editId):null;g('p-nom').value=p?.nom||'';g('p-email').value=p?.email||'';g('p-tel').value=p?.tel||'';g('p-adresse').value=p?.adresse||'';g('p-tva').value=p?.tva||'';openModal('m-partner');}
