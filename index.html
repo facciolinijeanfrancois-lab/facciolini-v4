@@ -167,6 +167,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .status-enroute{background:rgba(232,160,32,0.2);color:var(--gold);border:1px solid rgba(232,160,32,0.5);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700;animation:pulse 1.5s infinite}
 .status-annule{background:rgba(224,48,64,0.12);color:var(--red2);border:1px solid rgba(224,48,64,0.3);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.res-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px}
+.res-section-title{font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold2);margin-bottom:14px}
+#res-form-scroll{max-height:72vh;overflow-y:auto;padding-right:2px}
 .entretien-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
 .entretien-urgent{border-color:var(--red2)}
 .inasti-box{background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
@@ -380,215 +383,240 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="modal-title" id="res-modal-title">Nouvelle course</div>
 <div class="modal-subtitle" id="res-modal-subtitle"></div>
 <input type="hidden" id="res-edit-id">
-<div class="steps" id="res-steps"></div>
-<div class="step-label" id="res-step-label"></div>
-<!-- SP1 -->
-<div class="step-panel" id="sp1">
-  <div class="fg" style="position:relative">
-    <label class="fl">Nom du client</label>
-    <input type="text" class="fi" id="r-client-nom" placeholder="Ex: Marie Dupont" oninput="acClient(this)" autocomplete="off">
-    <div id="ac-client-drop" style="position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1.5px solid var(--gold);border-radius:var(--radius-sm);z-index:9999;max-height:200px;overflow-y:auto;display:none;box-shadow:0 12px 40px rgba(0,0,0,0.5)"></div>
-  </div>
-  <div class="fg"><label class="fl">T&#xe9;l&#xe9;phone</label><input type="tel" class="fi" id="r-client-tel" placeholder="+32 471 ..."></div>
-  <div class="fg"><label class="fl">Langue client</label>
-    <div class="chips" id="r-langue-chips">
-      <div class="chip active" onclick="selectChip(this,'r-langue','fr')">&#x1f1eb;&#x1f1f7; FR</div>
-      <div class="chip" onclick="selectChip(this,'r-langue','nl')">&#x1f1e7;&#x1f1ea; NL</div>
-      <div class="chip" onclick="selectChip(this,'r-langue','en')">&#x1f1ec;&#x1f1e7; EN</div>
+<!-- FORMULAIRE SCROLLABLE -->
+<div id="res-form-scroll">
+
+  <!-- SECTION 1: CLIENT -->
+  <div class="res-section">
+    <div class="res-section-title">👤 Client</div>
+    <div class="fg" style="position:relative">
+      <label class="fl">Nom du client</label>
+      <input type="text" class="fi" id="r-client-nom" placeholder="Ex: Marie Dupont" oninput="acClient(this)" autocomplete="off">
+      <div id="ac-client-drop" style="position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1.5px solid var(--gold);border-radius:var(--radius-sm);z-index:9999;max-height:200px;overflow-y:auto;display:none;box-shadow:0 12px 40px rgba(0,0,0,0.5)"></div>
     </div>
-    <input type="hidden" id="r-langue" value="fr">
-  </div>
-  <div class="fg"><label class="fl">Source</label><div class="chips" id="r-source-chips"></div><input type="hidden" id="r-source" value="direct"></div>
-  <div id="r-partner-opts" style="display:none">
-    <div class="fg"><label class="fl">Type partenaire</label>
-      <div class="chips" id="r-partner-type-chips">
-        <div class="chip active" onclick="selectChip(this,'r-partner-type','commission');updPartnerType()">Commission &#xe0; reverser</div>
-        <div class="chip" onclick="selectChip(this,'r-partner-type','prepaye');updPartnerType()">Pr&#xe9;pay&#xe9;e</div>
-      </div>
-      <input type="hidden" id="r-partner-type" value="commission">
-    </div>
-    <div id="r-commission-box"><div class="fg"><label class="fl">Commission (&#x20ac;)</label><input type="number" class="fi" id="r-commission" placeholder="Ex: 15.00" step="0.01" oninput="updCalc()"></div></div>
-    <div id="r-prepaye-box" style="display:none"><div class="alert alert-green">&#x2705; Client pr&#xe9;pay&#xe9; &#x2014; facturez le partenaire via Biltobox.</div></div>
-  </div>
-  <div class="fr">
-    <div class="fg"><label class="fl">Passagers</label><input type="number" class="fi" id="r-passagers" value="1" min="1" max="8"></div>
-    <div class="fg"><label class="fl">V&#xe9;hicule</label><select class="fs" id="r-vehicule"><option value="0">&#x1f697; Seat Leon</option><option value="1">&#x1f690; Talento (+20&#x20ac;)</option></select></div>
-  </div>
-</div>
-<!-- SP2 -->
-<div class="step-panel" id="sp2">
-  <div class="fg"><label class="fl">Type de course</label>
-    <div class="chips" id="r-type-chips">
-      <div class="chip active" onclick="selectChip(this,'r-type','aller');updResType()">Aller simple</div>
-      <div class="chip" onclick="selectChip(this,'r-type','ar-jour');updResType()">A/R m&#xea;me jour</div>
-      <div class="chip" onclick="selectChip(this,'r-type','ar-diff');updResType()">A/R date diff&#xe9;rente</div>
-    </div>
-    <input type="hidden" id="r-type" value="aller">
-  </div>
-  <div class="fg"><label class="fl">Service</label>
-    <div class="chips" id="r-service-chips">
-      <div class="chip active" onclick="selectChip(this,'r-service','depose')">&#x2708; D&#xe9;pose a&#xe9;roport</div>
-      <div class="chip" onclick="selectChip(this,'r-service','recuperation')">&#x1f6ec; R&#xe9;cup&#xe9;ration</div>
-      <div class="chip" onclick="selectChip(this,'r-service','gare')">&#x1f689; Gare</div>
-      <div class="chip" onclick="selectChip(this,'r-service','autre')">Autre</div>
-    </div>
-    <input type="hidden" id="r-service" value="depose">
-  </div>
-  <div class="fr">
-    <div class="fg"><label class="fl">Date aller</label><input type="date" class="fi" id="r-date-aller"></div>
-    <div class="fg"><label class="fl">Heure aller</label><input type="time" class="fi" id="r-heure-aller"></div>
-  </div>
-  <div class="fg">
-    <label class="fl">D&#xe9;part</label>
-    <div id="fav-chips-dep" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-    <div class="ac-wrap"><input type="text" class="fi" id="r-depart" placeholder="Adresse de d&#xe9;part..." autocomplete="off" oninput="acSearch(this,'ac-r-dep','r-depart')"><input type="hidden" id="r-dep-lat"><input type="hidden" id="r-dep-lon"><div class="ac-drop" id="ac-r-dep"></div></div>
-  </div>
-  <div class="fg">
-    <label class="fl">Arriv&#xe9;e</label>
-    <div id="fav-chips-arr" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-    <div class="ac-wrap"><input type="text" class="fi" id="r-arrivee" placeholder="Adresse d'arriv&#xe9;e..." autocomplete="off" oninput="acSearch(this,'ac-r-arr','r-arrivee')"><input type="hidden" id="r-arr-lat"><input type="hidden" id="r-arr-lon"><div class="ac-drop" id="ac-r-arr"></div></div>
-  </div>
-  <div id="dist-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">&#x23f3; Calcul distance...</div></div>
-  <div id="dist-ok" style="display:none" class="dist-box ok"><div style="flex:1"><div class="dist-km" id="dist-km">&#x2014;</div><div class="dist-time" id="dist-time">&#x2014;</div></div><button class="btn btn-ghost btn-xs" onclick="calcDist()">&#x21ba;</button></div>
-  <div class="fg"><label class="fl">Distance aller (km)</label><input type="number" class="fi" id="r-distance" placeholder="Calcul&#xe9; automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
-  <div class="fg"><label class="fl">Num&#xe9;ro de vol</label><input type="text" class="fi" id="r-vol" placeholder="Ex: SN3724" style="text-transform:uppercase"></div>
-  <!-- AR meme jour -->
-  <div id="sp2-ar-jour" style="display:none">
-    <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Retour m&#xea;me jour</div><div class="section-divider-line"></div></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour-jour"></div>
-      <div class="fg"><label class="fl">Distance retour (km)</label><input type="number" class="fi" id="r-distance-retour-jour" placeholder="= aller si vide" step="0.1" oninput="updKmRecap();updCalc()"></div>
-    </div>
-  </div>
-</div>
-<!-- SP3 : Trajet retour AR diff -->
-<div class="step-panel" id="sp3">
-  <div class="alert alert-blue">&#x1f4cd; Les adresses de retour peuvent &#xea;tre diff&#xe9;rentes (ex: Brussels Airport &#x2192; Baudour).</div>
-  <div class="fr">
-    <div class="fg"><label class="fl">Date retour</label><input type="date" class="fi" id="r-date-retour"></div>
-    <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour"></div>
-  </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-inverse" onclick="setRetourInverse()" style="flex:1;font-size:0.78rem">&#x21c4; Inverser aller (Arr&#x2192;D&#xe9;p)</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-meme" onclick="setRetourMeme()" style="flex:1;font-size:0.78rem">&#x3d; M&#xea;mes adresses que l&apos;aller</button>
-  </div>
-  <div class="fg">
-    <label class="fl">D&#xe9;part retour</label>
-    <div id="fav-chips-dep-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-    <div class="ac-wrap"><input type="text" class="fi" id="r-depart-retour" placeholder="Ex: Brussels Airport..." autocomplete="off" oninput="acSearch(this,'ac-r-dep-ret','r-depart-retour')"><input type="hidden" id="r-dep-ret-lat"><input type="hidden" id="r-dep-ret-lon"><div class="ac-drop" id="ac-r-dep-ret"></div></div>
-  </div>
-  <div class="fg">
-    <label class="fl">Arriv&#xe9;e retour</label>
-    <div id="fav-chips-arr-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-    <div class="ac-wrap"><input type="text" class="fi" id="r-arrivee-retour" placeholder="Ex: Baudour, Mons..." autocomplete="off" oninput="acSearch(this,'ac-r-arr-ret','r-arrivee-retour')"><input type="hidden" id="r-arr-ret-lat"><input type="hidden" id="r-arr-ret-lon"><div class="ac-drop" id="ac-r-arr-ret"></div></div>
-  </div>
-  <div id="dist-ret-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">&#x23f3; Calcul distance retour...</div></div>
-  <div id="dist-ret-ok" style="display:none" class="dist-box ok"><div style="flex:1"><div class="dist-km" id="dist-ret-km">&#x2014;</div><div class="dist-time" id="dist-ret-time">&#x2014;</div></div><button class="btn btn-ghost btn-xs" onclick="calcDistRetour()">&#x21ba;</button></div>
-  <div class="fg"><label class="fl">Distance retour (km)</label><input type="number" class="fi" id="r-distance-retour" placeholder="Calcul&#xe9; automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
-</div>
-<!-- SP4 : Km a vide -->
-<div class="step-panel" id="sp4">
-  <div class="alert alert-gold">&#x1f697; Ces km ne sont PAS factur&#xe9;s au client mais comptent dans votre co&#xfb;t r&#xe9;el et suivi compteur.</div>
-  <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Jour 1 &#x2014; Aller</div><div class="section-divider-line"></div></div>
-  <div class="fg"><label class="fl">Km pour aller chercher le client</label><input type="number" class="fi" id="r-km-pickup" placeholder="Ex: 5" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-hint">Distance Carni&#xe8;res &#x2192; domicile client</div></div>
-  <div class="fg"><label class="fl">Retour apr&#xe8;s d&#xe9;pose (J1)</label>
-    <div class="chips" id="r-vide-aller-chips">
-      <div class="chip active" onclick="selectChip(this,'r-vide-aller-type','maison');updVideAller()">&#x1f3e0; Maison</div>
-      <div class="chip" onclick="selectChip(this,'r-vide-aller-type','depart');updVideAller()">&#x1f4cd; Point d&#xe9;part</div>
-      <div class="chip" onclick="selectChip(this,'r-vide-aller-type','manuel');updVideAller()">&#x270f;&#xfe0f; Manuel</div>
-      <div class="chip" onclick="selectChip(this,'r-vide-aller-type','aucun');updVideAller()">&#x274c; Aucun</div>
-    </div>
-    <input type="hidden" id="r-vide-aller-type" value="maison">
-    <div id="r-vide-aller-calc" style="margin-top:8px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
-  </div>
-  <div id="r-vide-aller-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide (J1)</label><input type="number" class="fi" id="r-km-vide-aller" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
-  <div id="sp4-retour-section" style="display:none">
-    <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text" id="sp4-j2-label">Jour 2 &#x2014; Retour</div><div class="section-divider-line"></div></div>
-    <div class="fg" id="r-km-pickup-retour-fg"><label class="fl">Km pour aller chercher au retour (J2)</label><input type="number" class="fi" id="r-km-pickup-retour" placeholder="Calcul&#xe9; auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-retour-hint">Carni&#xe8;res &#x2192; lieu de r&#xe9;cup&#xe9;ration</div></div>
-    <div class="fg"><label class="fl">Retour apr&#xe8;s r&#xe9;cup&#xe9;ration</label>
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px">
-        <div>
-          <div style="font-weight:700;font-size:0.9rem">Retour à vide ?</div>
-          <div style="font-size:0.75rem;color:var(--text3);margin-top:2px" id="r-vide-retour-toggle-sub">Retour vers la maison calculé auto</div>
+    <div class="fg"><label class="fl">Téléphone</label><input type="tel" class="fi" id="r-client-tel" placeholder="+32 471 ..."></div>
+    <div class="fg"><label class="fl">Source</label><div class="chips" id="r-source-chips"></div><input type="hidden" id="r-source" value="direct"></div>
+    <div id="r-partner-opts" style="display:none">
+      <div class="fg"><label class="fl">Type partenaire</label>
+        <div class="chips" id="r-partner-type-chips">
+          <div class="chip active" onclick="selectChip(this,'r-partner-type','commission');updPartnerType()">Commission à reverser</div>
+          <div class="chip" onclick="selectChip(this,'r-partner-type','prepaye');updPartnerType()">Prépayée</div>
         </div>
-        <label class="toggle" style="margin:0">
-          <input type="checkbox" id="r-vide-retour-toggle" checked onchange="updVideRetourToggle()">
-          <div class="tslider"></div>
-        </label>
+        <input type="hidden" id="r-partner-type" value="commission">
       </div>
-      <div id="r-vide-retour-dest" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px">
-        <div class="chip active" onclick="selectChip(this,'r-vide-retour-type','maison');updVideRetour()">&#x1f3e0; Maison</div>
-        <div class="chip" onclick="selectChip(this,'r-vide-retour-type','depart');updVideRetour()">&#x1f4cd; Point départ</div>
-        <div class="chip" onclick="selectChip(this,'r-vide-retour-type','manuel');updVideRetour()">&#x270f;&#xfe0f; Manuel</div>
+      <div id="r-commission-box"><div class="fg"><label class="fl">Commission (€)</label><input type="number" class="fi" id="r-commission" placeholder="Ex: 15.00" step="0.01" oninput="updCalc()"></div></div>
+      <div id="r-prepaye-box" style="display:none"><div class="alert alert-green">✅ Client prépayé — facturez le partenaire via Biltobox.</div></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: TRAJET -->
+  <div class="res-section">
+    <div class="res-section-title">🗺️ Trajet</div>
+    <div class="fg"><label class="fl">Type de course</label>
+      <div class="chips" id="r-type-chips">
+        <div class="chip active" onclick="selectChip(this,'r-type','aller');updResType()">Aller simple</div>
+        <div class="chip" onclick="selectChip(this,'r-type','ar-jour');updResType()">A/R même jour</div>
+        <div class="chip" onclick="selectChip(this,'r-type','ar-diff');updResType()">A/R date différente</div>
       </div>
-      <input type="hidden" id="r-vide-retour-type" value="maison">
-      <div id="r-vide-retour-calc" style="margin-top:4px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
+      <input type="hidden" id="r-type" value="aller">
     </div>
-    <div id="r-vide-retour-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide</label><input type="number" class="fi" id="r-km-vide-retour" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
-  </div>
-  <div class="km-recap">
-    <div style="font-size:0.68rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">R&#xe9;capitulatif km r&#xe9;els</div>
-    <div class="km-recap-row"><span class="km-recap-label">Pickup aller</span><span class="km-recap-val" id="kr-pickup">&#x2014;</span></div>
-    <div class="km-recap-row"><span class="km-recap-label">Trajet aller</span><span class="km-recap-val" id="kr-aller">&#x2014;</span></div>
-    <div class="km-recap-row"><span class="km-recap-label">Retour vide J1</span><span class="km-recap-val" id="kr-vide1">&#x2014;</span></div>
-    <div class="km-recap-row" id="kr-j2-1" style="display:none"><span class="km-recap-label">Pickup retour J2</span><span class="km-recap-val" id="kr-pickup2">&#x2014;</span></div>
-    <div class="km-recap-row" id="kr-j2-2" style="display:none"><span class="km-recap-label">Trajet retour</span><span class="km-recap-val" id="kr-retour">&#x2014;</span></div>
-    <div class="km-recap-row" id="kr-j2-3" style="display:none"><span class="km-recap-label">Retour vide J2</span><span class="km-recap-val" id="kr-vide2">&#x2014;</span></div>
-    <div class="km-recap-row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px"><span style="color:var(--text);font-weight:700;font-size:0.82rem">Total km r&#xe9;els</span><span style="color:var(--blue2);font-weight:700;font-size:0.88rem" id="kr-total">&#x2014;</span></div>
-    <div class="km-recap-row"><span class="km-recap-label">Km factur&#xe9;s client</span><span style="color:var(--gold2);font-weight:600" id="kr-client">&#x2014;</span></div>
-  </div>
-</div>
-<!-- SP5 : Prix -->
-<div class="step-panel" id="sp5">
-  <div id="r-devis-box" style="display:none" class="devis-box">
-    <div style="font-size:0.65rem;color:var(--gold2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">&#x1f4a1; Prix sugg&#xe9;r&#xe9;</div>
-    <div class="devis-price" id="r-devis-price">&#x2014;</div>
-    <div class="devis-detail" id="r-devis-detail">&#x2014;</div>
-    <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="applyDevis()">&#x2713; Appliquer ce prix</button>
-  </div>
-  <div class="fg"><label class="fl">Prix total (&#x20ac;)</label><input type="number" class="fi" id="r-prix" placeholder="Ex: 95" step="0.01" oninput="updCalc();updAcompte()"><div class="ferr" id="r-prix-hint"></div></div>
-  <div class="fg"><label class="fl">Mode de paiement</label>
-    <div class="chips" id="r-paiement-chips">
-      <div class="chip active" onclick="selectChip(this,'r-paiement','cash');toggleVmt()">&#x1f4b5; Cash</div>
-      <div class="chip" onclick="selectChip(this,'r-paiement','carte');toggleVmt()">&#x1f4b3; Carte</div>
-      <div class="chip" onclick="selectChip(this,'r-paiement','virement');toggleVmt()">&#x1f3e6; Virement</div>
-      <div class="chip" onclick="selectChip(this,'r-paiement','prepaye');toggleVmt()">&#x1f91d; Pr&#xe9;pay&#xe9;</div>
+    <div class="fg"><label class="fl">Service</label>
+      <div class="chips" id="r-service-chips">
+        <div class="chip active" onclick="selectChip(this,'r-service','depose');updVolField()">✈️ Dépose aéroport</div>
+        <div class="chip" onclick="selectChip(this,'r-service','recuperation');updVolField()">🛬 Récupération</div>
+        <div class="chip" onclick="selectChip(this,'r-service','gare');updVolField()">🚉 Gare</div>
+        <div class="chip" onclick="selectChip(this,'r-service','autre');updVolField()">Autre</div>
+      </div>
+      <input type="hidden" id="r-service" value="depose">
     </div>
-    <input type="hidden" id="r-paiement" value="cash">
+    <div class="fr">
+      <div class="fg"><label class="fl">Date aller</label><input type="date" class="fi" id="r-date-aller"></div>
+      <div class="fg"><label class="fl">Heure aller</label><input type="time" class="fi" id="r-heure-aller"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Départ</label>
+      <div id="fav-chips-dep" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div class="ac-wrap"><input type="text" class="fi" id="r-depart" placeholder="Adresse de départ..." autocomplete="off" oninput="acSearch(this,'ac-r-dep','r-depart')"><input type="hidden" id="r-dep-lat"><input type="hidden" id="r-dep-lon"><div class="ac-drop" id="ac-r-dep"></div></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Arrivée</label>
+      <div id="fav-chips-arr" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div class="ac-wrap"><input type="text" class="fi" id="r-arrivee" placeholder="Adresse d'arrivée..." autocomplete="off" oninput="acSearch(this,'ac-r-arr','r-arrivee')"><input type="hidden" id="r-arr-lat"><input type="hidden" id="r-arr-lon"><div class="ac-drop" id="ac-r-arr"></div></div>
+    </div>
+    <div id="dist-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">⏳ Calcul distance...</div></div>
+    <div id="dist-ok" style="display:none" class="dist-box ok"><div style="flex:1"><div class="dist-km" id="dist-km">—</div><div class="dist-time" id="dist-time">—</div></div><button class="btn btn-ghost btn-xs" onclick="calcDist()">↺</button></div>
+    <div class="fg"><label class="fl">Distance aller (km)</label><input type="number" class="fi" id="r-distance" placeholder="Calculé automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
+    <!-- Vol - affiché seulement si récupération -->
+    <div class="fg" id="r-vol-fg" style="display:none"><label class="fl">Numéro de vol</label><input type="text" class="fi" id="r-vol" placeholder="Ex: SN3724" style="text-transform:uppercase"></div>
+    <!-- AR même jour -->
+    <div id="sp2-ar-jour" style="display:none">
+      <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Retour même jour</div><div class="section-divider-line"></div></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour-jour"></div>
+        <div class="fg"><label class="fl">Distance retour (km)</label><input type="number" class="fi" id="r-distance-retour-jour" placeholder="= aller si vide" step="0.1" oninput="updKmRecap();updCalc()"></div>
+      </div>
+    </div>
+    <!-- AR date différente -->
+    <div id="sp3" style="display:none">
+      <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Trajet retour</div><div class="section-divider-line"></div></div>
+      <div class="alert alert-blue">📍 Les adresses de retour peuvent être différentes.</div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Date retour</label><input type="date" class="fi" id="r-date-retour"></div>
+        <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-inverse" onclick="setRetourInverse()" style="flex:1;font-size:0.78rem">⇄ Inverser aller</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-meme" onclick="setRetourMeme()" style="flex:1;font-size:0.78rem">= Mêmes adresses</button>
+      </div>
+      <div class="fg">
+        <label class="fl">Départ retour</label>
+        <div id="fav-chips-dep-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div class="ac-wrap"><input type="text" class="fi" id="r-depart-retour" placeholder="Ex: Brussels Airport..." autocomplete="off" oninput="acSearch(this,'ac-r-dep-ret','r-depart-retour')"><input type="hidden" id="r-dep-ret-lat"><input type="hidden" id="r-dep-ret-lon"><div class="ac-drop" id="ac-r-dep-ret"></div></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Arrivée retour</label>
+        <div id="fav-chips-arr-ret" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div class="ac-wrap"><input type="text" class="fi" id="r-arrivee-retour" placeholder="Ex: Baudour, Mons..." autocomplete="off" oninput="acSearch(this,'ac-r-arr-ret','r-arrivee-retour')"><input type="hidden" id="r-arr-ret-lat"><input type="hidden" id="r-arr-ret-lon"><div class="ac-drop" id="ac-r-arr-ret"></div></div>
+      </div>
+      <div id="dist-ret-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">⏳ Calcul distance retour...</div></div>
+      <div id="dist-ret-ok" style="display:none" class="dist-box ok"><div style="flex:1"><div class="dist-km" id="dist-ret-km">—</div><div class="dist-time" id="dist-ret-time">—</div></div><button class="btn btn-ghost btn-xs" onclick="calcDistRetour()">↺</button></div>
+      <div class="fg"><label class="fl">Distance retour (km)</label><input type="number" class="fi" id="r-distance-retour" placeholder="Calculé automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
+      <div class="fg" id="r-vol-ret-fg"><label class="fl">Numéro de vol retour</label><input type="text" class="fi" id="r-vol-retour" placeholder="Ex: SN3725" style="text-transform:uppercase"></div>
+    </div>
   </div>
-  <div id="r-vmt-section" style="display:none"><div class="toggle-row"><span style="font-size:0.88rem;font-weight:500">Virement re&#xe7;u &#x2705;</span><label class="toggle"><input type="checkbox" id="r-vmt-recu"><span class="tslider"></span></label></div></div>
-  <div class="fr">
-    <div class="fg"><label class="fl">P&#xe9;ages (&#x20ac;)</label><input type="number" class="fi" id="r-peages" value="0" step="0.01" oninput="updCalc()"></div>
-    <div class="fg"><label class="fl">Parking (&#x20ac;)</label><input type="number" class="fi" id="r-parking" value="0" step="0.01" oninput="updCalc()"></div>
+
+  <!-- SECTION 3: VÉHICULE & PASSAGERS -->
+  <div class="res-section">
+    <div class="res-section-title">🚗 Véhicule & passagers</div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Véhicule</label><select class="fs" id="r-vehicule"><option value="0">🚗 Seat Leon</option><option value="1">🚐 Talento (+20€)</option></select></div>
+      <div class="fg"><label class="fl">Passagers</label><input type="number" class="fi" id="r-passagers" value="1" min="1" max="8"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">🧳 Bagages</label><input type="number" class="fi" id="r-bagages" value="0" min="0" max="20" oninput="updVehiculeAuto()"></div>
+      <div class="fg"><label class="fl">👶 Sièges bébé</label><input type="number" class="fi" id="r-sieges-bebe" value="0" min="0" max="3" oninput="updVehiculeAuto()"></div>
+    </div>
+    <div id="r-vehicule-hint" style="display:none;margin-top:6px" class="alert alert-orange">🚐 Talento recommandé pour les bagages importants</div>
   </div>
-  <div class="fg"><label class="fl">Acompte &#xe0; l'aller (&#x20ac;)</label><input type="number" class="fi" id="r-acompte" value="0" step="0.01" oninput="updAcompte()"><div id="r-solde-hint" style="display:none;margin-top:8px"></div></div>
-  <div class="fg"><label class="fl">Notes client (dans le message WhatsApp)</label><textarea class="ft" id="r-notes" placeholder="Infos pour le client..."></textarea></div>
-  <div class="fg"><label class="fl">&#x1f512; Note interne (priv&#xe9;e, jamais envoy&#xe9;e)</label><textarea class="ft" id="r-notes-interne" placeholder="Remarques perso, infos confidentielles..." style="min-height:60px"></textarea></div>
-  <div class="card card-sm" style="background:var(--bg3)">
-    <div class="dr"><span class="dr-label">Km factur&#xe9;s client</span><span class="dr-val c-blue" id="prev-km-client">&#x2014;</span></div>
-    <div class="dr"><span class="dr-label">Km r&#xe9;els totaux</span><span class="dr-val c-purple" id="prev-km-reels">&#x2014;</span></div>
-    <div class="dr" id="prev-comm-row" style="display:none"><span class="dr-label">Commission</span><span class="dr-val c-red" id="prev-comm">&#x2014;</span></div>
-    <div class="dr"><span class="dr-label">Co&#xfb;t v&#xe9;hicule</span><span class="dr-val c-red" id="prev-cout">&#x2014;</span></div>
-    <div class="dr"><span class="dr-label">B&#xe9;n&#xe9;fice comptable</span><span class="dr-val" id="prev-benef" style="font-size:1rem;font-family:Playfair Display,serif">&#x2014;</span></div>
-    <div class="dr" style="border-bottom:none"><span class="dr-label">B&#xe9;n&#xe9;fice r&#xe9;el</span><span class="dr-val" id="prev-benef-reel">&#x2014;</span></div>
+
+  <!-- SECTION 4: PRIX & PAIEMENT -->
+  <div class="res-section">
+    <div class="res-section-title">💰 Prix & paiement</div>
+    <div id="r-devis-box" style="display:none" class="devis-box">
+      <div style="font-size:0.65rem;color:var(--gold2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">💡 Prix suggéré</div>
+      <div class="devis-price" id="r-devis-price">—</div>
+      <div class="devis-detail" id="r-devis-detail">—</div>
+      <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="applyDevis()">✓ Appliquer ce prix</button>
+    </div>
+    <div class="fg"><label class="fl">Prix total (€)</label><input type="number" class="fi" id="r-prix" placeholder="Ex: 95" step="0.01" oninput="updCalc();updAcompte()"><div class="ferr" id="r-prix-hint"></div></div>
+    <div class="fg"><label class="fl">Mode de paiement</label>
+      <div class="chips" id="r-paiement-chips">
+        <div class="chip active" onclick="selectChip(this,'r-paiement','cash');toggleVmt()">💵 Cash</div>
+        <div class="chip" onclick="selectChip(this,'r-paiement','carte');toggleVmt()">💳 Carte</div>
+        <div class="chip" onclick="selectChip(this,'r-paiement','virement');toggleVmt()">🏦 Virement</div>
+        <div class="chip" onclick="selectChip(this,'r-paiement','prepaye');toggleVmt()">🤝 Prépayé</div>
+      </div>
+      <input type="hidden" id="r-paiement" value="cash">
+    </div>
+    <div id="r-vmt-section" style="display:none"><div class="toggle-row"><span style="font-size:0.88rem;font-weight:500">Virement reçu ✅</span><label class="toggle"><input type="checkbox" id="r-vmt-recu"><span class="tslider"></span></label></div></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Péages (€)</label><input type="number" class="fi" id="r-peages" value="0" step="0.01" oninput="updCalc()"></div>
+      <div class="fg"><label class="fl">Parking (€)</label><input type="number" class="fi" id="r-parking" value="0" step="0.01" oninput="updCalc()"></div>
+    </div>
+    <div class="fg" id="r-acompte-fg" style="display:none"><label class="fl">Acompte à l'aller (€)</label><input type="number" class="fi" id="r-acompte" value="0" step="0.01" oninput="updAcompte()"><div id="r-solde-hint" style="display:none;margin-top:8px"></div></div>
+    <!-- Mini récap prix -->
+    <div class="card card-sm" style="background:var(--bg3);margin-top:10px">
+      <div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val" id="prev-benef" style="font-size:1rem;font-family:Playfair Display,serif">—</span></div>
+      <div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val" id="prev-benef-reel">—</span></div>
+    </div>
   </div>
-</div>
-<!-- SP6 : Resume -->
-<div class="step-panel" id="sp6">
-  <div id="res-summary"></div>
-  <div style="margin-top:16px">
-    <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Message de confirmation</div>
+
+  <!-- SECTION 5: OPTIONS AVANCÉES (dépliable) -->
+  <div class="res-section">
+    <button type="button" class="btn btn-ghost btn-full" id="btn-adv-toggle" onclick="toggleAdvanced()" style="font-size:0.82rem;color:var(--text3)">⚙️ Options avancées</button>
+    <div id="res-advanced" style="display:none;margin-top:14px">
+      <div class="fg"><label class="fl">Langue client</label>
+        <div class="chips" id="r-langue-chips">
+          <div class="chip active" onclick="selectChip(this,'r-langue','fr')">🇫🇷 FR</div>
+          <div class="chip" onclick="selectChip(this,'r-langue','nl')">🇧🇪 NL</div>
+          <div class="chip" onclick="selectChip(this,'r-langue','en')">🇬🇧 EN</div>
+        </div>
+        <input type="hidden" id="r-langue" value="fr">
+      </div>
+      <!-- Km pickup -->
+      <div class="fg"><label class="fl">Km pickup (Carnières → client)</label><input type="number" class="fi" id="r-km-pickup" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-hint">Calculé automatiquement depuis votre adresse</div></div>
+      <!-- Retour vide aller -->
+      <div class="fg"><label class="fl">Retour après dépose (J1)</label>
+        <div class="chips" id="r-vide-aller-chips">
+          <div class="chip active" onclick="selectChip(this,'r-vide-aller-type','maison');updVideAller()">🏠 Maison</div>
+          <div class="chip" onclick="selectChip(this,'r-vide-aller-type','depart');updVideAller()">📍 Point départ</div>
+          <div class="chip" onclick="selectChip(this,'r-vide-aller-type','manuel');updVideAller()">✏️ Manuel</div>
+          <div class="chip" onclick="selectChip(this,'r-vide-aller-type','aucun');updVideAller()">❌ Aucun</div>
+        </div>
+        <input type="hidden" id="r-vide-aller-type" value="maison">
+        <div id="r-vide-aller-calc" style="margin-top:8px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
+      </div>
+      <div id="r-vide-aller-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide (J1)</label><input type="number" class="fi" id="r-km-vide-aller" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
+      <!-- Retour vide retour (AR diff) -->
+      <div id="sp4-retour-section" style="display:none">
+        <div class="fg" id="r-km-pickup-retour-fg"><label class="fl">Km pickup retour J2</label><input type="number" class="fi" id="r-km-pickup-retour" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-retour-hint">Carnières → lieu de récupération</div></div>
+        <div class="fg"><label class="fl">Retour après récupération</label>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px">
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Retour à vide ?</div>
+              <div style="font-size:0.75rem;color:var(--text3);margin-top:2px" id="r-vide-retour-toggle-sub">Retour vers la maison calculé auto</div>
+            </div>
+            <label class="toggle" style="margin:0">
+              <input type="checkbox" id="r-vide-retour-toggle" checked onchange="updVideRetourToggle()">
+              <div class="tslider"></div>
+            </label>
+          </div>
+          <div id="r-vide-retour-dest" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px">
+            <div class="chip active" onclick="selectChip(this,'r-vide-retour-type','maison');updVideRetour()">🏠 Maison</div>
+            <div class="chip" onclick="selectChip(this,'r-vide-retour-type','depart');updVideRetour()">📍 Point départ</div>
+            <div class="chip" onclick="selectChip(this,'r-vide-retour-type','manuel');updVideRetour()">✏️ Manuel</div>
+          </div>
+          <input type="hidden" id="r-vide-retour-type" value="maison">
+          <div id="r-vide-retour-calc" style="margin-top:4px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
+        </div>
+        <div id="r-vide-retour-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide</label><input type="number" class="fi" id="r-km-vide-retour" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
+      </div>
+      <!-- Récap km -->
+      <div class="km-recap">
+        <div style="font-size:0.68rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Récap km réels</div>
+        <div class="km-recap-row"><span class="km-recap-label">Pickup aller</span><span class="km-recap-val" id="kr-pickup">—</span></div>
+        <div class="km-recap-row"><span class="km-recap-label">Trajet aller</span><span class="km-recap-val" id="kr-aller">—</span></div>
+        <div class="km-recap-row"><span class="km-recap-label">Retour vide J1</span><span class="km-recap-val" id="kr-vide1">—</span></div>
+        <div class="km-recap-row" id="kr-j2-1" style="display:none"><span class="km-recap-label">Pickup retour J2</span><span class="km-recap-val" id="kr-pickup2">—</span></div>
+        <div class="km-recap-row" id="kr-j2-2" style="display:none"><span class="km-recap-label">Trajet retour</span><span class="km-recap-val" id="kr-retour">—</span></div>
+        <div class="km-recap-row" id="kr-j2-3" style="display:none"><span class="km-recap-label">Retour vide J2</span><span class="km-recap-val" id="kr-vide2">—</span></div>
+        <div class="km-recap-row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px"><span style="color:var(--text);font-weight:700;font-size:0.82rem">Total km réels</span><span style="color:var(--blue2);font-weight:700;font-size:0.88rem" id="kr-total">—</span></div>
+        <div class="km-recap-row"><span class="km-recap-label">Km facturés client</span><span style="color:var(--gold2);font-weight:600" id="kr-client">—</span></div>
+      </div>
+      <!-- Notes -->
+      <div class="fg"><label class="fl">Notes client (message WhatsApp)</label><textarea class="ft" id="r-notes" placeholder="Infos pour le client..."></textarea></div>
+      <div class="fg"><label class="fl">🔒 Note interne (privée)</label><textarea class="ft" id="r-notes-interne" placeholder="Remarques perso..." style="min-height:60px"></textarea></div>
+      <!-- Km supplémentaires cachés pour compatibilité -->
+      <input type="hidden" id="r-km-pickup-retour-hidden">
+    </div>
+  </div>
+
+  <!-- SECTION 6: CONFIRMATION -->
+  <div class="res-section" id="res-confirm-section" style="display:none">
+    <div class="res-section-title">💬 Confirmation client</div>
     <div class="wa-preview" id="wa-preview"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn btn-green" style="flex:1" onclick="sendWA()">&#x1f4ac; WhatsApp</button>
-      <button class="btn btn-blue" style="flex:1" onclick="sendSMS()">&#x1f4f1; SMS</button>
-      <button class="btn btn-ghost btn-xs" onclick="copyMsg()">&#x1f4cb;</button>
+      <button class="btn btn-green" style="flex:1" onclick="sendWA()">💬 WhatsApp</button>
+      <button class="btn btn-blue" style="flex:1" onclick="sendSMS()">📱 SMS</button>
+      <button class="btn btn-ghost btn-xs" onclick="copyMsg()">📋</button>
     </div>
   </div>
-</div>
-<div class="step-nav" id="res-step-nav">
-  <button class="btn btn-outline" id="res-btn-prev" onclick="resStep(-1)" style="display:none">&#x2190; Retour</button>
-  <button class="btn btn-gold" id="res-btn-next" onclick="resStep(1)" style="flex:1">Suivant &#x2192;</button>
+
+</div><!-- end res-form-scroll -->
+
+<div class="step-nav" id="res-step-nav" style="margin-top:8px">
+  <button class="btn btn-outline" onclick="closeModal('m-res')" style="min-width:80px">Annuler</button>
+  <button class="btn btn-gold" id="res-btn-save" onclick="saveReservation()" style="flex:1">✓ Enregistrer</button>
 </div>
 </div></div>
 
@@ -1207,48 +1235,29 @@ function openModal(id){g(id).classList.add('open');}
 function closeModal(id){g(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function getTotalSteps(){return(g('r-type')?.value||'aller')==='ar-diff'?6:5;}
-function getPanelForStep(step){const type=g('r-type')?.value||'aller';if(type==='ar-diff')return{1:'sp1',2:'sp2',3:'sp3',4:'sp4',5:'sp5',6:'sp6'}[step];return{1:'sp1',2:'sp2',3:'sp4',4:'sp5',5:'sp6'}[step];}
-function getStepLabel(step){const type=g('r-type')?.value||'aller';const labAR=['Client & source','Trajet aller','Trajet retour','Km à vide','Prix & paiement','Résumé'];const labOther=['Client & source','Trajet','Km à vide','Prix & paiement','Résumé'];return(type==='ar-diff'?labAR:labOther)[step-1]||'';}
-function updResSteps(){
-  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
-  const tot=getTotalSteps(),panelId=getPanelForStep(curStep);
-  if(g('res-steps'))g('res-steps').innerHTML=Array.from({length:tot},(_,i)=>'<div class="step-dot '+(i+1<curStep?'done':i+1===curStep?'active':'')+'"></div>').join('');
-  sv('res-step-label','Étape '+curStep+'/'+tot+' — '+getStepLabel(curStep));
-  const panel=g(panelId);if(panel)panel.classList.add('active');
-  const bp=g('res-btn-prev');if(bp)bp.style.display=curStep>1?'block':'none';
-  const nb=g('res-btn-next');if(!nb)return;const isLast=curStep===tot;
-  if(isLast){nb.textContent='✅ Enregistrer';nb.onclick=saveReservation;genResSummary();}
-  else{nb.textContent='Suivant →';nb.onclick=()=>resStep(1);}
-}
-function resStep(dir){
-  const type=g('r-type').value;
-  if(dir===1){
-    if(curStep===1&&!g('r-client-nom').value.trim()){alert('Veuillez entrer le nom du client');return;}
-    if(curStep===2){const d=parseFloat(g('r-distance').value||0);if(d<=0){alert('Veuillez entrer la distance aller');return;}}
-    if(type==='ar-diff'&&curStep===3){
-      const da=g('r-date-aller').value,dr=g('r-date-retour').value;
-      if(!dr){alert('Veuillez entrer la date de retour');return;}
-      if(da&&dr&&new Date(dr)<=new Date(da)){alert('La date de retour doit être après la date d\'aller !');return;}
-      const distR=parseFloat(g('r-distance-retour').value||0);
-      if(distR<=0){if(!confirm('Distance retour non calculée. Utiliser la même distance que l\'aller ?'))return;g('r-distance-retour').value=g('r-distance').value;}
-    }
-    const prixStep=type==='ar-diff'?5:4;
-    if(curStep===prixStep){const prixVal=parseFloat(g('r-prix').value||0);if(!g('r-prix').value||prixVal<0){alert('Veuillez entrer le prix');return;}if(prixVal===0&&!confirm('Prix à 0 € — confirmer un trajet offert ?'))return;}
-  }
-  const tot=getTotalSteps();curStep=Math.max(1,Math.min(tot,curStep+dir));updResSteps();
-  const videStep=type==='ar-diff'?4:3;if(curStep===videStep)calcKmVideAuto();
-}
+// Fonctions étapes supprimées - formulaire scrollable
+function updResSteps(){}
+// resStep supprimé - remplacé par saveReservation direct
 function updResType(){
   const type=g('r-type').value;
   const spArJour=g('sp2-ar-jour');if(spArJour)spArJour.style.display=type==='ar-jour'?'block':'none';
+  const sp3=g('sp3');if(sp3)sp3.style.display=type==='ar-diff'?'block':'none';
   const spRet=g('sp4-retour-section');if(spRet)spRet.style.display=(type==='ar-diff'||type==='ar-jour')?'block':'none';
+  const acFg=g('r-acompte-fg');if(acFg)acFg.style.display=type==='ar-diff'?'block':'none';
   const lbl=g('sp4-j2-label');if(lbl)lbl.textContent=type==='ar-jour'?'Retour même jour':'Jour 2 — Retour';
   ['kr-j2-1','kr-j2-2','kr-j2-3'].forEach(id=>{const el=g(id);if(el)el.style.display=type==='ar-diff'?'flex':'none';});
   const pkrFg=g('r-km-pickup-retour-fg');if(pkrFg)pkrFg.style.display=type==='ar-diff'?'block':'none';
   if(curStep===3&&type!=='ar-diff')curStep=2;
   updResSteps();updCalc();
 }
-function openNewRes(){g('res-edit-id').value='';sv('res-modal-title','Nouvelle course');sv('res-modal-subtitle','');resetResForm();curStep=1;updResSteps();openModal('m-res');}
+function openNewRes(){
+  g('res-edit-id').value='';
+  sv('res-modal-title','Nouvelle course');
+  sv('res-modal-subtitle','');
+  resetResForm();
+  openModal('m-res');
+  setTimeout(()=>{const s=g('res-form-scroll');if(s)s.scrollTop=0;},100);
+}
 function resetResForm(){
   acC={};calcTimers={};
   const niElR=g('r-notes-interne');if(niElR)niElR.value='';
@@ -1267,6 +1276,16 @@ function resetResForm(){
   const rha=g('r-heure-aller');if(rha)rha.value=new Date().toTimeString().slice(0,5);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+p.nom.replace(/\'/g,"\\'")+'\');updSourceUI()">'+p.nom+'</div>').join('');g('r-source').value='direct';}
   renderFavChips();updKmRecap();
+  // Reset nouveau formulaire
+  const adv=g('res-advanced');if(adv)adv.style.display='none';
+  const btnAdv=g('btn-adv-toggle');if(btnAdv)btnAdv.textContent='⚙️ Options avancées';
+  const vhint=g('r-vehicule-hint');if(vhint)vhint.style.display='none';
+  const volFg=g('r-vol-fg');if(volFg)volFg.style.display='none';
+  const acompFg=g('r-acompte-fg');if(acompFg)acompFg.style.display='none';
+  const confSec=g('res-confirm-section');if(confSec)confSec.style.display='none';
+  const bagEl=g('r-bagages');if(bagEl)bagEl.value='0';
+  const bebeEl=g('r-sieges-bebe');if(bebeEl)bebeEl.value='0';
+  const saveBtn=g('res-btn-save');if(saveBtn){saveBtn.textContent='✓ Enregistrer';saveBtn.onclick=saveReservation;}
 }
 function renderFavChips(){
   const favs=db.favAddresses||[];
@@ -1432,7 +1451,7 @@ function saveReservation(){
     facturePaye:existingR.facturePaye||false,
     commissionPayee:existingR.commissionPayee||false,
     statut:existingR.statut||'',
-    type,service:g('r-service').value,
+    bagages:parseInt(g('r-bagages')?.value||0),siegesBebe:parseInt(g('r-sieges-bebe')?.value||0),type,service:g('r-service').value,
     dateAller:g('r-date-aller').value,heure:g('r-heure-aller').value,
     dateRetour:type==='ar-diff'?g('r-date-retour').value:'',
     heureRetour:type==='ar-diff'?g('r-heure-retour').value:(g('r-heure-retour-jour')?.value||''),
@@ -1453,8 +1472,14 @@ function saveReservation(){
     duree:dist>0?Math.round(dist/60*60)+30:90
   };
   if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;}else db.reservations.push(r);
-  save();closeModal('m-res');renderAll();
-  if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier Samsung ?"))exportICS(r);},400);}
+  save();renderAll();
+  // Afficher section confirmation avec message WA
+  genResSummary();
+  const confSec=g('res-confirm-section');
+  if(confSec){confSec.style.display='block';confSec.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  // Changer bouton en "Fermer"
+  const saveBtn=g('res-btn-save');if(saveBtn){saveBtn.textContent='✓ Fermer';saveBtn.onclick=function(){closeModal('m-res');saveBtn.textContent='✓ Enregistrer';saveBtn.onclick=saveReservation;};}
+  if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier Samsung ?"))exportICS(r);},600);}
 }
 function genResSummary(){
   const source=g('r-source').value,pt=g('r-partner-type').value,comm=parseFloat(g('r-commission')?.value||0);
@@ -1592,7 +1617,15 @@ function editRes(id){
   if(r.type==='ar-diff')kmR+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);
   else if(r.type==='ar-jour')kmR+=parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);
   acC['kmC']=kmC;acC['kmR']=kmR;
-  updResType();toggleVmt();updVideAller();updVideRetour();curStep=1;updResSteps();openModal('m-res');
+  updResType();toggleVmt();updVideAller();updVideRetour();updVolField();
+  // Ouvrir options avancées si des infos avancées sont remplies
+  const hasAdv=r.notes||r.notesInternes||r.langue!=='fr';
+  if(hasAdv){const adv=g('res-advanced');if(adv)adv.style.display='block';const btn=g('btn-adv-toggle');if(btn)btn.textContent='⚙️ Masquer les options';}
+  // Bagages et sièges
+  if(g('r-bagages'))g('r-bagages').value=r.bagages||0;
+  if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;
+  openModal('m-res');
+  setTimeout(()=>{const s=g('res-form-scroll');if(s)s.scrollTop=0;},100);
 }
 var currentDetailId=null;
 function setStatut(id,statut){
@@ -1693,6 +1726,29 @@ function getStatusBadge(r){
   if(diff===0)return '<span class="status-today">🔥 Aujourd\'hui</span>';
   if(diff>0)return '<span class="status-upcoming">Dans '+Math.ceil(diff)+'j</span>';
   return '<span class="status-done">✓ Terminée</span>';
+}
+function toggleAdvanced(){
+  const adv=g('res-advanced'),btn=g('btn-adv-toggle');
+  if(!adv)return;
+  const open=adv.style.display==='block';
+  adv.style.display=open?'none':'block';
+  if(btn)btn.textContent=open?'⚙️ Options avancées':'⚙️ Masquer les options';
+}
+function updVehiculeAuto(){
+  const bag=parseInt(g('r-bagages')?.value||0);
+  const bebe=parseInt(g('r-sieges-bebe')?.value||0);
+  const hint=g('r-vehicule-hint');
+  if(bag>=4||bebe>=2){
+    if(hint)hint.style.display='block';
+    const veh=g('r-vehicule');if(veh&&veh.value==='0'){veh.value='1';}
+  }else{
+    if(hint)hint.style.display='none';
+  }
+}
+function updVolField(){
+  const service=g('r-service')?.value||'depose';
+  const volFg=g('r-vol-fg');
+  if(volFg)volFg.style.display=service==='recuperation'?'block':'none';
 }
 function setPartnerHistFilter(f,el){partnerHistFilter=f;document.querySelectorAll('#page-partners .chip-phist').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderPartners();}
 function setClientSort(s,el){clientSort=s;document.querySelectorAll('#page-clients .chip-csort').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderClients();}
