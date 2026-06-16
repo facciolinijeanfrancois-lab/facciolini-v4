@@ -362,7 +362,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-red btn-full" style="margin-top:8px" onclick="resetApp()">&#x1f5d1; R&#xe9;initialiser l'application</button>
   <div style="text-align:center;padding:28px;color:var(--text3);font-size:0.7rem;margin-top:8px;line-height:1.8">
     <div style="font-family:Playfair Display,serif;font-size:0.95rem;color:var(--text2);margin-bottom:4px">Facciolini Mobility</div>
-    Version 5.2 &middot; Jean-Fran&#xe7;ois Facciolini<br>BCE 1033.793.336 &middot; Carni&#xe8;res, Belgique
+    Version 6.0 &middot; Jean-Fran&#xe7;ois Facciolini<br>BCE 1033.793.336 &middot; Carni&#xe8;res, Belgique
   </div>
 </div>
 </div>
@@ -840,7 +840,7 @@ function getEncaisseRetour(r){const p=parseFloat(r.prix||0),a=parseFloat(r.acomp
 function getEncaisseMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const da=new Date(r.dateAller);const dr=r.type==='ar-diff'&&r.dateRetour?new Date(r.dateRetour):null;let enc=0;if(da.getMonth()===m&&da.getFullYear()===y)enc+=getEncaisseAller(r);if(dr&&dr.getMonth()===m&&dr.getFullYear()===y)enc+=getEncaisseRetour(r);return s+enc;},0);}
 function isVip(nom){return db.reservations.filter(r=>r.clientNom===nom).length>=db.settings.vip.seuil;}
 function cntRes(nom){return db.reservations.filter(r=>r.clientNom===nom).length;}
-function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commissionsDues:0,aFacturer:0,courses:[]};});db.reservations.forEach(r=>{if(!r.source||r.source==='direct')return;if(!s[r.source])s[r.source]={commissionsDues:0,aFacturer:0,courses:[]};if(r.partnerType==='commission'&&!r.commissionPayee)s[r.source].commissionsDues+=parseFloat(r.commission||0);else if(r.partnerType==='prepaye'&&!r.facturePaye)s[r.source].aFacturer+=parseFloat(r.prix||0);s[r.source].courses.push(r);});return s;}
+function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commissionsDues:0,aFacturer:0,courses:[]};});db.reservations.filter(r=>r.statut!=='annule').forEach(r=>{if(!r.source||r.source==='direct')return;if(!s[r.source])s[r.source]={commissionsDues:0,aFacturer:0,courses:[]};if(r.partnerType==='commission'&&!r.commissionPayee)s[r.source].commissionsDues+=parseFloat(r.commission||0);else if(r.partnerType==='prepaye'&&!r.facturePaye)s[r.source].aFacturer+=parseFloat(r.prix||0);s[r.source].courses.push(r);});return s;}
 function getInastiAlerte(){const now=new Date();const y=now.getFullYear();for(const e of [{label:'T1',m:3,j:31},{label:'T2',m:6,j:31},{label:'T3',m:9,j:31},{label:'T4',m:12,j:31}]){const d=new Date(y,e.m-1,e.j);const diff=Math.round((d-now)/86400000);if(diff>=0&&diff<=45)return{label:e.label,date:d.toLocaleDateString('fr-BE',{day:'2-digit',month:'long'}),diff};}return null;}
 let pinBuf='';
 function pp(v){if(v==='C'){pinBuf='';updDots();return;}if(v==='D'){pinBuf=pinBuf.slice(0,-1);updDots();return;}if(pinBuf.length>=4)return;pinBuf+=v;updDots();if(pinBuf.length===4)setTimeout(checkPin,120);}
@@ -1343,6 +1343,9 @@ function resetResForm(){
   const confSec=g('res-confirm-section');if(confSec)confSec.style.display='none';
   const bagEl=g('r-bagages');if(bagEl)bagEl.value='0';
   const bebeEl=g('r-sieges-bebe');if(bebeEl)bebeEl.value='0';
+  const volInp=g('r-vol');if(volInp)volInp.value='';
+  const volRetInp=g('r-vol-retour');if(volRetInp)volRetInp.value='';
+  updVolField();
   const saveBtn=g('res-btn-save');if(saveBtn){saveBtn.textContent='✓ Enregistrer';saveBtn.onclick=saveReservation;}
 }
 function renderFavChips(){
@@ -1681,8 +1684,11 @@ function editRes(id){
   const hasAdv=r.notes||r.notesInternes||r.langue!=='fr';
   if(hasAdv){const adv=g('res-advanced');if(adv)adv.style.display='block';const btn=g('btn-adv-toggle');if(btn)btn.textContent='⚙️ Masquer les options';}
   // Bagages et sièges
+  if(g('r-passagers'))g('r-passagers').value=r.passagers||1;
   if(g('r-bagages'))g('r-bagages').value=r.bagages||0;
   if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;
+  if(g('r-vol'))g('r-vol').value=r.vol||'';
+  if(g('r-vol-retour'))g('r-vol-retour').value=r.volRetour||'';
   setTimeout(showClientAddrBtns,200);
   openModal('m-res');
   setTimeout(()=>{const s=g('res-form-scroll');if(s)s.scrollTop=0;},100);
