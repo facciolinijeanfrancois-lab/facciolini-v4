@@ -348,6 +348,37 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 </div>
 <div class="page" id="page-params">
   <div id="backup-alert" style="display:none;background:rgba(240,112,32,0.1);border:1px solid rgba(240,112,32,0.3);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:0.8rem;color:var(--orange2);font-weight:600"></div>
+  <!-- SECTION NOTIFICATIONS -->
+  <div class="card" id="notif-card" style="margin-bottom:10px">
+    <div style="font-size:0.68rem;color:var(--gold2);font-weight:800;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">🔔 Notifications</div>
+    <div id="notif-status-bar" style="margin-bottom:12px"></div>
+    <div class="toggle-row" style="margin-bottom:10px">
+      <div>
+        <div style="font-weight:600;font-size:0.88rem">Rappel J-1</div>
+        <div style="font-size:0.72rem;color:var(--text3)">Notification la veille de chaque course</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="notif-j1-toggle" onchange="saveNotifSettings()"><span class="tslider"></span></label>
+    </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label class="fl">Heure du rappel J-1</label>
+      <input type="time" class="fi" id="notif-j1-heure" value="20:00" onchange="saveNotifSettings()" style="max-width:140px">
+    </div>
+    <div class="toggle-row" style="margin-bottom:10px">
+      <div>
+        <div style="font-weight:600;font-size:0.88rem">Rappel matin (jour J)</div>
+        <div style="font-size:0.72rem;color:var(--text3)">Notification le matin de la course</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="notif-matin-toggle" onchange="saveNotifSettings()"><span class="tslider"></span></label>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label class="fl">Heure du rappel matin</label>
+      <input type="time" class="fi" id="notif-matin-heure" value="07:00" onchange="saveNotifSettings()" style="max-width:140px">
+    </div>
+    <button class="btn btn-gold btn-full" onclick="requestNotifPermission()">🔔 Activer les notifications</button>
+    <div id="notif-test-btn" style="display:none;margin-top:8px">
+      <button class="btn btn-outline btn-full btn-sm" onclick="testNotification()">🧪 Tester une notification</button>
+    </div>
+  </div>
   <div class="sec" style="padding-top:8px"><span class="sec-title">Param&#xe8;tres</span></div>
   <div class="stitle">Mon profil</div>
   <div class="sitem"><div class="sitem-left"><div class="sitem-label">Adresse maison</div><div class="sitem-sub" id="p-home">Rue Saint-Eloi 173, Carni&#xe8;res</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-home')">Modifier</button></div>
@@ -1309,6 +1340,8 @@ function marquerCommissionPayee(p){if(!confirm('Commissions de '+p+' reversées 
 function marquerFacturePaye(p){if(!confirm('Courses de '+p+' facturées ?'))return;db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='prepaye')r.facturePaye=true;});save();renderAll();}
 function renderParams(){
   var s=db.settings;
+  loadNotifSettings();
+  renderNotifStatus();
   // Alerte backup
   var lastBk=localStorage.getItem('fm_last_backup');var bakEl=g('backup-alert');
   if(bakEl){var daysSince=lastBk?Math.round((Date.now()-parseInt(lastBk))/86400000):999;
@@ -1915,6 +1948,135 @@ function updVolField(){
   const volFg=g('r-vol-fg');
   if(volFg)volFg.style.display=service==='recuperation'?'block':'none';
 }
+// ===== NOTIFICATIONS PUSH =====
+function requestNotifPermission(){
+  if(!('Notification' in window)){
+    alert('Votre navigateur ne supporte pas les notifications.');return;
+  }
+  Notification.requestPermission().then(perm => {
+    if(perm === 'granted'){
+      saveNotifSettings();
+      scheduleAllNotifications();
+      renderNotifStatus();
+      document.getElementById('notif-test-btn').style.display='block';
+    } else {
+      alert('Notifications refusées. Vous pouvez les activer dans les paramètres de Chrome.');
+    }
+  });
+}
+
+function renderNotifStatus(){
+  const bar = document.getElementById('notif-status-bar');
+  if(!bar) return;
+  if(!('Notification' in window)){
+    bar.innerHTML='<div class="alert alert-orange">⚠️ Notifications non supportées sur ce navigateur</div>';return;
+  }
+  const perm = Notification.permission;
+  if(perm === 'granted'){
+    bar.innerHTML='<div class="alert alert-green" style="font-size:0.78rem">✅ Notifications activées</div>';
+    document.getElementById('notif-test-btn').style.display='block';
+  } else if(perm === 'denied'){
+    bar.innerHTML='<div class="alert alert-red" style="font-size:0.78rem">❌ Notifications bloquées — activez-les dans Paramètres Chrome → Site</div>';
+  } else {
+    bar.innerHTML='<div class="alert alert-orange" style="font-size:0.78rem">🔔 Appuyez sur "Activer" pour recevoir les rappels automatiques</div>';
+  }
+}
+
+function saveNotifSettings(){
+  db.settings.notifs = {
+    j1: document.getElementById('notif-j1-toggle')?.checked || false,
+    j1Heure: document.getElementById('notif-j1-heure')?.value || '20:00',
+    matin: document.getElementById('notif-matin-toggle')?.checked || false,
+    matinHeure: document.getElementById('notif-matin-heure')?.value || '07:00'
+  };
+  save();
+  if(Notification.permission === 'granted') scheduleAllNotifications();
+}
+
+function loadNotifSettings(){
+  const ns = db.settings.notifs || {};
+  const t1 = document.getElementById('notif-j1-toggle');
+  const h1 = document.getElementById('notif-j1-heure');
+  const t2 = document.getElementById('notif-matin-toggle');
+  const h2 = document.getElementById('notif-matin-heure');
+  if(t1) t1.checked = ns.j1 || false;
+  if(h1) h1.value = ns.j1Heure || '20:00';
+  if(t2) t2.checked = ns.matin || false;
+  if(h2) h2.value = ns.matinHeure || '07:00';
+}
+
+function scheduleAllNotifications(){
+  if(Notification.permission !== 'granted') return;
+  const ns = db.settings.notifs || {};
+  const now = new Date();
+  const today = new Date(); today.setHours(0,0,0,0);
+  
+  // Annuler les anciens timers
+  if(window._notifTimers) window._notifTimers.forEach(t => clearTimeout(t));
+  window._notifTimers = [];
+  
+  db.reservations.filter(r => r.statut !== 'annule').forEach(r => {
+    const dateAller = new Date(r.dateAller);
+    dateAller.setHours(0,0,0,0);
+    const diffDays = Math.round((dateAller - today) / 86400000);
+    
+    // Rappel J-1
+    if(ns.j1 && diffDays === 1){
+      const [h,m] = (ns.j1Heure || '20:00').split(':');
+      const notifTime = new Date();
+      notifTime.setHours(parseInt(h), parseInt(m), 0, 0);
+      const delay = notifTime - now;
+      if(delay > 0){
+        const t = setTimeout(() => {
+          showLocalNotification(
+            '🚗 Course demain !',
+            r.heure + ' · ' + r.clientNom + ' · ' + (r.depart || '').substring(0,30),
+            r.id
+          );
+        }, delay);
+        window._notifTimers.push(t);
+      }
+    }
+    
+    // Rappel matin jour J
+    if(ns.matin && diffDays === 0){
+      const [h,m] = (ns.matinHeure || '07:00').split(':');
+      const notifTime = new Date();
+      notifTime.setHours(parseInt(h), parseInt(m), 0, 0);
+      const delay = notifTime - now;
+      if(delay > 0){
+        const t = setTimeout(() => {
+          showLocalNotification(
+            '🚗 Course aujourd\'hui !',
+            r.heure + ' · ' + r.clientNom + ' · ' + (r.depart || '').substring(0,30),
+            r.id + '-matin'
+          );
+        }, delay);
+        window._notifTimers.push(t);
+      }
+    }
+  });
+  
+  console.log('FM: ' + (window._notifTimers.length) + ' notification(s) planifiée(s)');
+}
+
+function showLocalNotification(title, body, tag){
+  if(Notification.permission !== 'granted') return;
+  const notif = new Notification(title, {
+    body, icon: './icon-192.png', badge: './icon-96.png',
+    tag: tag || 'fm', vibrate: [200,100,200]
+  });
+  notif.onclick = () => { window.focus(); notif.close(); };
+}
+
+function testNotification(){
+  showLocalNotification(
+    '🚗 Test Facciolini Mobility',
+    'Les notifications fonctionnent correctement !',
+    'fm-test'
+  );
+}
+
 function setPartnerHistFilter(f,el){partnerHistFilter=f;document.querySelectorAll('#page-partners .chip-phist').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderPartners();}
 function setClientSort(s,el){clientSort=s;document.querySelectorAll('#page-clients .chip-csort').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderClients();}
 // ===== SWIPE TO DELETE =====
