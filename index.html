@@ -1146,54 +1146,106 @@ function renderPartners(){
   var soldes=calcPartnerSoldes();
   var pl=document.getElementById('partners-list');
   if(pl){
+    if(!db.partners.length){pl.innerHTML='<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Aucun partenaire configuré</div>';return;}
     var html='';
     db.partners.forEach(function(p){
       var s=soldes[p.nom]||{commissionsDues:0,aFacturer:0,courses:[]};
-      var tCA=s.courses.reduce(function(sum,r){return sum+parseFloat(r.prix||0);},0);
-      var pid=p.id,pnom=p.nom;
-      html+='<div class="partner-card">';
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-      html+='<div style="font-weight:700;font-size:1rem">🤝 '+p.nom+'</div>';
-      html+='<div style="display:flex;gap:6px;align-items:center">';
-      html+='<button class="btn btn-ghost btn-xs" data-id="'+pid+'" onclick="openPartnerModal(this.dataset.id)">✏️</button>';
-      html+='<span style="font-size:0.72rem;color:var(--text3)">'+s.courses.length+' courses · '+fmt(tCA)+'</span></div></div>';
-      if(p.email)html+='<div style="font-size:0.73rem;color:var(--text3);margin-bottom:8px">📧 '+p.email+(p.tel?' · 📞 '+p.tel:'')+'</div>';
-      html+='<div class="dr"><span class="dr-label">Commissions à reverser</span><span style="font-weight:700;color:'+(s.commissionsDues>0?'var(--red2)':'var(--text3)')+'"> '+(s.commissionsDues>0?'- '+fmt(s.commissionsDues):'Aucune')+'</span></div>';
-      html+='<div class="dr" style="border-bottom:none"><span class="dr-label">Prépayées à facturer</span><span style="font-weight:700;color:'+(s.aFacturer>0?'var(--green2)':'var(--text3)')+'"> '+(s.aFacturer>0?fmt(s.aFacturer)+' → Biltobox':'Aucune')+'</span></div>';
-      if(s.commissionsDues>0)html+='<button class="btn btn-outline btn-full" style="margin-top:10px;border-color:var(--red2);color:var(--red2)" data-nom="'+pnom+'" onclick="marquerCommissionPayee(this.dataset.nom)">✓ Commissions reversées</button>';
-      if(s.aFacturer>0)html+='<button class="btn btn-green btn-full" style="margin-top:6px" data-nom="'+pnom+'" onclick="marquerFacturePaye(this.dataset.nom)">✓ Facturé via Biltobox</button>';
+      // Calcul net à facturer
+      var netAFacturer=s.aFacturer-s.commissionsDues;
+      html+='<div class="card card-gold" style="margin-bottom:12px">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+      html+='<div><div style="font-weight:800;font-size:1rem">🤝 '+p.nom+'</div>';
+      if(p.tel)html+='<div style="font-size:0.75rem;color:var(--text3);margin-top:2px">📞 '+p.tel+'</div>';
+      html+='</div>';
+      html+='<div style="display:flex;gap:6px">';
+      html+='<button class="btn btn-outline btn-xs" onclick="editPartner(this.dataset.id)" data-id="'+p.id+'">✏️</button>';
+      html+='</div></div>';
+
+      // Résumé financier
+      var nbCourses=s.courses.filter(r=>r.statut!=='annule').length;
+      var totalEncaisse=s.courses.filter(r=>r.statut!=='annule').reduce((t,r)=>t+parseFloat(r.prix||0),0);
+      html+='<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">';
+      html+='<div style="font-size:0.62rem;color:var(--gold2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">💰 Situation financière</div>';
+      html+='<div class="dr"><span class="dr-label">Courses effectuées</span><span class="dr-val">'+nbCourses+' course'+(nbCourses>1?'s':'')+'</span></div>';
+      html+='<div class="dr"><span class="dr-label">Total encaissé</span><span class="dr-val c-gold">'+fmt(totalEncaisse)+'</span></div>';
+      if(s.commissionsDues>0){
+        html+='<div class="dr"><span class="dr-label" style="color:var(--red2)">Commissions à reverser</span><span class="dr-val" style="color:var(--red2)">- '+fmt(s.commissionsDues)+'</span></div>';
+      }
+      if(s.aFacturer>0){
+        html+='<div class="dr"><span class="dr-label" style="color:var(--green2)">Prépayées à facturer</span><span class="dr-val" style="color:var(--green2)">'+fmt(s.aFacturer)+'</span></div>';
+      }
+      // Ligne NET
+      if(s.commissionsDues>0||s.aFacturer>0){
+        html+='<div class="dr" style="border-top:1px solid var(--border);margin-top:6px;padding-top:8px;border-bottom:none">';
+        html+='<span style="font-weight:700;color:var(--text)">NET à facturer / verser</span>';
+        if(netAFacturer>0){
+          html+='<span style="font-weight:800;color:var(--green2);font-family:Playfair Display,serif;font-size:1rem">→ Tu factures '+fmt(netAFacturer)+'</span>';
+        }else if(netAFacturer<0){
+          html+='<span style="font-weight:800;color:var(--red2);font-family:Playfair Display,serif;font-size:1rem">→ Tu verses '+fmt(Math.abs(netAFacturer))+'</span>';
+        }else{
+          html+='<span style="color:var(--text3)">Soldé ✓</span>';
+        }
+        html+='</div>';
+      }
+      html+='</div>';
+
+      // Bouton actions
+      if(s.commissionsDues>0){
+        html+='<button class="btn btn-outline btn-full btn-sm" style="margin-bottom:8px;color:var(--green2);border-color:var(--green2)" onclick="marquerCommissionPayee(this.dataset.nom)" data-nom="'+p.nom+'">✓ Marquer commissions reversées ('+fmt(s.commissionsDues)+')</button>';
+      }
+      if(s.aFacturer>0){
+        html+='<button class="btn btn-gold btn-full btn-sm" style="margin-bottom:8px" onclick="marquerFacturePaye(this.dataset.nom)" data-nom="'+p.nom+'">✓ Marquer facture envoyée ('+fmt(s.aFacturer)+')</button>';
+      }
+
+      // Détail courses
+      var coursesPartenaire=s.courses.filter(r=>r.statut!=='annule').sort((a,b)=>new Date(b.dateAller)-new Date(a.dateAller));
+      if(coursesPartenaire.length){
+        html+='<div style="font-size:0.62rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:10px 0 8px">Détail des courses</div>';
+        coursesPartenaire.forEach(function(r){
+          var comm=parseFloat(r.commission||0);
+          var isPrepaye=r.partnerType==='prepaye';
+          html+='<div style="background:var(--bg3);border-radius:var(--radius-xs);padding:10px;margin-bottom:6px;border:1px solid var(--border)">';
+          html+='<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+          html+='<div style="flex:1">';
+          html+='<div style="font-weight:700;font-size:0.85rem">'+r.clientNom+'</div>';
+          html+='<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">📅 '+new Date(r.dateAller).toLocaleDateString("fr-BE")+(r.heure?" à "+r.heure:"")+'</div>';
+          html+='<div style="font-size:0.72rem;color:var(--text2);margin-top:2px">🚗 '+(r.depart||"").substring(0,22)+'→'+(r.arrivee||"").substring(0,22)+'</div>';
+          html+='</div>';
+          html+='<div style="text-align:right;min-width:80px">';
+          html+='<div style="font-weight:800;color:var(--gold2);font-family:Playfair Display,serif">'+fmt(r.prix)+'</div>';
+          if(isPrepaye){
+            html+='<div style="font-size:0.7rem;color:'+(r.facturePaye?'var(--green2)':'var(--orange2)')+'">'+( r.facturePaye?'✓ Facturé':'📄 À facturer')+'</div>';
+          }else if(comm>0){
+            html+='<div style="font-size:0.7rem;color:'+(r.commissionPayee?'var(--green2)':'var(--red2)')+'">Commission : '+(r.commissionPayee?'✓ ':'')+fmt(comm)+'</div>';
+          }
+          html+='</div></div></div>';
+        });
+      }
       html+='</div>';
     });
-    pl.innerHTML=html;
+    pl.innerHTML=html||'<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Aucune activité partenaire</div>';
   }
-  var now3=new Date();var histAll=[].concat(db.reservations).filter(function(r){return r.source&&r.source!=='direct';});
-  var hist;
-  if(partnerHistFilter==='mois'){hist=histAll.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear;});}
-  else if(partnerHistFilter==='3mois'){var d3=new Date(now3);d3.setMonth(d3.getMonth()-3);hist=histAll.filter(function(r){return new Date(r.dateAller)>=d3;});}
-  else{hist=histAll;}
-  hist=hist.sort(function(a,b){return new Date(b.dateAller)-new Date(a.dateAller);}).slice(0,30);
+
+  // Historique filtré (gardé pour compatibilité mais maintenant intégré dans les fiches)
   var ph=document.getElementById('partner-history');
   if(ph){
-    if(!hist.length){ph.innerHTML='<div class="empty"><div class="empty-icon">🤝</div><div class="empty-title">Aucune course partenaire</div></div>';return;}
-    var hhtml='';
-    hist.forEach(function(r){
-      var rid=r.id;
-      hhtml+='<div class="item" data-id="'+rid+'" onclick="showDetailRes(this.dataset.id)">';
-      hhtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">';
-      hhtml+='<div><span style="font-weight:700">'+(r.clientNom||'Client')+'</span> <span class="badge badge-orange">'+r.source+'</span></div>';
-      hhtml+='<span style="font-weight:700;color:var(--gold)">'+fmt(r.prix)+'</span></div>';
-      hhtml+='<div style="font-size:0.73rem;color:var(--text2)">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' · '+(r.depart||'—').substring(0,20)+' → '+(r.arrivee||'—').substring(0,20)+'</div>';
-      hhtml+='<div style="display:flex;gap:5px;margin-top:7px">';
-      if(r.partnerType==='commission')hhtml+='<span class="badge badge-red">Comm. -'+fmt(r.commission)+'</span>';
-      else hhtml+='<span class="badge badge-green">Prépayé</span>';
-      if(r.partnerType==='commission'&&r.commissionPayee)hhtml+='<span class="badge badge-green">✓ Reversée</span>';
-      if(r.partnerType==='prepaye'&&r.facturePaye)hhtml+='<span class="badge badge-green">✓ Facturé</span>';
-      if(r.partnerType==='prepaye'&&!r.facturePaye)hhtml+='<span class="badge badge-orange">📄 À facturer</span>';
-      hhtml+='</div></div>';
-    });
-    ph.innerHTML=hhtml;
+    var now3=new Date();var histAll=[].concat(db.reservations).filter(function(r){return r.source&&r.source!=='direct';});
+    var hist;
+    if(partnerHistFilter==='mois'){hist=histAll.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear;});}
+    else if(partnerHistFilter==='3mois'){var d3=new Date(now3);d3.setMonth(d3.getMonth()-3);hist=histAll.filter(function(r){return new Date(r.dateAller)>=d3;});}
+    else{hist=histAll;}
+    hist=hist.filter(r=>r.statut==='annule').sort(function(a,b){return new Date(b.dateAller)-new Date(a.dateAller);}).slice(0,10);
+    if(hist.length){
+      var hhtml='<div style="font-size:0.62rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Courses annulées</div>';
+      hist.forEach(function(r){
+        hhtml+='<div class="item" style="opacity:0.6"><div style="font-size:0.72rem;color:var(--text3)">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' · '+r.source+'</div>';
+        hhtml+='<div style="font-weight:700">'+r.clientNom+' — '+fmt(r.prix)+'</div></div>';
+      });
+      ph.innerHTML=hhtml;
+    }else{ph.innerHTML='';}
   }
 }
+
 function marquerCommissionPayee(p){if(!confirm('Commissions de '+p+' reversées ?'))return;db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='commission')r.commissionPayee=true;});save();renderAll();}
 function marquerFacturePaye(p){if(!confirm('Courses de '+p+' facturées ?'))return;db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='prepaye')r.facturePaye=true;});save();renderAll();}
 function renderParams(){
