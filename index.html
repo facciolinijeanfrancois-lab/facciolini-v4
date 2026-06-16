@@ -902,15 +902,27 @@ function fixDb(){
     db.settings.vehicles[0].cout=0.24;
     db.settings.vehicles[0].conso=4.3;
   }
-  // Corriger assurance au bon montant
-  var assIdx=db.charges.findIndex(function(c){return c.id==='ch3'||c.nom==='Assurance TL Seat Leon';});
-  if(assIdx>=0&&parseFloat(db.charges[assIdx].montant)<340.30)db.charges[assIdx].montant=340.30;
-  // Corriger Proximus
-  var proxIdx=db.charges.findIndex(function(c){return c.id==='ch2'||c.nom==='Proximus Pro';});
-  if(proxIdx>=0&&parseFloat(db.charges[proxIdx].montant)!==62.83)db.charges[proxIdx].montant=62.83;
-  // Corriger crédit Seat
-  var creditIdx=db.charges.findIndex(function(c){return c.id==='ch4'||c.nom.includes('Crédit Seat');});
-  if(creditIdx>=0&&parseFloat(db.charges[creditIdx].montant)!==339.00)db.charges[creditIdx].montant=339.00;
+  // Forcer réinitialisation complète des charges avec les bons montants
+  const CHARGES_CORRECT = [
+    {id:'ch1', nom:'AG Compta Fisc (Adam)', montant:50.00},
+    {id:'ch2', nom:'Proximus Pro', montant:62.83},
+    {id:'ch3', nom:'Assurance TL Seat Leon', montant:340.30},
+    {id:'ch4', nom:'Crédit Seat Leon', montant:339.00},
+    {id:'ch5', nom:'Lois sociales INASTI', montant:38.33}
+  ];
+  // Vérifier et corriger chaque charge par ID
+  CHARGES_CORRECT.forEach(function(correct){
+    var idx=db.charges.findIndex(function(c){return c.id===correct.id||c.nom===correct.nom;});
+    if(idx>=0){
+      db.charges[idx].montant=correct.montant;
+      db.charges[idx].nom=correct.nom;
+      db.charges[idx].id=correct.id;
+    } else {
+      db.charges.push(JSON.parse(JSON.stringify(correct)));
+    }
+  });
+  // Supprimer les doublons (garder seulement les 5 charges officielles)
+  db.charges=db.charges.filter(function(c){return CHARGES_CORRECT.some(function(cc){return cc.id===c.id;});});
   // migrateR pour les réservations
   db.reservations=(db.reservations||[]).map(function(r){return migrateR(r);});
 }
