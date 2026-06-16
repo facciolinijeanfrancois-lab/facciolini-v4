@@ -857,7 +857,7 @@ const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','
 const MOIS_S=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MOI={nom:'Jean-François Facciolini',adresse:'Rue Saint-Eloi 173, 7141 Carnières',bce:'1033.793.336',email:'facciolini.mobility@outlook.com',tel:'0471692650'};
 const HOME_DEFAULT={adresse:'Rue Saint-Eloi 173, 7141 Carnières',lat:50.4089,lon:4.1756};
-const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:'ch2',nom:'Proximus Pro',montant:62.84},{id:'ch3',nom:'Assurance TL Seat Leon',montant:335.98},{id:'ch4',nom:'Crédit Seat Leon',montant:339.11},{id:'ch5',nom:'Lois sociales INASTI',montant:38.33}];
+const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:'ch2',nom:'Proximus Pro',montant:62.83},{id:'ch3',nom:'Assurance TL Seat Leon',montant:340.30},{id:'ch4',nom:'Crédit Seat Leon',montant:339.00},{id:'ch5',nom:'Lois sociales INASTI',montant:38.33}];
 const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zaventem',lat:50.9010,lon:4.4844},{id:'f2',nom:'Charleroi CRL',adresse:'Brussels South Charleroi Airport',lat:50.4592,lon:4.4538},{id:'f3',nom:'Gare de Mons',adresse:'Place Leopold, Mons',lat:50.4542,lon:3.9563},{id:'f4',nom:'Gare Charleroi',adresse:'Boulevard Tirou, Charleroi',lat:50.4108,lon:4.4446},{id:'f5',nom:'Gare du Midi',adresse:'Rue de France 2, Bruxelles',lat:50.8354,lon:4.3360}];
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
@@ -902,9 +902,15 @@ function fixDb(){
     db.settings.vehicles[0].cout=0.24;
     db.settings.vehicles[0].conso=4.3;
   }
-  // Corriger assurance si encore à 333
+  // Corriger assurance au bon montant
   var assIdx=db.charges.findIndex(function(c){return c.id==='ch3'||c.nom==='Assurance TL Seat Leon';});
-  if(assIdx>=0&&parseFloat(db.charges[assIdx].montant)===333)db.charges[assIdx].montant=335.98;
+  if(assIdx>=0&&parseFloat(db.charges[assIdx].montant)<340.30)db.charges[assIdx].montant=340.30;
+  // Corriger Proximus
+  var proxIdx=db.charges.findIndex(function(c){return c.id==='ch2'||c.nom==='Proximus Pro';});
+  if(proxIdx>=0&&parseFloat(db.charges[proxIdx].montant)!==62.83)db.charges[proxIdx].montant=62.83;
+  // Corriger crédit Seat
+  var creditIdx=db.charges.findIndex(function(c){return c.id==='ch4'||c.nom.includes('Crédit Seat');});
+  if(creditIdx>=0&&parseFloat(db.charges[creditIdx].montant)!==339.00)db.charges[creditIdx].montant=339.00;
   // migrateR pour les réservations
   db.reservations=(db.reservations||[]).map(function(r){return migrateR(r);});
 }
