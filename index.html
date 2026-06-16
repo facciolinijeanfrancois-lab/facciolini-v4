@@ -181,18 +181,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .dt-picker-sheet{background:var(--bg2);border-radius:24px 24px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,0.6)}
 .dt-picker-title{font-weight:800;font-size:1rem;color:var(--text);margin-bottom:4px;text-align:center}
 .dt-picker-sub{font-size:0.72rem;color:var(--text3);text-align:center;margin-bottom:18px}
-.dt-picker-cols{display:flex;gap:8px;margin-bottom:18px}
-.dt-col{flex:1;position:relative;height:200px;overflow:hidden}
-.dt-col::before,.dt-col::after{content:'';position:absolute;left:0;right:0;height:72px;z-index:2;pointer-events:none}
-.dt-col::before{top:0;background:linear-gradient(to bottom,var(--bg2),transparent)}
-.dt-col::after{bottom:0;background:linear-gradient(to top,var(--bg2),transparent)}
-.dt-col-sel{position:absolute;top:50%;left:0;right:0;height:44px;transform:translateY(-50%);background:rgba(240,168,32,0.08);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);border-radius:8px;pointer-events:none;z-index:1}
+.dt-picker-cols{display:flex;gap:12px;margin-bottom:22px;justify-content:center}
+.dt-col{flex:1;max-width:110px;position:relative;height:220px;overflow:hidden}
+.dt-col::before,.dt-col::after{content:'';position:absolute;left:0;right:0;height:80px;z-index:2;pointer-events:none}
+.dt-col::before{top:0;background:linear-gradient(to bottom,var(--bg2) 20%,transparent)}
+.dt-col::after{bottom:0;background:linear-gradient(to top,var(--bg2) 20%,transparent)}
+.dt-col-sel{position:absolute;top:50%;left:4px;right:4px;height:52px;transform:translateY(-50%);background:rgba(240,168,32,0.10);border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);border-radius:10px;pointer-events:none;z-index:1}
 .dt-col-inner{position:absolute;left:0;right:0;top:0;cursor:grab;user-select:none}
 .dt-col-inner:active{cursor:grabbing}
-.dt-item{height:44px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--text2);transition:color 0.15s}
-.dt-item.selected{color:var(--gold2);font-size:1.15rem}
-.dt-col-label{text-align:center;font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px}
+.dt-item{height:52px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:700;color:rgba(255,255,255,0.35);transition:all 0.15s;letter-spacing:0.02em}
+.dt-item.selected{color:#fff;font-size:1.4rem;text-shadow:0 0 20px rgba(240,168,32,0.6)}
+.dt-col-label{text-align:center;font-size:0.65rem;color:var(--gold2);font-weight:800;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;opacity:0.8}
 .dt-picker-actions{display:flex;gap:10px}
+.dt-picker-sheet{background:var(--bg2);border-radius:28px 28px 0 0;padding:24px 24px 40px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,0.7)}
 .entretien-urgent{border-color:var(--red2)}
 .inasti-box{background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .wa-preview{background:var(--bg3);border-radius:var(--radius-sm);padding:14px;font-size:0.8rem;line-height:1.7;color:var(--text);border:1px solid var(--border);margin-top:10px;white-space:pre-wrap;max-height:200px;overflow-y:auto}
@@ -2374,7 +2375,7 @@ function openDtPicker(fieldId, type, title){
       <div class="dt-col-label">${lbl}</div>
       <div class="dt-col" id="dtcol-${id}">
         <div class="dt-col-sel"></div>
-        <div class="dt-col-inner" id="dtinner-${id}" style="top:${78-safeIdx*44}px">
+        <div class="dt-col-inner" id="dtinner-${id}" style="top:${86-safeIdx*52}px">
           ${items.map((x,i)=>`<div class="dt-item${i===safeIdx?' selected':''}" data-val="${x.val}">${x.label}</div>`).join('')}
         </div>
       </div>
@@ -2414,19 +2415,19 @@ function openDtPicker(fieldId, type, title){
 }
 
 function initDtScroll(inner, colId){
-  const ITEM_H = 44;
+  const ITEM_H = 52;
   let startY = 0, startTop = 0, isDragging = false, currentTop = 0;
   
   const getItems = () => inner.querySelectorAll('.dt-item');
-  const getTop = () => parseInt(inner.style.top) || 78;
+  const getTop = () => parseInt(inner.style.top) || 86;
   
   const snapTo = (rawTop) => {
     const items = getItems();
-    const maxTop = 78;
-    const minTop = 78 - (items.length-1)*ITEM_H;
+    const maxTop = 86;
+    const minTop = 86 - (items.length-1)*ITEM_H;
     const clampedTop = Math.max(minTop, Math.min(maxTop, rawTop));
-    const snappedIdx = Math.round((78 - clampedTop) / ITEM_H);
-    const finalTop = 78 - snappedIdx * ITEM_H;
+    const snappedIdx = Math.round((86 - clampedTop) / ITEM_H);
+    const finalTop = 86 - snappedIdx * ITEM_H;
     inner.style.transition = 'top 0.2s ease';
     inner.style.top = finalTop + 'px';
     items.forEach((item, i) => item.classList.toggle('selected', i === snappedIdx));
