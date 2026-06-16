@@ -171,6 +171,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .res-section-title{font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold2);margin-bottom:14px}
 #res-form-scroll{max-height:72vh;overflow-y:auto;padding-right:2px}
 .entretien-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+/* Date/Time Picker Custom */
+.dt-field{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all 0.2s}
+.dt-field:active{border-color:var(--gold);background:var(--bg4)}
+.dt-field-icon{font-size:1.1rem}
+.dt-field-val{flex:1;font-weight:600;font-size:0.9rem;color:var(--text)}
+.dt-field-val.empty{color:var(--text3)}
+.dt-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px)}
+.dt-picker-sheet{background:var(--bg2);border-radius:24px 24px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,0.6)}
+.dt-picker-title{font-weight:800;font-size:1rem;color:var(--text);margin-bottom:4px;text-align:center}
+.dt-picker-sub{font-size:0.72rem;color:var(--text3);text-align:center;margin-bottom:18px}
+.dt-picker-cols{display:flex;gap:8px;margin-bottom:18px}
+.dt-col{flex:1;position:relative;height:200px;overflow:hidden}
+.dt-col::before,.dt-col::after{content:'';position:absolute;left:0;right:0;height:72px;z-index:2;pointer-events:none}
+.dt-col::before{top:0;background:linear-gradient(to bottom,var(--bg2),transparent)}
+.dt-col::after{bottom:0;background:linear-gradient(to top,var(--bg2),transparent)}
+.dt-col-sel{position:absolute;top:50%;left:0;right:0;height:44px;transform:translateY(-50%);background:rgba(240,168,32,0.08);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);border-radius:8px;pointer-events:none;z-index:1}
+.dt-col-inner{position:absolute;left:0;right:0;top:0;cursor:grab;user-select:none}
+.dt-col-inner:active{cursor:grabbing}
+.dt-item{height:44px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--text2);transition:color 0.15s}
+.dt-item.selected{color:var(--gold2);font-size:1.15rem}
+.dt-col-label{text-align:center;font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px}
+.dt-picker-actions{display:flex;gap:10px}
 .entretien-urgent{border-color:var(--red2)}
 .inasti-box{background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .wa-preview{background:var(--bg3);border-radius:var(--radius-sm);padding:14px;font-size:0.8rem;line-height:1.7;color:var(--text);border:1px solid var(--border);margin-top:10px;white-space:pre-wrap;max-height:200px;overflow-y:auto}
@@ -430,8 +452,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <input type="hidden" id="r-service" value="depose">
     </div>
     <div class="fr">
-      <div class="fg"><label class="fl">Date aller</label><input type="date" class="fi" id="r-date-aller"></div>
-      <div class="fg"><label class="fl">Heure aller</label><input type="time" class="fi" id="r-heure-aller"></div>
+      <div class="fg">
+        <label class="fl">Date aller</label>
+        <div class="dt-field" onclick="openDtPicker('r-date-aller','date','📅 Date aller')">
+          <span class="dt-field-icon">📅</span>
+          <span class="dt-field-val empty" id="r-date-aller-disp">Choisir une date</span>
+        </div>
+        <input type="hidden" id="r-date-aller">
+      </div>
+      <div class="fg">
+        <label class="fl">Heure aller</label>
+        <div class="dt-field" onclick="openDtPicker('r-heure-aller','time','🕐 Heure aller')">
+          <span class="dt-field-icon">🕐</span>
+          <span class="dt-field-val empty" id="r-heure-aller-disp">Choisir l'heure</span>
+        </div>
+        <input type="hidden" id="r-heure-aller">
+      </div>
     </div>
     <div class="fg">
       <label class="fl">Départ</label>
@@ -452,7 +488,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div id="sp2-ar-jour" style="display:none">
       <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Retour même jour</div><div class="section-divider-line"></div></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour-jour"></div>
+        <div class="fg">
+          <label class="fl">Heure retour</label>
+          <div class="dt-field" onclick="openDtPicker('r-heure-retour-jour','time','🕐 Heure retour')">
+            <span class="dt-field-icon">🕐</span>
+            <span class="dt-field-val empty" id="r-heure-retour-jour-disp">Choisir l'heure</span>
+          </div>
+          <input type="hidden" id="r-heure-retour-jour">
+        </div>
         <div class="fg"><label class="fl">Distance retour (km)</label><input type="number" class="fi" id="r-distance-retour-jour" placeholder="= aller si vide" step="0.1" oninput="updKmRecap();updCalc()"></div>
       </div>
     </div>
@@ -461,8 +504,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Trajet retour</div><div class="section-divider-line"></div></div>
       <div class="alert alert-blue">📍 Les adresses de retour peuvent être différentes.</div>
       <div class="fr">
-        <div class="fg"><label class="fl">Date retour</label><input type="date" class="fi" id="r-date-retour"></div>
-        <div class="fg"><label class="fl">Heure retour</label><input type="time" class="fi" id="r-heure-retour"></div>
+        <div class="fg">
+          <label class="fl">Date retour</label>
+          <div class="dt-field" onclick="openDtPicker('r-date-retour','date','📅 Date retour')">
+            <span class="dt-field-icon">📅</span>
+            <span class="dt-field-val empty" id="r-date-retour-disp">Choisir une date</span>
+          </div>
+          <input type="hidden" id="r-date-retour">
+        </div>
+        <div class="fg">
+          <label class="fl">Heure retour</label>
+          <div class="dt-field" onclick="openDtPicker('r-heure-retour','time','🕐 Heure retour')">
+            <span class="dt-field-icon">🕐</span>
+            <span class="dt-field-val empty" id="r-heure-retour-disp">Choisir l'heure</span>
+          </div>
+          <input type="hidden" id="r-heure-retour">
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button type="button" class="btn btn-ghost btn-sm" id="btn-ret-inverse" onclick="setRetourInverse()" style="flex:1;font-size:0.78rem">⇄ Inverser aller</button>
@@ -1330,8 +1387,8 @@ function resetResForm(){
   ['kr-j2-1','kr-j2-2','kr-j2-3'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   const acd=g('ac-client-drop');if(acd)acd.style.display='none';
   setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
-  const rda=g('r-date-aller');if(rda)rda.value=new Date().toISOString().split('T')[0];
-  const rha=g('r-heure-aller');if(rha)rha.value=new Date().toTimeString().slice(0,5);
+  const rda=g('r-date-aller');const todayStr=new Date().toISOString().split('T')[0];if(rda)rda.value=todayStr;updDtDisplay('r-date-aller',todayStr);
+  const rha=g('r-heure-aller');const nowTime=new Date().toTimeString().slice(0,5);if(rha)rha.value=nowTime;updDtDisplay('r-heure-aller',nowTime);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+p.nom.replace(/\'/g,"\\'")+'\');updSourceUI()">'+p.nom+'</div>').join('');g('r-source').value='direct';}
   renderFavChips();updKmRecap();
   // Reset nouveau formulaire
@@ -1664,9 +1721,9 @@ function editRes(id){
   updSourceUI();
   if(r.source!=='direct'){setChips('r-partner-type-chips','r-partner-type',r.partnerType||'commission');updPartnerType();const ce=g('r-commission');if(ce)ce.value=r.commission||'';}
   setChips('r-type-chips','r-type',r.type||'aller');setChips('r-service-chips','r-service',r.service||'depose');
-  g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';g('r-heure-aller').value=r.heure||'';
+  g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';updDtDisplay('r-date-aller',r.dateAller||'');g('r-heure-aller').value=r.heure||'';updDtDisplay('r-heure-aller',r.heure||'');
   g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';g('r-distance').value=r.distance||'';g('r-vol').value=r.vol||'';
-  if(r.type==='ar-diff'){[['r-date-retour',r.dateRetour||''],['r-heure-retour',r.heureRetour||''],['r-depart-retour',r.departRetour||''],['r-arrivee-retour',r.arriveeRetour||''],['r-distance-retour',r.distanceRetour||'']].forEach(([id,val])=>{const el=g(id);if(el)el.value=val;});if(r.depRetLat)acC['r-depart-retour']={lat:r.depRetLat,lon:r.depRetLon};if(r.arrRetLat)acC['r-arrivee-retour']={lat:r.arrRetLat,lon:r.arrRetLon};}else if(r.type==='ar-jour'){const hj=g('r-heure-retour-jour');if(hj)hj.value=r.heureRetour||'';const dj=g('r-distance-retour-jour');if(dj)dj.value=r.distanceRetour||'';}
+  if(r.type==='ar-diff'){updDtDisplay('r-date-retour',r.dateRetour||'');updDtDisplay('r-heure-retour',r.heureRetour||'');[['r-date-retour',r.dateRetour||''],['r-heure-retour',r.heureRetour||''],['r-depart-retour',r.departRetour||''],['r-arrivee-retour',r.arriveeRetour||''],['r-distance-retour',r.distanceRetour||'']].forEach(([id,val])=>{const el=g(id);if(el)el.value=val;});if(r.depRetLat)acC['r-depart-retour']={lat:r.depRetLat,lon:r.depRetLon};if(r.arrRetLat)acC['r-arrivee-retour']={lat:r.arrRetLat,lon:r.arrRetLon};}else if(r.type==='ar-jour'){const hj=g('r-heure-retour-jour');if(hj)hj.value=r.heureRetour||'';const dj=g('r-distance-retour-jour');if(dj)dj.value=r.distanceRetour||'';}
   const kp=g('r-km-pickup');if(kp)kp.value=r.kmPickup||'';const kpr=g('r-km-pickup-retour');if(kpr)kpr.value=r.kmPickupRetour||'';
   setChips('r-vide-aller-chips','r-vide-aller-type',r.kmVideAllerType||'maison');const isAucunR=r.kmVideRetourType==='aucun';const togFill=g('r-vide-retour-toggle');if(togFill)togFill.checked=!isAucunR;const destFill=g('r-vide-retour-dest');if(destFill)destFill.style.display=isAucunR?'none':'flex';const subFill=g('r-vide-retour-toggle-sub');if(subFill)subFill.textContent=isAucunR?'Pas de retour à vide (client au retour 👍)':'Retour vers la maison calculé auto';if(!isAucunR)setChips('r-vide-retour-dest','r-vide-retour-type',r.kmVideRetourType||'maison');
   if(r.kmVideAllerType==='manuel'){const el=g('r-km-vide-aller');if(el)el.value=r.kmVideAller||0;}
@@ -2279,6 +2336,180 @@ function shareDevis(){
   const detail=g('dv-detail')?.textContent||'';
   const msg='🚗 Facciolini Mobility\n\nDevis transport :\n📍 '+dep+'\n🏁 '+arr+'\n\n💰 Prix estimé : '+prix+'\n('+detail+')\n\n📞 '+MOI.tel;
   if(navigator.share){navigator.share({text:msg});}else if(navigator.clipboard){navigator.clipboard.writeText(msg).then(()=>alert('Devis copié !'));}
+}
+
+// ===== DATE/TIME PICKER CUSTOM =====
+function openDtPicker(fieldId, type, title){
+  const existing = document.getElementById('dt-picker-overlay');
+  if(existing) existing.remove();
+  
+  const now = new Date();
+  const currentVal = document.getElementById(fieldId)?.value || '';
+  
+  // Valeurs initiales
+  let initDay, initMonth, initYear, initHour, initMin;
+  if(type === 'date' && currentVal){
+    const d = new Date(currentVal);
+    initDay = d.getDate(); initMonth = d.getMonth()+1; initYear = d.getFullYear();
+  } else if(type === 'date'){
+    initDay = now.getDate(); initMonth = now.getMonth()+1; initYear = now.getFullYear();
+  } else if(type === 'time' && currentVal){
+    const parts = currentVal.split(':');
+    initHour = parseInt(parts[0]); initMin = parseInt(parts[1]);
+  } else {
+    initHour = now.getHours(); initMin = Math.ceil(now.getMinutes()/5)*5%60;
+  }
+  
+  // Générer les options
+  const days = Array.from({length:31},(_,i)=>({val:i+1,label:String(i+1).padStart(2,'0')}));
+  const months = [{val:1,label:'Janv.'},{val:2,label:'Févr.'},{val:3,label:'Mars'},{val:4,label:'Avril'},{val:5,label:'Mai'},{val:6,label:'Juin'},{val:7,label:'Juil.'},{val:8,label:'Août'},{val:9,label:'Sept.'},{val:10,label:'Oct.'},{val:11,label:'Nov.'},{val:12,label:'Déc.'}];
+  const years = Array.from({length:4},(_,i)=>({val:now.getFullYear()+i-1,label:String(now.getFullYear()+i-1)}));
+  const hours = Array.from({length:24},(_,i)=>({val:i,label:String(i).padStart(2,'0')}));
+  const mins = Array.from({length:12},(_,i)=>({val:i*5,label:String(i*5).padStart(2,'0')}));
+  
+  const makeCol = (id, items, initVal, lbl) => {
+    const idx = items.findIndex(x=>x.val===initVal);
+    const safeIdx = idx>=0?idx:0;
+    return `<div>
+      <div class="dt-col-label">${lbl}</div>
+      <div class="dt-col" id="dtcol-${id}">
+        <div class="dt-col-sel"></div>
+        <div class="dt-col-inner" id="dtinner-${id}" style="top:${78-safeIdx*44}px">
+          ${items.map((x,i)=>`<div class="dt-item${i===safeIdx?' selected':''}" data-val="${x.val}">${x.label}</div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  };
+  
+  let colsHTML = '';
+  if(type === 'date'){
+    colsHTML = makeCol('day', days, initDay, 'Jour') + makeCol('month', months, initMonth, 'Mois') + makeCol('year', years, initYear, 'Année');
+  } else {
+    colsHTML = makeCol('hour', hours, initHour, 'Heure') + makeCol('min', mins, Math.round(initMin/5)*5, 'Min');
+  }
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'dt-picker-overlay';
+  overlay.id = 'dt-picker-overlay';
+  overlay.innerHTML = `
+    <div class="dt-picker-sheet">
+      <div class="dt-picker-title">${title}</div>
+      <div class="dt-picker-sub">Faites glisser pour choisir</div>
+      <div class="dt-picker-cols">${colsHTML}</div>
+      <div class="dt-picker-actions">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('dt-picker-overlay').remove()">Annuler</button>
+        <button class="btn btn-gold" style="flex:2" onclick="confirmDtPicker('${fieldId}','${type}')">✓ Confirmer</button>
+      </div>
+    </div>`;
+  
+  overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+  
+  // Initialiser le drag sur chaque colonne
+  ['day','month','year','hour','min'].forEach(colId => {
+    const inner = document.getElementById('dtinner-'+colId);
+    if(!inner) return;
+    initDtScroll(inner, colId);
+  });
+}
+
+function initDtScroll(inner, colId){
+  const ITEM_H = 44;
+  let startY = 0, startTop = 0, isDragging = false, currentTop = 0;
+  
+  const getItems = () => inner.querySelectorAll('.dt-item');
+  const getTop = () => parseInt(inner.style.top) || 78;
+  
+  const snapTo = (rawTop) => {
+    const items = getItems();
+    const maxTop = 78;
+    const minTop = 78 - (items.length-1)*ITEM_H;
+    const clampedTop = Math.max(minTop, Math.min(maxTop, rawTop));
+    const snappedIdx = Math.round((78 - clampedTop) / ITEM_H);
+    const finalTop = 78 - snappedIdx * ITEM_H;
+    inner.style.transition = 'top 0.2s ease';
+    inner.style.top = finalTop + 'px';
+    items.forEach((item, i) => item.classList.toggle('selected', i === snappedIdx));
+    setTimeout(() => inner.style.transition = '', 200);
+  };
+  
+  inner.addEventListener('touchstart', e => {
+    isDragging = true;
+    startY = e.touches[0].clientY;
+    startTop = getTop();
+    inner.style.transition = 'none';
+  }, {passive:true});
+  
+  inner.addEventListener('touchmove', e => {
+    if(!isDragging) return;
+    const dy = e.touches[0].clientY - startY;
+    inner.style.top = (startTop + dy) + 'px';
+    if(e.cancelable) e.preventDefault();
+  }, {passive:false});
+  
+  inner.addEventListener('touchend', () => {
+    isDragging = false;
+    snapTo(getTop());
+  });
+  
+  // Click sur un item
+  inner.querySelectorAll('.dt-item').forEach((item, idx) => {
+    item.addEventListener('click', () => snapTo(78 - idx*ITEM_H));
+  });
+}
+
+function confirmDtPicker(fieldId, type){
+  const getValue = (colId) => {
+    const inner = document.getElementById('dtinner-'+colId);
+    if(!inner) return null;
+    const sel = inner.querySelector('.dt-item.selected');
+    return sel ? parseInt(sel.dataset.val) : null;
+  };
+  
+  let value = '', display = '';
+  if(type === 'date'){
+    const d = getValue('day'), m = getValue('month'), y = getValue('year');
+    if(d && m && y){
+      value = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const months = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+      const weekdays = ['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+      const dateObj = new Date(y, m-1, d);
+      display = weekdays[dateObj.getDay()]+' '+d+' '+months[m-1]+' '+y;
+    }
+  } else {
+    const h = getValue('hour'), min = getValue('min');
+    if(h !== null && min !== null){
+      value = `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+      display = value;
+    }
+  }
+  
+  if(value){
+    const field = document.getElementById(fieldId);
+    if(field) field.value = value;
+    const dispEl = document.getElementById(fieldId+'-disp');
+    if(dispEl){ dispEl.textContent = display; dispEl.classList.remove('empty'); }
+    
+    // Déclencher les calculs liés
+    if(fieldId === 'r-date-aller' || fieldId === 'r-heure-aller') updCalc();
+    if(fieldId === 'r-date-retour') updCalc();
+  }
+  
+  document.getElementById('dt-picker-overlay')?.remove();
+}
+
+function updDtDisplay(fieldId, value){
+  const dispEl = document.getElementById(fieldId+'-disp');
+  if(!dispEl || !value) return;
+  if(fieldId.includes('date')){
+    const d = new Date(value);
+    const months = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+    const weekdays = ['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+    dispEl.textContent = weekdays[d.getDay()]+' '+d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+  } else {
+    dispEl.textContent = value;
+  }
+  dispEl.classList.remove('empty');
 }
 
 function selectChip(el,hiddenId,val){const c=el.closest('.chips');if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');const h=g(hiddenId);if(h)h.value=val;}
