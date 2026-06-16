@@ -2581,5 +2581,48 @@ if(!db.settings.pin)unlockApp();
   </div>
 </div>
 
+<script>
+// Service Worker - mise à jour automatique
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    // Vérifier les mises à jour toutes les 30 min
+    setInterval(() => reg.update(), 30 * 60 * 1000);
+    
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      newSW.addEventListener('statechange', () => {
+        if(newSW.state === 'installed' && navigator.serviceWorker.controller){
+          // Nouvelle version disponible - afficher bannière
+          showUpdateBanner(newSW);
+        }
+      });
+    });
+  });
+  
+  // Recharger si le SW prend le contrôle
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(!refreshing){ refreshing = true; window.location.reload(); }
+  });
+}
+
+function showUpdateBanner(newSW){
+  const existing = document.getElementById('update-banner');
+  if(existing) return;
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;padding:12px 16px;z-index:99999;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 4px 20px rgba(240,168,32,0.5)';
+  banner.innerHTML = '<span style="font-weight:700;font-size:0.85rem">🚀 Nouvelle version disponible !</span><button onclick="applyUpdate()" style="background:#000;color:var(--gold2);border:none;border-radius:20px;padding:6px 14px;font-weight:700;font-size:0.78rem;cursor:pointer">Mettre à jour</button>';
+  document.body.appendChild(banner);
+  window._pendingSW = newSW;
+}
+
+function applyUpdate(){
+  if(window._pendingSW){
+    window._pendingSW.postMessage('skipWaiting');
+  }
+  document.getElementById('update-banner')?.remove();
+}
+</script>
 </body>
 </html>
