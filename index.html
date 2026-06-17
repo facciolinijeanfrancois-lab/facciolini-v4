@@ -861,7 +861,7 @@ const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:
 const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zaventem',lat:50.9010,lon:4.4844},{id:'f2',nom:'Charleroi CRL',adresse:'Brussels South Charleroi Airport',lat:50.4592,lon:4.4538},{id:'f3',nom:'Gare de Mons',adresse:'Place Leopold, Mons',lat:50.4542,lon:3.9563},{id:'f4',nom:'Gare Charleroi',adresse:'Boulevard Tirou, Charleroi',lat:50.4108,lon:4.4446},{id:'f5',nom:'Gare du Midi',adresse:'Rue de France 2, Bruxelles',lat:50.8354,lon:4.3360}];
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
-let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.40,long:1.50,min:50,round:5,camion:20},vip:{seuil:4,reduc:10}}};
+let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.50,long:1.50,min:60,round:5,camion:20},vip:{seuil:4,reduc:10}}};
 let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous',payFilter='tous',clientSort='alpha',partnerHistFilter='tous';
 let acTimers={},acC={},calcTimers={};
 function save(){
@@ -895,7 +895,7 @@ function fixDb(){
   if(!db.settings.homeAddress||!db.settings.homeAddress.lat)db.settings.homeAddress=HOME_DEFAULT;
   if(!db.settings.tarifs.round)db.settings.tarifs.round=5;
   if(!db.settings.tarifs.camion)db.settings.tarifs.camion=20;
-  if(!db.settings.tarifs.min)db.settings.tarifs.min=50;
+  if(!db.settings.tarifs.min)db.settings.tarifs.min=60;
   if(!db.charges||!db.charges.length)db.charges=JSON.parse(JSON.stringify(CHARGES_DEFAULT));
   // Corriger coût/km Seat Leon si encore à l'ancienne valeur 0.30
   if(db.settings.vehicles&&db.settings.vehicles[0]&&db.settings.vehicles[0].cout===0.30){
@@ -2188,7 +2188,7 @@ function saveHome(){const a=g('home-adr').value.trim();if(!a){alert('Adresse req
 function openVehicleModal(idx){const v=db.settings.vehicles[idx];g('vehicle-idx').value=idx;sv('vehicle-title',idx===0?'🚗 Seat Leon':'🚐 Talento');g('v-nom').value=v.nom||'';g('v-cout').value=v.cout||'';g('v-conso').value=v.conso||'';openModal('m-vehicle');}
 function saveVehicle(){const idx=parseInt(g('vehicle-idx').value);db.settings.vehicles[idx]={nom:g('v-nom').value,cout:parseFloat(g('v-cout').value)||0.30,conso:parseFloat(g('v-conso').value)||5};save();closeModal('m-vehicle');renderParams();}
 function openTarifModal(){const t=db.settings.tarifs;g('t-rayon').value=t.rayon;g('t-court').value=t.court;g('t-long').value=t.long;g('t-min').value=t.min;g('t-round').value=t.round||5;g('t-camion').value=t.camion||20;openModal('m-tarifs');}
-function saveTarifs(){db.settings.tarifs={rayon:parseInt(g('t-rayon').value)||30,court:parseFloat(g('t-court').value)||1.40,long:parseFloat(g('t-long').value)||1.50,min:parseFloat(g('t-min').value)||50,round:parseInt(g('t-round').value)||5,camion:parseFloat(g('t-camion').value)||20};save();closeModal('m-tarifs');renderParams();}
+function saveTarifs(){db.settings.tarifs={rayon:parseInt(g('t-rayon').value)||30,court:parseFloat(g('t-court').value)||1.50,long:parseFloat(g('t-long').value)||1.50,min:parseFloat(g('t-min').value)||60,round:parseInt(g('t-round').value)||5,camion:parseFloat(g('t-camion').value)||20};save();closeModal('m-tarifs');renderParams();}
 function openVipModal(){g('vip-seuil').value=db.settings.vip.seuil;g('vip-reduc').value=db.settings.vip.reduc;openModal('m-vip');}
 function saveVip(){db.settings.vip={seuil:parseInt(g('vip-seuil').value)||4,reduc:parseInt(g('vip-reduc').value)||10};save();closeModal('m-vip');renderAll();}
 function saveCharge(){const c={id:genId(),nom:g('ch-nom').value.trim(),montant:parseFloat(g('ch-montant').value)||0};if(!c.nom){alert('Nom requis');return;}db.charges.push(c);save();closeModal('m-charge');renderParams();}
