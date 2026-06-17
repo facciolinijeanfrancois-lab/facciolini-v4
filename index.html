@@ -820,7 +820,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="modal-actions" style="margin-top:16px">
   <button class="btn btn-outline" onclick="closeModal('m-detail-res')">Fermer</button>
   <button class="btn btn-green btn-sm" id="dr-rappel-btn" style="display:none">&#x1f4ac; Rappel J-1</button>
-  <button class="btn btn-gold btn-sm" id="dr-avis-btn" style="display:none">&#x2b50; Avis Google</button>
+  <button class="btn btn-gold btn-sm" id="dr-avis-wa-btn" style="display:none">&#x1f4ac; Avis WhatsApp</button>
+  <button class="btn btn-outline btn-sm" id="dr-avis-sms-btn" style="display:none">&#x1f4f1; Avis SMS</button>
   <button class="btn btn-outline btn-sm" id="dr-edit-btn">Modifier</button>
   <button class="btn btn-red btn-sm" id="dr-del-btn">Supprimer</button>
 </div>
@@ -1773,23 +1774,31 @@ function showDetailRes(id){
     if(diff2>=0&&diff2<=3){drb.style.display='inline-flex';drb.onclick=function(){sendRappel(id);};}
     else drb.style.display='none';
   }
-  // Bouton avis Google
-  var dab=g('dr-avis-btn');
-  if(dab){
+  // Boutons avis Google (WhatsApp + SMS)
+  var dawb=g('dr-avis-wa-btn');
+  var dasb=g('dr-avis-sms-btn');
+  var nom=r.clientNom||r.client||'';
+  var prenom=nom.split(' ')[0]||'';
+  var dest=r.destination||r.arrivee||'';
+  var msgAvis='Bonjour '+prenom+' !\n\nMerci pour votre confiance'+(dest?' pour votre trajet vers '+dest:'')+'.\n\nSi vous etes satisfait(e) de la prestation, un petit avis Google nous aiderait enormement :\n https://share.google/wt1lsRQMDu7tYcfl5\n\nMerci d avance et a bientot !\nJean-Francois - Facciolini Mobility';
+  var telRaw=r.clientTel||r.telephone||'';
+  if(dawb){
     if(r.statut==='termine'){
-      dab.style.display='inline-flex';
-      dab.onclick=function(){
-        var nom=r.clientNom||r.client||'';
-        var prenom=nom.split(' ')[0]||'';
-        var dest=r.destination||r.arrivee||'';
-        var msg='Bonjour '+prenom+' \uD83D\uDE0A\n\nMerci pour votre confiance'+(dest?' pour votre trajet vers '+dest:'')+'.\n\nSi vous etes satisfait(e) de la prestation, un petit avis Google nous aiderait enormement :\n\uD83D\uDC49 https://share.google/wt1lsRQMDu7tYcfl5\n\nMerci d avance et a bientot !\nJean-Francois - Facciolini Mobility';
-        var tel=(r.clientTel||r.telephone||'').replace(/[\s\-\+]/g,'').replace(/^0/,'32');
-        var url='https://wa.me/'+tel+'?text='+encodeURIComponent(msg);
-        window.open(url,'_blank');
+      dawb.style.display='inline-flex';
+      dawb.onclick=function(){
+        var tel=telRaw.replace(/[\s\-\+]/g,'').replace(/^0/,'32');
+        window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msgAvis),'_blank');
       };
-    } else {
-      dab.style.display='none';
-    }
+    } else { dawb.style.display='none'; }
+  }
+  if(dasb){
+    if(r.statut==='termine'){
+      dasb.style.display='inline-flex';
+      dasb.onclick=function(){
+        var tel=telRaw.replace(/\s/g,'');
+        window.open('sms:'+tel+'?body='+encodeURIComponent(msgAvis),'_blank');
+      };
+    } else { dasb.style.display='none'; }
   }
   openModal('m-detail-res');
 }
