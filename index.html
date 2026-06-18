@@ -889,7 +889,7 @@ function save(){
     }
   }
 }
-function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,volRetour:'',notesInternes:'',service:'depose',...r};}
+function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,volRetour:'',notesInternes:'',service:'depose',statut:'',...r};}
 function load(){const keys=['fm_v52','facciolini_v51','facciolini_v5'];for(const k of keys){const d=localStorage.getItem(k);if(d){try{const p=JSON.parse(d);db={...db,...p};fixDb();return;}catch(e){}}}const d4=localStorage.getItem('facciolini_v4');if(d4){try{const old=JSON.parse(d4);db.reservations=(old.reservations||[]).map(r=>migrateR(r));db.carburant=old.carburant||[];db.charges=(old.charges||[]).map(c=>{if(c.nom&&c.nom.toLowerCase().includes('comptable')&&parseFloat(c.montant)>50)return{...c,montant:50};return c;});db.kmReels=old.kmReels||[];if(old.settings)db.settings={...db.settings,...old.settings};fixDb();save();return;}catch(e){}}fixDb();}
 function fixDb(){
   if(!db.frais)db.frais=[];
@@ -1987,7 +1987,7 @@ function sendRappel(id,sens){
   document.getElementById('rappel-sms-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx].rappelEnvoye=new Date().toISOString();save();renderRes();}}},true);
   document.getElementById('rappel-cancel-btn').onclick=function(){popup.remove();};
 }
-function getStatusBadge(r){
+function getStatusBadge(r){if(!r||typeof r.statut==='undefined')return '';
   // Statut manuel prioritaire
   if(r.statut==='annule')return '<span class="status-annule">❌ Annulée</span>';
   if(r.statut==='enroute')return '<span class="status-enroute">🚗 En route</span>';
