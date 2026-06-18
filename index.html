@@ -887,7 +887,7 @@ function save(){
     }
   }
 }
-function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,...r};}
+function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,volRetour:'',notesInternes:'',service:'depose',...r};}
 function load(){const keys=['fm_v52','facciolini_v51','facciolini_v5'];for(const k of keys){const d=localStorage.getItem(k);if(d){try{const p=JSON.parse(d);db={...db,...p};fixDb();return;}catch(e){}}}const d4=localStorage.getItem('facciolini_v4');if(d4){try{const old=JSON.parse(d4);db.reservations=(old.reservations||[]).map(r=>migrateR(r));db.carburant=old.carburant||[];db.charges=(old.charges||[]).map(c=>{if(c.nom&&c.nom.toLowerCase().includes('comptable')&&parseFloat(c.montant)>50)return{...c,montant:50};return c;});db.kmReels=old.kmReels||[];if(old.settings)db.settings={...db.settings,...old.settings};fixDb();save();return;}catch(e){}}fixDb();}
 function fixDb(){
   if(!db.frais)db.frais=[];
@@ -899,7 +899,7 @@ function fixDb(){
   if(!db.settings.homeAddress||!db.settings.homeAddress.lat)db.settings.homeAddress=HOME_DEFAULT;
   if(!db.settings.tarifs.round)db.settings.tarifs.round=5;
   if(!db.settings.tarifs.camion)db.settings.tarifs.camion=20;
-  if(!db.settings.tarifs.min)db.settings.tarifs.min=60;
+  if(!db.settings.tarifs.min)db.settings.tarifs.min=50;
   if(!db.charges||!db.charges.length)db.charges=JSON.parse(JSON.stringify(CHARGES_DEFAULT));
   // Corriger coût/km Seat Leon si encore à l'ancienne valeur 0.30
   if(db.settings.vehicles&&db.settings.vehicles[0]&&db.settings.vehicles[0].cout===0.30){
@@ -1450,6 +1450,8 @@ function resetResForm(){
   ['r-vide-retour-manuel-box','r-vide-aller-manuel-box','sp4-retour-section','sp2-ar-jour'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   ['kr-j2-1','kr-j2-2','kr-j2-3'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   const acd=g('ac-client-drop');if(acd)acd.style.display='none';
+  const bDep2=g('btn-client-addr-dep');if(bDep2)bDep2.style.display='none';
+  const bArr2=g('btn-client-addr-arr');if(bArr2)bArr2.style.display='none';
   setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
   const rda=g('r-date-aller');const todayStr=new Date().toISOString().split('T')[0];if(rda)rda.value=todayStr;updDtDisplay('r-date-aller',todayStr);
   const rha=g('r-heure-aller');const nowTime=new Date().toTimeString().slice(0,5);if(rha)rha.value=nowTime;updDtDisplay('r-heure-aller',nowTime);
@@ -1684,9 +1686,9 @@ function genResSummary(){
   const heure=g('r-heure-aller').value||'',lang=g('r-langue').value||'fr';
   const fmtDL=(ds,hs)=>ds?new Date(ds).toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})+' à '+hs:'';
   let msg='';
-  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n✈️ OUTBOUND\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETURN\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n🏠 To: '+arrRet;msg+='\n\n💶 Total: '+fmt(prix)+'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR);}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
-  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n✈️ HEENREIS\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 TERUGREIS\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n🏠 Naar: '+arrRet;msg+='\n\n💶 Totaal: '+fmt(prix)+'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR);}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
-  else{msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n✈️ ALLER\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+'\n📍 Arrivée : '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETOUR\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n🏠 Arrivée : '+arrRet;msg+='\n\n💶 Prix total : '+fmt(prix)+'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR);}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
+  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n✈️ OUTBOUND\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETURN\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n🏠 To: '+arrRet+(r&&r.volRetour?'\n✈️ Return flight: '+r.volRetour:'');msg+='\n\n💶 Total: '+fmt(prix)+'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR);}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
+  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n✈️ HEENREIS\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr;if(type==='ar-diff'){msg+='\n\n🛬 TERUGREIS\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n🏠 Naar: '+arrRet+(r&&r.volRetour?'\n✈️ Terugvlucht: '+r.volRetour:'');msg+='\n\n💶 Totaal: '+fmt(prix)+'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR);}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
+  else{msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n✈️ ALLER\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+'\n📍 Arrivée : '+arr;if(type==='ar-diff'){msg+='\n\n🛬 RETOUR\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n🏠 Arrivée : '+arrRet+(r&&r.volRetour?'\n✈️ Vol retour : '+r.volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR);}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
   sv('wa-preview',msg);acC['wa-msg']=msg;acC['wa-tel']=(g('r-client-tel').value||'').replace(/[^+\d]/g,'');
 }
 function sendWA(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
@@ -2165,6 +2167,45 @@ function scheduleAllNotifications(){
     }
   });
   
+  // Rappel J-1 retour (ar-diff)
+  db.reservations.filter(r => r.statut !== 'annule' && r.type === 'ar-diff' && r.dateRetour).forEach(r => {
+    const dateRet = new Date(r.dateRetour);
+    dateRet.setHours(0,0,0,0);
+    const diffR = Math.round((dateRet - today) / 86400000);
+    if(ns.j1 && diffR === 1){
+      const [h,m] = (ns.j1Heure || '20:00').split(':');
+      const notifTime = new Date();
+      notifTime.setHours(parseInt(h), parseInt(m), 0, 0);
+      const delay = notifTime - now;
+      if(delay > 0){
+        const t = setTimeout(() => {
+          showLocalNotification(
+            '🛬 Retour demain !',
+            (r.heureRetour||'') + ' · ' + r.clientNom + ' · ' + (r.departRetour||r.arrivee||'').substring(0,30),
+            r.id + '-retour'
+          );
+        }, delay);
+        window._notifTimers.push(t);
+      }
+    }
+    if(ns.matin && diffR === 0){
+      const [h,m] = (ns.matinHeure || '07:00').split(':');
+      const notifTime = new Date();
+      notifTime.setHours(parseInt(h), parseInt(m), 0, 0);
+      const delay = notifTime - now;
+      if(delay > 0){
+        const t = setTimeout(() => {
+          showLocalNotification(
+            '🛬 Retour aujourd\'hui !',
+            (r.heureRetour||'') + ' · ' + r.clientNom + ' · ' + (r.departRetour||r.arrivee||'').substring(0,30),
+            r.id + '-retour-matin'
+          );
+        }, delay);
+        window._notifTimers.push(t);
+      }
+    }
+  });
+
   console.log('FM: ' + (window._notifTimers.length) + ' notification(s) planifiée(s)');
 }
 
@@ -2401,7 +2442,8 @@ function exportICS(r){
       '🛬 Prise en charge: '+shortAero(depRet),
       arrRet?'🏠 Dépose: '+arrRet:'',
       r.passagers?'👥 Passagers: '+r.passagers:'',
-      r.vol?'🛩️ Vol: '+r.vol:'',
+      r.vol?'🛩️ Vol aller: '+r.vol:'',
+      r.volRetour?'🛩️ Vol retour: '+r.volRetour:'',
       '💰 Prix: '+fmt(r.prix),
       '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+solde,
       r.notes?'📋 '+r.notes:'',
