@@ -1095,7 +1095,7 @@ function renderRes(){
   var res;
   if(resFilter==='upcoming')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});
   else if(resFilter==='today')res=db.reservations.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});
-  else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d.getTime()===demain.getTime();});}
+  else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()===demain.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()===demain.getTime();}return false;});}
   else if(resFilter==='done')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});
   else if(resFilter==='annule')res=db.reservations.filter(function(r){return r.statut==='annule';});
   else res=getMonthRes(curMonth,curYear);
