@@ -504,11 +504,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="fg">
       <label class="fl">Départ</label>
       <div id="fav-chips-dep" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <button type="button" class="chip" id="btn-client-addr-dep" onclick="fillClientAddrSimple('depart')" style="display:none;margin-bottom:8px;background:rgba(45,125,210,0.12);border-color:var(--blue2);color:var(--blue2)">👤 Adresse client</button>
       <div class="ac-wrap"><input type="text" class="fi" id="r-depart" placeholder="Adresse de départ..." autocomplete="off" oninput="acSearch(this,'ac-r-dep','r-depart')"><input type="hidden" id="r-dep-lat"><input type="hidden" id="r-dep-lon"><div class="ac-drop" id="ac-r-dep"></div></div>
     </div>
     <div class="fg">
       <label class="fl">Arrivée</label>
       <div id="fav-chips-arr" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <button type="button" class="chip" id="btn-client-addr-arr" onclick="fillClientAddrSimple('arrivee')" style="display:none;margin-bottom:8px;background:rgba(45,125,210,0.12);border-color:var(--blue2);color:var(--blue2)">👤 Adresse client</button>
       <div class="ac-wrap"><input type="text" class="fi" id="r-arrivee" placeholder="Adresse d'arrivée..." autocomplete="off" oninput="acSearch(this,'ac-r-arr','r-arrivee')"><input type="hidden" id="r-arr-lat"><input type="hidden" id="r-arr-lon"><div class="ac-drop" id="ac-r-arr"></div></div>
     </div>
     <div id="dist-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">⏳ Calcul distance...</div></div>
@@ -2024,15 +2026,27 @@ function fillClientAddrRetour(field){
   }
 }
 function showClientAddrBtns(){
-  const nom=g('r-client-nom')?.value?.trim();
-  const client=nom?db.clients.find(c=>c.nom.toLowerCase()===nom.toLowerCase()):null;
-  const hasAddr=client&&client.adresse;
+  const c=db.clients.find(x=>x.nom===g('r-client-nom')?.value);
+  const hasAddr=!!(c&&c.adresse);
+  const svc=g('r-service')?.value||'depose';
+  const isRec=(svc==='recuperation');
+  // Boutons trajet simple
+  const bDep=g('btn-client-addr-dep');
+  const bArr=g('btn-client-addr-arr');
+  if(bDep)bDep.style.display=(hasAddr&&!isRec)?'inline-flex':'none';
+  if(bArr)bArr.style.display=(hasAddr&&isRec)?'inline-flex':'none';
+  // Boutons aller-retour
   const b1=g('btn-client-addr-dep-ret');if(b1)b1.style.display=hasAddr?'inline-flex':'none';
   const b2=g('btn-client-addr-arr-ret');if(b2)b2.style.display=hasAddr?'inline-flex':'none';
-  if(hasAddr&&client){
-    if(b1)b1.title='Domicile: '+client.adresse;
-    if(b2)b2.title='Domicile: '+client.adresse;
-  }
+}
+function fillClientAddrSimple(field){
+  const c=db.clients.find(x=>x.nom===g('r-client-nom')?.value);
+  if(!c||!c.adresse)return;
+  const inputId=field==='depart'?'r-depart':'r-arrivee';
+  const acKey=field==='depart'?'r-depart':'r-arrivee';
+  const otherKey=field==='depart'?'r-arrivee':'r-depart';
+  g(inputId).value=c.adresse;
+  if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(acC[otherKey])calcDist();}
 }
 function updVolField(){
   const service=g('r-service')?.value||'depose';
