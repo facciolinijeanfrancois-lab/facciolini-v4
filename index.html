@@ -316,6 +316,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="dr"><span class="dr-label">Taux de charge</span><span class="dr-val" id="f-taux-charge">&#x2014;</span></div>
     <div class="dr" style="border-bottom:none"><span class="dr-label">Km annuels</span><span class="dr-val" id="f-km-a">0 km</span></div>
   </div>
+  <div class="sec" style="padding-top:4px"><span class="sec-title">Répartition encaissements</span></div>
+  <div id="pay-repartition"></div>
   <div class="sec"><span class="sec-title">Carburant</span><button class="btn btn-outline btn-sm" onclick="openCarbModal()">+ Plein</button></div>
   <div style="display:flex;gap:7px;margin-bottom:10px">
     <div class="chip active" id="carb-f-tous" onclick="setCarbFilter('tous',this)">Tous</div>
@@ -1247,6 +1249,7 @@ function renderFin(){
     if(consos.length>0)conso=(consos.reduce((s,v)=>s+v,0)/consos.length).toFixed(1).replace('.',',')+' L/100km';
   }
   sv('f-carb-co',conso);
+  renderPayRepartition();
   const cSort=[...carbsFiltered].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const cl=g('carb-list');
   if(cl){
@@ -2291,6 +2294,65 @@ function setResFilter(f,el){resFilter=f;payFilter='tous';document.querySelectorA
 function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
 function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='upcoming')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='done')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
+function renderPayRepartition(){
+  const res=getMonthRes(curMonth,curYear);
+  if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
+  const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},carte:{label:'Carte',icon:'💳',color:'var(--blue2)',res:[]},virement:{label:'Virement',icon:'🏦',color:'var(--gold)',res:[]},prepaye:{label:'Partenaires',icon:'🤝',color:'var(--orange2)',res:[]}};
+  res.forEach(r=>{const p=r.paiement||'cash';const k=groups[p]?p:'cash';groups[k].res.push(r);});
+  const total=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  Object.entries(groups).forEach(([key,g2])=>{
+    const amt=g2.res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+    const pct=total>0?Math.round(amt/total*100):0;
+    const active=window._payFilter===key;
+    html+='<div onclick="togglePayFilter(&quot;'+key+'&quot;)" style="background:'+(active?'#1a1a1a':'var(--card)')+';border:1.5px solid '+(active?g2.color:'var(--border)')+';border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all 0.2s">';
+    html+='<div style="font-size:1rem;margin-bottom:5px">'+g2.icon+'</div>';
+    html+='<div style="font-size:0.68rem;color:'+(active?'#aaa':'var(--text3)')+';margin-bottom:3px">'+g2.label+'</div>';
+    html+='<div style="font-size:1.05rem;font-weight:700;color:'+(active?g2.color:'var(--text)')+'">'+fmt(amt)+'</div>';
+    html+='<div style="font-size:0.68rem;color:'+(active?'#888':'var(--text3)')+';margin-top:2px">'+g2.res.length+' course'+(g2.res.length>1?'s':'')+' · '+pct+'%</div>';
+    html+='<div style="height:3px;border-radius:2px;margin-top:8px;background:'+g2.color+';width:'+pct+'%"></div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  // Détail si filtre actif
+  if(window._payFilter&&groups[window._payFilter]){
+    const gf=groups[window._payFilter];
+    const rs=gf.res.sort((a,b)=>new Date(b.dateAller)-new Date(a.dateAller));
+    html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    html+='<div style="font-size:0.72rem;font-weight:700;color:'+gf.color+';text-transform:uppercase;letter-spacing:0.08em">'+gf.icon+' '+gf.label+' — '+rs.length+' course'+(rs.length>1?'s':'')+'</div>';
+    if(rs.length>1)html+='<button class="btn btn-red btn-xs" onclick="deletePayGroup(&quot;'+window._payFilter+'&quot;)">🗑 Tout supprimer</button>';
+    html+='</div>';
+    rs.forEach(r=>{
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">';
+      html+='<div style="flex:1"><div style="font-size:0.83rem;font-weight:600;color:var(--text)">'+r.clientNom+'</div>';
+      html+='<div style="font-size:0.72rem;color:var(--text3)">'+new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+' · '+(r.depart||'').substring(0,18)+'</div></div>';
+      html+='<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:var(--gold)">'+fmt(r.prix)+'</span>';
+      html+='<button class="btn btn-red btn-xs" data-id="'+r.id+'" onclick="deleteOneResFromPay(this.dataset.id)">✕</button></div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  const el=g('pay-repartition');if(el)el.innerHTML=html;
+}
+function togglePayFilter(key){
+  window._payFilter=window._payFilter===key?null:key;
+  renderPayRepartition();
+}
+function deletePayGroup(payKey){
+  const res=getMonthRes(curMonth,curYear).filter(r=>(r.paiement||'cash')===payKey);
+  if(!res.length)return;
+  if(!confirm('Supprimer les '+res.length+' courses '+payKey+' de ce mois ? Cette action est irréversible.'))return;
+  const ids=new Set(res.map(r=>r.id));
+  db.reservations=db.reservations.filter(r=>!ids.has(r.id));
+  window._payFilter=null;
+  save();renderAll();
+}
+function deleteOneResFromPay(id){
+  if(!confirm('Supprimer cette course définitivement ?'))return;
+  db.reservations=db.reservations.filter(r=>r.id!==id);
+  save();renderAll();
+}
 function delCarb(id){if(confirm("Supprimer ce plein ?")){db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
 function delFrais2(id){if(confirm("Supprimer ce frais ?")){db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
 function markVmt(id){const r=db.reservations.find(r=>r.id===id);if(r){r.vmtRecu=true;save();renderDash();renderRes();}}
