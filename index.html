@@ -1141,7 +1141,14 @@ function renderRes(){
     // Bouton rappel J-1 pour courses à venir
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
     if(diff2>=0&&diff2<=3&&r.clientTel){
-      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id)">💬 Envoyer rappel'+( diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)')+'</button>';
+      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,'aller')">💬 Rappel aller'+( diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)')+'</button>';
+    }
+    // Bouton rappel retour pour ar-diff
+    if(r.type==='ar-diff'&&r.dateRetour&&r.clientTel){
+      var diff3=(new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
+      if(diff3>=0&&diff3<=3){
+        html+='<button class="btn btn-full" style="margin-top:6px;font-size:0.8rem;background:var(--blue2);color:#fff;border:none;border-radius:10px;padding:10px" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,\'retour\')">🛬 Rappel retour'+(diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':' (dans '+Math.ceil(diff3)+'j)')+'</button>';
+      }
     }
     html+='</div>';
   });
@@ -1858,9 +1865,10 @@ function setStatut(id,statut){
   });
   renderDash();renderRes();
 }
-function sendRappel(id){
+function sendRappel(id,sens){
   var r=db.reservations.find(function(x){return x.id===id;});
   if(!r)return;
+  var isRetour=sens==='retour'&&r.type==='ar-diff'&&r.dateRetour;
   var lang=r.langue||'fr';
   var date=new Date(r.dateAller);
   var dateStr=date.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'});
@@ -1901,6 +1909,43 @@ function sendRappel(id){
     if(solde>0)msg+='\n💶 Solde à régler à l\'arrivée : '+fmt(solde)+'\n';
     msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');
   }
+  if(isRetour){
+    var dateRet2=new Date(r.dateRetour);
+    var dateRetStr=dateRet2.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'});
+    var heureRet=r.heureRetour||'';
+    var depRet=r.departRetour||r.arrivee||'';
+    var arrRet=r.arriveeRetour||r.depart||'';
+    var diffRet=Math.round((new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
+    var quandRet=diffRet===0?'aujourd\'hui':diffRet===1?'demain':'dans '+diffRet+' jours';
+    if(lang==='en'){
+      msg='Hello '+r.clientNom+' 👋\n\nJust a reminder for your return transfer '+quandRet+':\n\n';
+      msg+='📅 '+dateRetStr+(heureRet?' at '+heureRet:'')+'\n';
+      msg+='🛫 Departure: '+depRet+'\n';
+      msg+='🏠 Drop-off: '+arrRet+'\n';
+      if(r.volRetour)msg+='✈️ Return flight: '+r.volRetour+'\n';
+      msg+='\n📢 Once you have collected your luggage, please send me a message — I\'ll meet you at our agreed meeting point.\n';
+      if(solde>0)msg+='\n💶 Balance to pay on arrival: '+fmt(solde)+'\n';
+      msg+='\nSee you soon!\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');
+    } else if(lang==='nl'){
+      msg='Hallo '+r.clientNom+' 👋\n\nHerinnering voor uw terugreis '+quandRet+':\n\n';
+      msg+='📅 '+dateRetStr+(heureRet?' om '+heureRet:'')+'\n';
+      msg+='🛫 Vertrek: '+depRet+'\n';
+      msg+='🏠 Bestemming: '+arrRet+'\n';
+      if(r.volRetour)msg+='✈️ Terugvlucht: '+r.volRetour+'\n';
+      msg+='\n📢 Zodra u uw bagage hebt opgehaald, stuur mij een berichtje — ik kom u ophalen op onze afgesproken ontmoetingsplaats.\n';
+      if(solde>0)msg+='\n💶 Saldo te betalen bij aankomst: '+fmt(solde)+'\n';
+      msg+='\nTot binnenkort!\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');
+    } else {
+      msg='Bonjour '+r.clientNom+' 👋\n\nPetit rappel pour votre retour '+quandRet+' :\n\n';
+      msg+='📅 '+dateRetStr+(heureRet?' à '+heureRet:'')+'\n';
+      msg+='🛫 Départ de : '+depRet+'\n';
+      msg+='🏠 Arrivée à : '+arrRet+'\n';
+      if(r.volRetour)msg+='✈️ Vol retour : '+r.volRetour+'\n';
+      msg+='\n📢 Dès que vous avez récupéré vos bagages, envoyez-moi un message — je vous rejoins directement au point de rendez-vous convenu.\n';
+      if(solde>0)msg+='\n💶 Solde à régler à l\'arrivée : '+fmt(solde)+'\n';
+      msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');
+    }
+  }
   var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
   var existing=document.getElementById('rappel-choice-popup');
   if(existing)existing.remove();
@@ -1911,7 +1956,7 @@ function sendRappel(id){
   var waUrl=tel?'https://wa.me/'+tel+'?text='+encodedMsg:'https://wa.me/?text='+encodedMsg;
   var smsUrl=tel?'sms:'+tel+'?body='+encodedMsg:'sms:?body='+encodedMsg;
   popup.innerHTML='<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;box-shadow:0 -4px 30px rgba(0,0,0,0.4)">'
-    +'<div style="text-align:center;font-weight:700;font-size:1rem;margin-bottom:6px">💬 Envoyer le rappel via...</div>'
+    +'<div style="text-align:center;font-weight:700;font-size:1rem;margin-bottom:6px">'+(isRetour?'🛬 Rappel retour':'💬 Rappel aller')+' via...</div>'
     +'<div style="text-align:center;font-size:0.8rem;color:var(--text3);margin-bottom:20px">'+r.clientNom+(tel?' · '+r.clientTel:'')+'</div>'
     +'<div style="display:flex;gap:12px;margin-bottom:12px">'
     +'<button id="rappel-wa-btn" style="flex:1;padding:14px 8px;background:#25D366;color:#fff;border:none;border-radius:14px;font-size:0.95rem;font-weight:700;cursor:pointer">📱 WhatsApp</button>'
