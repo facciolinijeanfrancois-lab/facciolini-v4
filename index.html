@@ -964,6 +964,7 @@ function unlockApp(){const ps=g('pin-screen');if(ps)ps.style.display='none';cons
 function showPage(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(name!=='fin')window._payFilter=null;
   g('page-'+name).classList.add('active');
   if(btn)btn.classList.add('active');
   // Rendre uniquement la page ouverte + dash pour les stats
@@ -981,6 +982,7 @@ function changeMonth(d){
   curMonth+=d;
   if(curMonth>11){curMonth=0;curYear++;}
   if(curMonth<0){curMonth=11;curYear--;}
+  window._payFilter=null;
   // Forcer re-render complet au changement de mois
   const now=new Date();
   sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
@@ -2298,7 +2300,10 @@ function renderPayRepartition(){
   const res=getMonthRes(curMonth,curYear);
   if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
   const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},carte:{label:'Carte',icon:'💳',color:'var(--blue2)',res:[]},virement:{label:'Virement',icon:'🏦',color:'var(--gold)',res:[]},prepaye:{label:'Partenaires',icon:'🤝',color:'var(--orange2)',res:[]}};
-  res.forEach(r=>{const p=r.paiement||'cash';const k=groups[p]?p:'cash';groups[k].res.push(r);});
+  res.forEach(r=>{const p=r.paiement||'cash';
+    // Courses partenaires prépayées → groupe partenaires
+    const k=(p==='prepaye'||r.partnerType==='prepaye')?'prepaye':(groups[p]?p:'cash');
+    groups[k].res.push(r);});
   const total=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
   let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
   Object.entries(groups).forEach(([key,g2])=>{
