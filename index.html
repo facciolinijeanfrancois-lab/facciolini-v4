@@ -2052,6 +2052,7 @@ function updVolField(){
   const service=g('r-service')?.value||'depose';
   const volFg=g('r-vol-fg');
   if(volFg)volFg.style.display=service==='recuperation'?'block':'none';
+  showClientAddrBtns();
 }
 // ===== NOTIFICATIONS PUSH =====
 function requestNotifPermission(){
