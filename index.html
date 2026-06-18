@@ -1623,11 +1623,11 @@ function saveReservation(){
   const distRJ=parseFloat(g('r-distance-retour-jour')?.value||0);
   const distR=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||0):type==='ar-jour'?distRJ:0;
   const dist=parseFloat(g('r-distance').value||0);
-  if(!db.clients.find(c=>c.nom===nom)){db.clients.push({id:genId(),nom,tel,email:'',adresse:g('r-depart')?.value||'',lat:acC['r-depart']?.lat||null,lon:acC['r-depart']?.lon||null,langue,notes:'',blacklist:false});}
+  if(!db.clients.find(c=>c.nom===nom)){const _svc=g('r-service')?.value||'depose';const _isRec=_svc==='recuperation';const _adrField=_isRec?'r-arrivee':'r-depart';const _acKey=_isRec?'r-arrivee':'r-depart';db.clients.push({id:genId(),nom,tel,email:'',adresse:g(_adrField)?.value||'',lat:acC[_acKey]?.lat||null,lon:acC[_acKey]?.lon||null,langue,notes:'',blacklist:false});}
   const editId=g('res-edit-id').value;
   const existingR=editId?(db.reservations.find(x=>x.id===editId)||{}):{}
   const r={
-    id:editId||genId(),clientNom:nom,clientTel:tel,langue,vehicule:vidx,passagers:g('r-passagers').value,
+    id:editId||genId(),clientNom:nom,clientTel:tel,langue,vehicule:vidx,passagers:parseInt(g('r-passagers')?.value||1),
     source,partnerType:source!=='direct'?partnerType:'direct',
     commission:source!=='direct'&&partnerType==='commission'?parseFloat(g('r-commission')?.value||0):0,
     facturePaye:existingR.facturePaye||false,
@@ -1648,7 +1648,7 @@ function saveReservation(){
     kmPickup:parseFloat(g('r-km-pickup')?.value||0),kmPickupRetour:kpr,
     kmVideAller:kva,kmVideAllerType:g('r-vide-aller-type')?.value||'maison',
     kmVideRetour:kvr,kmVideRetourType:g('r-vide-retour-type')?.value||'maison',
-    vol:g('r-vol').value.toUpperCase(),prix:g('r-prix').value,paiement:g('r-paiement').value,
+    vol:g('r-vol').value.toUpperCase(),volRetour:(g('r-vol-retour')?.value||'').toUpperCase(),prix:g('r-prix').value,paiement:g('r-paiement').value,
     vmtRecu:g('r-vmt-recu').checked,peages:g('r-peages').value,parking:g('r-parking').value,
     acompte:parseFloat(g('r-acompte')?.value||0),notes:g('r-notes').value,notesInternes:g('r-notes-interne')?.value||'',
     duree:dist>0?Math.round(dist/60*60)+30:90
@@ -1780,7 +1780,9 @@ function showDetailRes(id){
   var drb=g('dr-rappel-btn');
   if(drb){
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
-    if(diff2>=0&&diff2<=3){drb.style.display='inline-flex';drb.onclick=function(){sendRappel(id);};}
+    var diff3=r.type==='ar-diff'&&r.dateRetour?(new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000:-1;
+    if(diff2>=0&&diff2<=3){drb.style.display='inline-flex';drb.textContent='💬 Rappel aller';drb.onclick=function(){sendRappel(id,'aller');};}
+    else if(diff3>=0&&diff3<=3){drb.style.display='inline-flex';drb.textContent='🛬 Rappel retour';drb.onclick=function(){sendRappel(id,'retour');};}
     else drb.style.display='none';
   }
   // Boutons avis Google (WhatsApp + SMS)
