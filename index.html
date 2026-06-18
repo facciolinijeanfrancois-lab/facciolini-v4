@@ -1141,13 +1141,13 @@ function renderRes(){
     // Bouton rappel J-1 pour courses à venir
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
     if(diff2>=0&&diff2<=3&&r.clientTel){
-      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,'aller')">💬 Rappel aller'+( diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)')+'</button>';
+      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">💬 Rappel aller'+( diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)')+'</button>';
     }
     // Bouton rappel retour pour ar-diff
     if(r.type==='ar-diff'&&r.dateRetour&&r.clientTel){
       var diff3=(new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
       if(diff3>=0&&diff3<=3){
-        html+='<button class="btn btn-full" style="margin-top:6px;font-size:0.8rem;background:var(--blue2);color:#fff;border:none;border-radius:10px;padding:10px" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,\'retour\')">🛬 Rappel retour'+(diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':' (dans '+Math.ceil(diff3)+'j)')+'</button>';
+        html+='<button class="btn btn-full" style="margin-top:6px;font-size:0.8rem;background:var(--blue2);color:#fff;border:none;border-radius:10px;padding:10px" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;retour&quot;)">🛬 Rappel retour'+(diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':' (dans '+Math.ceil(diff3)+'j)')+'</button>';
       }
     }
     html+='</div>';
