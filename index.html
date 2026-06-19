@@ -2476,12 +2476,18 @@ function exportICS(r){
   const cl=db.clients.find(c=>c.nom===r.clientNom)||{};
   const tel=r.clientTel||cl.tel||cl.gsm||'';
   // Notes ALLER propres, une info par ligne
+  const isRec=(r.service==='recuperation');
+  // DÉPOSE : départ=adresse client, arrivée=aéroport → 🛫 + nom aéroport arrivée
+  // RÉCUP  : départ=aéroport, arrivée=adresse client → 🛬 + nom aéroport départ
+  const aeroAller=isRec?shortAero(r.depart):shortAero(r.arrivee);
+  const emojiAller=isRec?'🛬':'🛫';
+  const addrClientAller=isRec?r.arrivee:r.depart;
   const linesAller=[
     '👤 '+r.clientNom,
     tel?'📞 '+tel:'',
     '🕐 Prise en charge: '+(r.heure||''),
-    r.depart?'🏠 Adresse: '+r.depart:'',
-    '✈️ Dépose: '+shortAero(r.arrivee),
+    isRec?('🛬 Récupération: '+aeroAller):('🏠 Adresse: '+r.depart),
+    isRec?(addrClientAller?'🏠 Dépose: '+addrClientAller:''):('✈️ Dépose: '+aeroAller),
     r.passagers?'👥 Passagers: '+r.passagers:'',
     r.vol?'🛩️ Vol: '+r.vol:'',
     '💰 Prix: '+fmt(r.prix),
@@ -2489,13 +2495,14 @@ function exportICS(r){
     r.notes?'📋 '+r.notes:'',
   ].filter(Boolean);
   const descAller=escDesc(linesAller.join('\n'));
-  // Titre ALLER : 🛫 HH:MM - Zaventem - NomClient
-  const summaryAller='🛫 '+(r.heure||'')+' - '+shortAero(r.arrivee)+' - '+r.clientNom;
+  // Titre : 🛫 HH:MM - Zaventem - NomClient  OU  🛬 HH:MM - Zaventem - NomClient
+  const summaryAller=emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+r.clientNom;
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
   const end=dEnd.getFullYear().toString()+String(dEnd.getMonth()+1).padStart(2,'0')+String(dEnd.getDate()).padStart(2,'0')+'T'+String(dEnd.getHours()).padStart(2,'0')+String(dEnd.getMinutes()).padStart(2,'0')+'00';
-  let events='BEGIN:VEVENT\r\nUID:fm-'+r.id+'-aller@facciolini\r\nSUMMARY:'+summaryAller+'\r\nDESCRIPTION:'+descAller+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(r.depart)+'\r\nEND:VEVENT';
+  // LOCATION : pour dépose = adresse client (départ), pour récup = adresse client (arrivée)
+  let events='BEGIN:VEVENT\r\nUID:fm-'+r.id+'-aller@facciolini\r\nSUMMARY:'+summaryAller+'\r\nDESCRIPTION:'+descAller+'\r\nDTSTART:'+start+'\r\nDTEND:'+end+'\r\nLOCATION:'+esc(addrClientAller)+'\r\nEND:VEVENT';
   if((r.type==='ar-diff'||r.type==='ar-jour')&&r.heureRetour){
     const dateR=r.type==='ar-diff'?r.dateRetour:r.dateAller;
     const startR=fmtDT(dateR,r.heureRetour);
