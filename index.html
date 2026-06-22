@@ -625,6 +625,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="fg" id="r-acompte-fg" style="display:none"><label class="fl">Acompte à l'aller (€)</label><input type="number" class="fi" id="r-acompte" value="0" step="0.01" oninput="updAcompte()"><div id="r-solde-hint" style="display:none;margin-top:8px"></div></div>
     <!-- Mini récap prix -->
     <div class="card card-sm" style="background:var(--bg3);margin-top:10px">
+      <div class="dr" id="prev-comm-row" style="display:none"><span class="dr-label">Commission</span><span class="dr-val c-red" id="prev-comm">—</span></div>
+      <div class="dr"><span class="dr-label">Km facturés</span><span class="dr-val c-blue" id="prev-km-client">—</span></div>
+      <div class="dr"><span class="dr-label">Km réels</span><span class="dr-val c-purple" id="prev-km-reels">—</span></div>
+      <div class="dr"><span class="dr-label">Coût km</span><span class="dr-val" id="prev-cout">—</span></div>
       <div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val" id="prev-benef" style="font-size:1rem;font-family:Playfair Display,serif">—</span></div>
       <div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val" id="prev-benef-reel">—</span></div>
     </div>
@@ -658,6 +662,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div id="r-vide-aller-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide (J1)</label><input type="number" class="fi" id="r-km-vide-aller" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
       <!-- Retour vide retour (AR diff) -->
       <div id="sp4-retour-section" style="display:none">
+        <div class="res-section-title" id="sp4-j2-label" style="margin-bottom:10px">Jour 2 — Retour</div>
         <div class="fg" id="r-km-pickup-retour-fg"><label class="fl">Km pickup retour J2</label><input type="number" class="fi" id="r-km-pickup-retour" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-retour-hint">Carnières → lieu de récupération</div></div>
         <div class="fg"><label class="fl">Retour après récupération</label>
           <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px">
@@ -702,7 +707,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 
   <!-- SECTION 6: CONFIRMATION -->
   <div class="res-section" id="res-confirm-section" style="display:none">
-    <div class="res-section-title">💬 Confirmation client</div>
+    <div class="res-section-title">✅ Réservation enregistrée</div>
+    <div id="res-summary" style="margin-bottom:12px"></div>
+    <div class="res-section-title" style="margin-top:12px">💬 Message client</div>
     <div class="wa-preview" id="wa-preview"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-green" style="flex:1" onclick="sendWA()">💬 WhatsApp</button>
@@ -1283,7 +1290,7 @@ function renderPartners(){
       if(p.tel)html+='<div style="font-size:0.75rem;color:var(--text3);margin-top:2px">📞 '+p.tel+'</div>';
       html+='</div>';
       html+='<div style="display:flex;gap:6px">';
-      html+='<button class="btn btn-outline btn-xs" onclick="editPartner(this.dataset.id)" data-id="'+p.id+'">✏️</button>';
+      html+='<button class="btn btn-outline btn-xs" onclick="openPartnerModal(this.dataset.id)" data-id="'+p.id+'">✏️</button>';
       html+='</div></div>';
 
       // Résumé financier
