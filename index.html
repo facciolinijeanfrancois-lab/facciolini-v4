@@ -1689,9 +1689,11 @@ function saveReservationCore(){
   const confSec=g('res-confirm-section');
   if(confSec){confSec.style.display='block';}
   dbg('✅ confSec affiché');
-  // Scroll vers le haut du modal
-  const modalBody=document.querySelector('#m-res .modal-body')||document.querySelector('#m-res');
-  if(modalBody)setTimeout(()=>{modalBody.scrollTop=0;},100);
+  // Scroll vers la section confirmation (en bas du res-form-scroll)
+  setTimeout(()=>{
+    const fs=g('res-form-scroll');
+    if(fs)fs.scrollTop=fs.scrollHeight;
+  },150);
   // Changer bouton en "Fermer"
   const saveBtnClose=g('res-btn-save');if(saveBtnClose){saveBtnClose.disabled=false;saveBtnClose.textContent='✓ Fermer';saveBtnClose.onclick=function(){closeModal('m-res');saveBtnClose.textContent='✓ Enregistrer';saveBtnClose.onclick=saveReservation;};}
   dbg('✅ TERMINÉ - bouton → Fermer');
