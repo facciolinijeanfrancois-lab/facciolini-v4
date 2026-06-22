@@ -1625,6 +1625,10 @@ function saveReservation(){
   const saveBtn=g('res-btn-save');
   if(saveBtn&&saveBtn.disabled)return;
   if(saveBtn){saveBtn.disabled=true;setTimeout(()=>{if(saveBtn)saveBtn.disabled=false;},2000);}
+  try{saveReservationCore();}catch(e){alert('❌ Erreur enregistrement:\n'+e.message+'\n\nLigne: '+(e.stack||'').split('\n')[1]);if(saveBtn)saveBtn.disabled=false;}
+}
+function saveReservationCore(){
+  const saveBtn=g('res-btn-save');
   const type=g('r-type').value,source=g('r-source').value,partnerType=g('r-partner-type').value;
   const nom=g('r-client-nom').value.trim(),tel=g('r-client-tel').value.trim(),langue=g('r-langue').value;
   const vidx=parseInt(g('r-vehicule').value||0);
