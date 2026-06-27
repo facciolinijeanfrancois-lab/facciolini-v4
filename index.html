@@ -956,8 +956,20 @@ function getMonthCarb(m,y){return db.carburant.filter(c=>{const d=new Date(c.dat
 function getMonthFrais(m,y){return db.frais.filter(f=>{const d=new Date(f.date);return d.getMonth()===m&&d.getFullYear()===y;});}
 function getYearKm(y){return db.reservations.filter(r=>new Date(r.dateAller).getFullYear()===y).reduce((s,r)=>s+getKmClient(r),0);}
 function getKmReelsMois(m,y,veh){const ms=y+'-'+String(m+1).padStart(2,'0');const vIdx=parseInt(veh||0);const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===vIdx);if(!e||!e.debut||!e.fin)return null;return parseFloat(e.fin)-parseFloat(e.debut);}
-function getEncaisseAller(r){const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);if(r.type==='aller'||r.type==='ar-jour')return p;return a>0?a:Math.round(p/2*100)/100;}
-function getEncaisseRetour(r){const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);if(r.type==='aller'||r.type==='ar-jour')return 0;return a>0?Math.round((p-a)*100)/100:Math.round(p/2*100)/100;}
+function getEncaisseAller(r){
+  const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
+  // Pour les courses partenaire en commission, déduire la commission de l'encaissement net
+  const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
+  if(r.type==='aller'||r.type==='ar-jour')return Math.max(0,p-comm);
+  const encBrut=a>0?a:Math.round(p/2*100)/100;
+  // Commission déduite sur l'aller uniquement (convention : comm prélevée à l'aller)
+  return Math.max(0,Math.round((encBrut-comm)*100)/100);
+}
+function getEncaisseRetour(r){
+  const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
+  if(r.type==='aller'||r.type==='ar-jour')return 0;
+  return a>0?Math.round((p-a)*100)/100:Math.round(p/2*100)/100;
+}
 function getEncaisseMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const da=new Date(r.dateAller);const dr=r.type==='ar-diff'&&r.dateRetour?new Date(r.dateRetour):null;let enc=0;if(da.getMonth()===m&&da.getFullYear()===y)enc+=getEncaisseAller(r);if(dr&&dr.getMonth()===m&&dr.getFullYear()===y)enc+=getEncaisseRetour(r);return s+enc;},0);}
 function isVip(nom){return db.reservations.filter(r=>r.clientNom===nom).length>=db.settings.vip.seuil;}
 function cntRes(nom){return db.reservations.filter(r=>r.clientNom===nom).length;}
@@ -2397,7 +2409,30 @@ function markVmt(id){const r=db.reservations.find(r=>r.id===id);if(r){r.vmtRecu=
 
 
 function openClientModal(editId){const c=editId?db.clients.find(x=>x.id===editId):null;sv('client-modal-title',c?'Modifier client':'Nouveau client');g('c-edit-id').value=editId||'';g('c-nom').value=c?.nom||'';g('c-tel').value=c?.tel||'';g('c-email').value=c?.email||'';g('c-adresse').value=c?.adresse||'';g('c-notes').value=c?.notes||'';g('c-blacklist').checked=c?.blacklist||false;g('c-bl-raison').value=c?.blRaison||'';g('c-bl-fg').style.display=c?.blacklist?'block':'none';setChips('c-langue-chips','c-langue',c?.langue||'fr');openModal('m-client');}
-function saveClient(){const editId=g('c-edit-id').value,bl=g('c-blacklist').checked;const c={id:editId||genId(),nom:g('c-nom').value.trim(),tel:g('c-tel').value.trim(),email:g('c-email').value.trim(),adresse:g('c-adresse').value.trim(),lat:parseFloat(g('c-lat').value)||null,lon:parseFloat(g('c-lon').value)||null,langue:g('c-langue').value,notes:g('c-notes').value.trim(),blacklist:bl,blRaison:bl?g('c-bl-raison').value.trim():''};if(!c.nom){alert('Nom requis');return;}if(editId){const i=db.clients.findIndex(x=>x.id===editId);if(i!==-1)db.clients[i]=c;}else db.clients.push(c);save();closeModal('m-client');renderClients();}
+function saveClient(){
+  const editId=g('c-edit-id').value,bl=g('c-blacklist').checked;
+  const oldClient=editId?db.clients.find(x=>x.id===editId):null;
+  const oldNom=oldClient?oldClient.nom:'';
+  const c={id:editId||genId(),nom:g('c-nom').value.trim(),tel:g('c-tel').value.trim(),email:g('c-email').value.trim(),adresse:g('c-adresse').value.trim(),lat:parseFloat(g('c-lat').value)||null,lon:parseFloat(g('c-lon').value)||null,langue:g('c-langue').value,notes:g('c-notes').value.trim(),blacklist:bl,blRaison:bl?g('c-bl-raison').value.trim():''};
+  if(!c.nom){alert('Nom requis');return;}
+  if(editId){
+    const i=db.clients.findIndex(x=>x.id===editId);if(i!==-1)db.clients[i]=c;
+    // Propager les changements nom/tel/langue dans toutes les réservations existantes
+    if(oldNom){
+      var nbSync=0;
+      db.reservations.forEach(function(r){
+        if(r.clientNom===oldNom){
+          r.clientNom=c.nom;
+          r.clientTel=c.tel;
+          r.langue=c.langue;
+          nbSync++;
+        }
+      });
+      if(nbSync>0){console.log('[Facciolini] '+nbSync+' réservation(s) synchronisée(s) avec la fiche client.');}
+    }
+  } else db.clients.push(c);
+  save();closeModal('m-client');renderClients();renderRes();
+}
 function showDetailClient(id){
   const c=db.clients.find(x=>x.id===id);if(!c)return;
   const n=cntRes(c.nom),vip=isVip(c.nom);
