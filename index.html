@@ -958,19 +958,37 @@ function getYearKm(y){return db.reservations.filter(r=>new Date(r.dateAller).get
 function getKmReelsMois(m,y,veh){const ms=y+'-'+String(m+1).padStart(2,'0');const vIdx=parseInt(veh||0);const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===vIdx);if(!e||!e.debut||!e.fin)return null;return parseFloat(e.fin)-parseFloat(e.debut);}
 function getEncaisseAller(r){
   const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
-  // Pour les courses partenaire en commission, déduire la commission de l'encaissement net
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
-  if(r.type==='aller'||r.type==='ar-jour')return Math.max(0,p-comm);
-  const encBrut=a>0?a:Math.round(p/2*100)/100;
-  // Commission déduite sur l'aller uniquement (convention : comm prélevée à l'aller)
-  return Math.max(0,Math.round((encBrut-comm)*100)/100);
+  const net=Math.max(0,p-comm); // net encaissé après commission (1 seule fois sur la course)
+  if(r.type==='aller'||r.type==='ar-jour')return Math.round(net*100)/100;
+  // ar-diff : split du net selon acompte
+  if(a>0)return Math.min(a,net); // acompte plafonné au net
+  return Math.round(net/2*100)/100;
 }
 function getEncaisseRetour(r){
   const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
+  const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
+  const net=Math.max(0,p-comm);
   if(r.type==='aller'||r.type==='ar-jour')return 0;
-  return a>0?Math.round((p-a)*100)/100:Math.round(p/2*100)/100;
+  if(a>0)return Math.max(0,Math.round((net-Math.min(a,net))*100)/100);
+  return Math.round(net/2*100)/100;
 }
-function getEncaisseMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const da=new Date(r.dateAller);const dr=r.type==='ar-diff'&&r.dateRetour?new Date(r.dateRetour):null;let enc=0;if(da.getMonth()===m&&da.getFullYear()===y)enc+=getEncaisseAller(r);if(dr&&dr.getMonth()===m&&dr.getFullYear()===y)enc+=getEncaisseRetour(r);return s+enc;},0);}
+function getEncaisseMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{
+  const da=new Date(r.dateAller);
+  const dr=r.type==='ar-diff'&&r.dateRetour?new Date(r.dateRetour):null;
+  const allerDansMois=da.getMonth()===m&&da.getFullYear()===y;
+  const retourDansMois=dr&&dr.getMonth()===m&&dr.getFullYear()===y;
+  let enc=0;
+  if(allerDansMois&&retourDansMois){
+    // Aller et retour même mois : on compte le net total une seule fois
+    const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
+    enc=Math.max(0,parseFloat(r.prix||0)-comm);
+  } else {
+    if(allerDansMois)enc+=getEncaisseAller(r);
+    if(retourDansMois)enc+=getEncaisseRetour(r);
+  }
+  return s+enc;
+},0);}
 function isVip(nom){return db.reservations.filter(r=>r.clientNom===nom&&r.statut!=='annule').length>=db.settings.vip.seuil;}
 function cntRes(nom){return db.reservations.filter(r=>r.clientNom===nom&&r.statut!=='annule').length;}
 function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commissionsDues:0,aFacturer:0,courses:[]};});db.reservations.filter(r=>r.statut!=='annule').forEach(r=>{if(!r.source||r.source==='direct')return;if(!s[r.source])s[r.source]={commissionsDues:0,aFacturer:0,courses:[]};if(r.partnerType==='commission'&&!r.commissionPayee)s[r.source].commissionsDues+=parseFloat(r.commission||0);else if(r.partnerType==='prepaye'&&!r.facturePaye)s[r.source].aFacturer+=parseFloat(r.prix||0);s[r.source].courses.push(r);});return s;}
@@ -1637,7 +1655,20 @@ function updCalc(){
   }
 }
 function applyDevis(){if(acC['devis']){const el=g('r-prix');if(el)el.value=acC['devis'];updCalc();updAcompte();}}
-function updAcompte(){const prix=parseFloat(g('r-prix')?.value||0),acompte=parseFloat(g('r-acompte')?.value||0),type=g('r-type')?.value||'aller',hint=g('r-solde-hint');if(!hint)return;if(type==='ar-diff'&&prix>0){hint.style.display='block';const encA=acompte>0?acompte:prix/2,encR=acompte>0?prix-acompte:prix/2;hint.innerHTML='<div class="pay-split pay-aller">✅ À l\'aller : <b>'+fmt(encA)+'</b></div><div class="pay-split pay-retour" style="margin-top:5px">⏳ Au retour : <b>'+fmt(encR)+'</b></div>';}else hint.style.display='none';}
+function updAcompte(){
+  const prix=parseFloat(g('r-prix')?.value||0),acompte=parseFloat(g('r-acompte')?.value||0);
+  const type=g('r-type')?.value||'aller';
+  const comm=(g('r-source')?.value!=='direct'&&g('r-partner-type')?.value==='commission')?parseFloat(g('r-commission')?.value||0):0;
+  const net=Math.max(0,prix-comm);
+  const hint=g('r-solde-hint');if(!hint)return;
+  if(type==='ar-diff'&&prix>0){
+    hint.style.display='block';
+    const encA=acompte>0?Math.min(acompte,net):Math.round(net/2*100)/100;
+    const encR=Math.max(0,Math.round((net-encA)*100)/100);
+    const commNote=comm>0?' <span style="font-size:0.7rem;color:var(--red2)">(comm. -'+fmt(comm)+' déduite)</span>':'';
+    hint.innerHTML='<div class="pay-split pay-aller">✅ À l\'aller : <b>'+fmt(encA)+'</b></div><div class="pay-split pay-retour" style="margin-top:5px">⏳ Au retour : <b>'+fmt(encR)+'</b>'+commNote+'</div>';
+  }else hint.style.display='none';
+}
 
 
 function saveReservation(){
@@ -1701,8 +1732,10 @@ function genResSummary(){
   const vipC=isVip(g('r-client-nom')?.value?.trim()||'');
   const source=g('r-source').value,pt=g('r-partner-type').value,comm=parseFloat(g('r-commission')?.value||0);
   const type=g('r-type').value,prix=parseFloat(g('r-prix')?.value||0),acompte=parseFloat(g('r-acompte')?.value||0);
-  const encA=type==='ar-diff'?(acompte>0?acompte:prix/2):prix;
-  const encR=type==='ar-diff'?(acompte>0?prix-acompte:prix/2):0;
+  const commS=(pt==='commission')?comm:0;
+  const netS=Math.max(0,prix-commS);
+  const encA=type==='ar-diff'?(acompte>0?Math.min(acompte,netS):Math.round(netS/2*100)/100):netS;
+  const encR=type==='ar-diff'?Math.max(0,Math.round((netS-encA)*100)/100):0;
   const tLabel={aller:'Aller simple','ar-jour':'A/R même jour','ar-diff':'A/R date différente'}[type];
   const kmC=acC['kmC']||0,kmR=acC['kmR']||0;
   const vidx=parseInt(g('r-vehicule')?.value||0),v=getV(vidx);
@@ -2622,12 +2655,14 @@ function exportICS(r){
 }
 function genNoteFrais(){
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
-  const recettes=res.reduce((s,r)=>s+parseFloat(r.prix||0),0),enc=getEncaisseMois(curMonth,curYear);
+  const recettesBrut=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const commissions=res.reduce((s,r)=>s+parseFloat(r.commission||0),0);
+  const recettes=recettesBrut-commissions; // recettes nettes après commissions partenaires
+  const enc=getEncaisseMois(curMonth,curYear);
   const tKC=res.reduce((s,r)=>s+getKmClient(r),0),tKR=res.reduce((s,r)=>s+getKmReels(r),0);
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
   const peages=res.reduce((s,r)=>s+parseFloat(r.peages||0),0),parkings=res.reduce((s,r)=>s+parseFloat(r.parking||0),0);
-  const commissions=res.reduce((s,r)=>s+parseFloat(r.commission||0),0);
   const benef=res.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
   const benefR=res.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
   const kmReel=getKmReelsMois(curMonth,curYear);
@@ -2637,7 +2672,7 @@ function genNoteFrais(){
   if(nc)nc.innerHTML='<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:0.73rem;color:var(--text2);line-height:1.7">'+MOI.nom+' · BCE '+MOI.bce+'<br>'+MOI.adresse+'<br>'+MOI.email+' · '+MOI.tel+'</div><div class="dr"><span class="dr-label">Facturé</span><span class="dr-val c-gold">'+fmt(recettes)+'</span></div><div class="dr"><span class="dr-label">Encaissé ce mois</span><span class="dr-val c-green">'+fmt(enc)+'</span></div><div class="dr"><span class="dr-label">Courses</span><span class="dr-val">'+res.length+'</span></div><div class="dr"><span class="dr-label">Km clients facturés</span><span class="dr-val c-blue">'+fmtKm(tKC)+'</span></div><div class="dr"><span class="dr-label">Km réels totaux</span><span class="dr-val c-purple">'+(kmReel?Math.round(kmReel)+' km (compteur)':fmtKm(tKR)+' (estimé)')+'</span></div><div class="dr"><span class="dr-label">Km annuels</span><span class="dr-val">'+fmtKm(getYearKm(curYear))+'</span></div><div class="divider"></div><div class="dr"><span class="dr-label">Carburant</span><span class="dr-val c-red">- '+fmt(diesel)+'</span></div><div class="dr"><span class="dr-label">Péages</span><span class="dr-val c-red">- '+fmt(peages)+'</span></div><div class="dr"><span class="dr-label">Parkings</span><span class="dr-val c-red">- '+fmt(parkings)+'</span></div><div class="dr"><span class="dr-label">Commissions</span><span class="dr-val c-red">- '+fmt(commissions)+'</span></div><div class="dr"><span class="dr-label">Frais exceptionnels</span><span class="dr-val c-red">- '+fmt(fraisT)+'</span></div>'+frais.map(f=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">'+(fi[f.type]||'📦')+' '+(f.desc||f.type)+(f.fournisseur?' · '+f.fournisseur:'')+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(f.montant)+'</span></div>').join('')+'<div class="dr"><span class="dr-label">Charges fixes</span><span class="dr-val c-red">- '+fmt(charges)+'</span></div>'+db.charges.map(c=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">· '+c.nom+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(c.montant)+'</span></div>').join('')+'<div class="divider"></div><div class="dr" style="background:var(--bg3);border-radius:var(--radius-xs);padding:12px"><span class="dr-label" style="font-weight:700;color:var(--text);font-size:0.95rem">BÉNÉFICE COMPTABLE</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1.2rem;font-family:\'Playfair Display\',serif">'+fmt(benef)+'</span></div><div class="dr" style="padding:10px 0"><span class="dr-label" style="color:var(--text2)">Bénéfice réel (km réels)</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div><div class="divider"></div><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Détail des courses</div>'+res.map(r=>{const kmC=getKmClient(r),kmR=getKmReels(r);return'<div class="dr"><span class="dr-label">'+new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+' · '+(r.clientNom||'—')+'<br><span style="font-size:0.7rem;color:var(--text3)">'+(r.depart||'').substring(0,16)+'→'+(r.arrivee||'').substring(0,16)+' · '+fmtKm(kmC)+' / '+fmtKm(kmR)+' réels'+(r.source!=='direct'?' · '+r.source:'')+'</span></span><span class="dr-val">'+fmt(r.prix)+(parseFloat(r.commission||0)>0?'<br><span style="font-size:0.68rem;color:var(--red2)">comm.-'+fmt(r.commission)+'</span>':'')+'</span></div>';}).join('');
   openModal('m-note-frais');
 }
-function exportNoteCSV(){const res=getMonthRes(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Prix;Acompte;Solde;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const solde=r.type==='ar-diff'?parseFloat(r.prix||0)-parseFloat(r.acompte||0):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',r.commission||0,r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.prix,r.acompte||0,solde.toFixed(2),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
+function exportNoteCSV(){const res=getMonthRes(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
 function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
 function resetApp(){
@@ -2809,8 +2844,8 @@ function devisToRes(){
     const depF=g('r-depart'),arrF=g('r-arrivee');
     if(depF)depF.value=g('dv-depart')?.value||'';
     if(arrF)arrF.value=g('dv-arrivee')?.value||'';
-    if(acC['dv-depart']){acC['r-depart']=acC['dv-depart'];const el=g('r-dep-lat');if(el)el.value=acC['dv-depart'].lat;}
-    if(acC['dv-arrivee']){acC['r-arrivee']=acC['dv-arrivee'];const el=g('r-arr-lat');if(el)el.value=acC['dv-arrivee'].lat;}
+    if(acC['dv-depart']){acC['r-depart']=acC['dv-depart'];const el=g('r-dep-lat');if(el)el.value=acC['dv-depart'].lat;const el2=g('r-dep-lon');if(el2)el2.value=acC['dv-depart'].lon;}
+    if(acC['dv-arrivee']){acC['r-arrivee']=acC['dv-arrivee'];const el=g('r-arr-lat');if(el)el.value=acC['dv-arrivee'].lat;const el2=g('r-arr-lon');if(el2)el2.value=acC['dv-arrivee'].lon;}
     const vidx=g('dv-veh')?.value||'0';if(g('r-vehicule'))g('r-vehicule').value=vidx;
     if(acC['dv-km']){const el=g('r-distance');if(el)el.value=acC['dv-km'];}
     if(acC['dv-prix']){const el=g('r-prix');if(el)el.value=acC['dv-prix'];}
