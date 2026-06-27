@@ -873,6 +873,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="modal-actions" style="margin-top:16px">
   <button class="btn btn-outline" onclick="closeModal('m-detail-client')">Fermer</button>
   <button class="btn btn-gold btn-sm" id="dc-newres-btn">+ Course</button>
+  <button class="btn btn-outline btn-sm" id="dc-vcf-btn" onclick="exportVCF()">📲 Répertoire</button>
   <button class="btn btn-outline btn-sm" id="dc-edit-btn">Modifier</button>
   <button class="btn btn-red btn-sm" id="dc-del-btn">Supprimer</button>
 </div>
@@ -2649,7 +2650,73 @@ function showDetailClient(id){
   const dcnr=g('dc-newres-btn');if(dcnr)dcnr.onclick=()=>{closeModal('m-detail-client');openNewRes();setTimeout(()=>{g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');if(c.adresse)g('r-depart').value=c.adresse;if(c.lat&&c.lon)acC['r-depart']={lat:c.lat,lon:c.lon};},300);};
   const dceb=g('dc-edit-btn');if(dceb)dceb.onclick=()=>{closeModal('m-detail-client');openClientModal(id);};
   const dcdb=g('dc-del-btn');if(dcdb)dcdb.onclick=()=>{if(confirm("Supprimer ce client ?")){db.clients=db.clients.filter(x=>x.id!==id);save();closeModal('m-detail-client');renderClients();}};
+  // Stocker le client courant pour exportVCF
+  window._currentClientId=id;
   openModal('m-detail-client');
+}
+function exportVCF(){
+  const id=window._currentClientId;
+  if(!id)return;
+  const c=db.clients.find(x=>x.id===id);
+  if(!c){alert('Client introuvable');return;}
+  if(!c.tel&&!c.email){alert('Ce client n\'a ni téléphone ni email à exporter.');return;}
+
+  // Construire le vCard 3.0
+  const lines=[];
+  lines.push('BEGIN:VCARD');
+  lines.push('VERSION:3.0');
+
+  // Nom : séparer prénom et nom si possible
+  const parts=(c.nom||'').trim().split(' ');
+  const prenom=parts[0]||'';
+  const nomFamille=parts.slice(1).join(' ')||'';
+  lines.push('FN:'+c.nom);
+  lines.push('N:'+nomFamille+';'+prenom+';;;');
+
+  // Téléphone
+  if(c.tel){
+    const telClean=c.tel.replace(/\s/g,'');
+    lines.push('TEL;TYPE=CELL:'+telClean);
+  }
+
+  // Email
+  if(c.email){
+    lines.push('EMAIL:'+c.email);
+  }
+
+  // Adresse
+  if(c.adresse){
+    lines.push('ADR;TYPE=HOME:;;'+c.adresse+';;;;');
+    lines.push('LABEL;TYPE=HOME:'+c.adresse);
+  }
+
+  // Note : client Facciolini Mobility + infos utiles
+  const nbCourses=cntRes(c.nom);
+  const vip=isVip(c.nom);
+  let note='Client Facciolini Mobility';
+  if(vip)note+=' — VIP ⭐';
+  if(nbCourses>0)note+=' ('+nbCourses+' course'+(nbCourses>1?'s':'')+'$)';
+  if(c.langue&&c.langue!=='fr')note+=' — Langue: '+c.langue.toUpperCase();
+  if(c.notes)note+=' — '+c.notes;
+  lines.push('NOTE:'+note);
+
+  // Organisation
+  lines.push('ORG:Client Facciolini Mobility');
+
+  lines.push('END:VCARD');
+
+  // Télécharger le fichier .vcf
+  const vcf=lines.join('\r\n');
+  const blob=new Blob([vcf],{type:'text/vcard;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=(c.nom||'client').replace(/[^a-zA-Z0-9\-_]/g,'_')+'.vcf';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+  // Petite confirmation
+  setTimeout(()=>alert('📲 Fichier contact téléchargé !\n\nOuvre-le pour l\'ajouter à ton répertoire.'),300);
 }
 function acClient(input){const q=input.value.toLowerCase(),drop=g('ac-client-drop');if(q.length<2){drop.style.display='none';return;}const m=db.clients.filter(c=>!c.blacklist&&(c.nom.toLowerCase().includes(q)||(c.tel||'').includes(q))).slice(0,6);if(!m.length){drop.style.display='none';return;}drop.innerHTML=m.map(c=>'<div class="ac-item" onclick="fillClient(\''+c.id+'\')"><div class="ac-main">'+c.nom+(isVip(c.nom)?' ⭐':'')+'</div><div class="ac-sub">'+(c.tel||'')+(c.adresse?' · '+c.adresse.substring(0,30):'')+'</div></div>').join('');drop.style.display='block';}
 function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';const svc=g('r-service')?.value||'depose';const isRec=(svc==='recuperation');const addrField=isRec?'r-arrivee':'r-depart';const latField=isRec?'r-arr-lat':'r-dep-lat';const lonField=isRec?'r-arr-lon':'r-dep-lon';const acKey=isRec?'r-arrivee':'r-depart';const otherKey=isRec?'r-depart':'r-arrivee';if(c.adresse&&!g(addrField).value){g(addrField).value=c.adresse;if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(acC[otherKey])calcDist();}}updCalc();setTimeout(showClientAddrBtns,100);}
