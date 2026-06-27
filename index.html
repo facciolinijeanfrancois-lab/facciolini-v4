@@ -971,8 +971,8 @@ function getEncaisseRetour(r){
   return a>0?Math.round((p-a)*100)/100:Math.round(p/2*100)/100;
 }
 function getEncaisseMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const da=new Date(r.dateAller);const dr=r.type==='ar-diff'&&r.dateRetour?new Date(r.dateRetour):null;let enc=0;if(da.getMonth()===m&&da.getFullYear()===y)enc+=getEncaisseAller(r);if(dr&&dr.getMonth()===m&&dr.getFullYear()===y)enc+=getEncaisseRetour(r);return s+enc;},0);}
-function isVip(nom){return db.reservations.filter(r=>r.clientNom===nom).length>=db.settings.vip.seuil;}
-function cntRes(nom){return db.reservations.filter(r=>r.clientNom===nom).length;}
+function isVip(nom){return db.reservations.filter(r=>r.clientNom===nom&&r.statut!=='annule').length>=db.settings.vip.seuil;}
+function cntRes(nom){return db.reservations.filter(r=>r.clientNom===nom&&r.statut!=='annule').length;}
 function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commissionsDues:0,aFacturer:0,courses:[]};});db.reservations.filter(r=>r.statut!=='annule').forEach(r=>{if(!r.source||r.source==='direct')return;if(!s[r.source])s[r.source]={commissionsDues:0,aFacturer:0,courses:[]};if(r.partnerType==='commission'&&!r.commissionPayee)s[r.source].commissionsDues+=parseFloat(r.commission||0);else if(r.partnerType==='prepaye'&&!r.facturePaye)s[r.source].aFacturer+=parseFloat(r.prix||0);s[r.source].courses.push(r);});return s;}
 function getInastiAlerte(){const now=new Date();const y=now.getFullYear();for(const e of [{label:'T1',m:3,j:31},{label:'T2',m:6,j:31},{label:'T3',m:9,j:31},{label:'T4',m:12,j:31}]){const d=new Date(y,e.m-1,e.j);const diff=Math.round((d-now)/86400000);if(diff>=0&&diff<=45)return{label:e.label,date:d.toLocaleDateString('fr-BE',{day:'2-digit',month:'long'}),diff};}return null;}
 let pinBuf='';
@@ -1073,9 +1073,9 @@ function renderDash(){
   sv('d-diesel',fmt(diesel));sv('d-litres',carbs.reduce((s,c)=>s+parseFloat(c.litres||0),0).toFixed(1)+' L');
   sv('d-charges',fmt(charges));sv('d-frais',fmt(fraisT));
   const alerts=[];const today2=new Date();
-  const todayRes=db.reservations.filter(r=>new Date(r.dateAller).toDateString()===today2.toDateString());
+  const todayRes=db.reservations.filter(r=>r.statut!=='annule'&&new Date(r.dateAller).toDateString()===today2.toDateString());
   if(todayRes.length>0){const tg=todayRes.reduce((s,r)=>s+parseFloat(r.prix||0),0);alerts.push(`<div class="alert alert-green" style="flex-direction:column;align-items:stretch"><div style="font-weight:700;margin-bottom:4px">📅 Aujourd&#x27;hui : ${todayRes.length} course${todayRes.length>1?'s':''} · ${fmt(tg)}</div>${todayRes.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).map(r=>`<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:0.8rem">→ <b>${r.heure||'?'}</b> · ${r.clientNom||'Client'} · <span style="color:var(--green2)">${fmt(r.prix)}</span>${r.clientTel?' <a href="tel:'+r.clientTel+'" style="color:var(--blue2)">📞</a>':''}</div>`).join('')}</div>`);}
-  const vmts=db.reservations.filter(r=>r.paiement==='virement'&&!r.vmtRecu);
+  const vmts=db.reservations.filter(r=>r.paiement==='virement'&&!r.vmtRecu&&r.statut!=='annule');
   if(vmts.length)alerts.push('<div class="alert alert-red">🏦 '+vmts.length+' virement'+(vmts.length>1?'s':'')+' en attente !</div>');
   if(kmReel===null)alerts.push('<div class="alert alert-blue" style="cursor:pointer" onclick="openKmModal()">📍 Relevé compteur non saisi pour '+MOIS[curMonth]+' — Cliquez ici</div>');
   const inasti=getInastiAlerte();
@@ -1094,7 +1094,7 @@ function renderDash(){
   const maxG=Math.max(...bars.map(b=>b.g),1),totalChart=bars.reduce((s,b)=>s+b.g,0);
   sv('d-chart-total','Total: '+fmt(totalChart));
   const dc=g('d-chart');if(dc)dc.innerHTML=bars.map(b=>'<div class="cbar-wrap">'+(b.g>0?'<div class="cbar-val">'+Math.round(b.g)+'€</div>':'<div class="cbar-val" style="opacity:0">0</div>')+'<div class="cbar '+(b.cur?'cur':'')+' '+(b.g>0?'has-data':'')+'" style="height:'+Math.max(b.g>0?8:3,b.g/maxG*92)+'px"></div><div class="cbar-label">'+b.m+'</div></div>').join('');
-  const cs={};res.forEach(r=>{const k=r.clientNom||'?';if(!cs[k])cs[k]={g:0,n:0};cs[k].g+=parseFloat(r.prix||0);cs[k].n++;});
+  const cs={};res.forEach(r=>{const k=r.clientNom||'?';if(!cs[k])cs[k]={g:0,n:0};const commT=(r.partnerType==='commission')?parseFloat(r.commission||0):0;cs[k].g+=Math.max(0,parseFloat(r.prix||0)-commT);cs[k].n++;});
   const top=Object.entries(cs).sort((a,b)=>b[1].g-a[1].g).slice(0,3);
   const topEl=g('d-top');
   if(topEl)topEl.innerHTML=top.length?top.map(([nom,s],i)=>'<div class="dr"><span class="dr-label">'+['🥇','🥈','🥉'][i]+' '+nom+(isVip(nom)?' ⭐':'')+'</span><span class="dr-val">'+fmt(s.g)+' · '+s.n+' course'+(s.n>1?'s':'')+'</span></div>').join(''):'<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Aucune course ce mois</div>';
@@ -1186,7 +1186,7 @@ function renderClients(){
   var clients=[].concat(db.clients);
   if(clientSort==='alpha')clients.sort(function(a,b){return a.nom.localeCompare(b.nom,'fr');});
   else if(clientSort==='courses')clients.sort(function(a,b){return cntRes(b.nom)-cntRes(a.nom);});
-  else if(clientSort==='ca')clients.sort(function(a,b){var ga=db.reservations.filter(r=>r.clientNom===a.nom&&r.statut!=='annule').reduce((s,r)=>s+parseFloat(r.prix||0),0);var gb=db.reservations.filter(r=>r.clientNom===b.nom&&r.statut!=='annule').reduce((s,r)=>s+parseFloat(r.prix||0),0);return gb-ga;});
+  else if(clientSort==='ca')clients.sort(function(a,b){var ga=db.reservations.filter(r=>r.clientNom===a.nom&&r.statut!=='annule').reduce((s,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);var gb=db.reservations.filter(r=>r.clientNom===b.nom&&r.statut!=='annule').reduce((s,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);return gb-ga;});
   else if(clientSort==='recent')clients.sort(function(a,b){var la=db.reservations.filter(r=>r.clientNom===a.nom).sort((x,y)=>new Date(y.dateAller)-new Date(x.dateAller))[0];var lb=db.reservations.filter(r=>r.clientNom===b.nom).sort((x,y)=>new Date(y.dateAller)-new Date(x.dateAller))[0];return (lb?new Date(lb.dateAller):0)-(la?new Date(la.dateAller):0);});
   if(search)clients=clients.filter(function(c){return c.nom.toLowerCase().includes(search)||(c.tel||'').includes(search);});
   var el=document.getElementById('clients-list');if(!el)return;
@@ -1194,7 +1194,7 @@ function renderClients(){
   var html='';
   clients.forEach(function(cl){
     var n=cntRes(cl.nom),vip=isVip(cl.nom);
-    var gains=db.reservations.filter(function(r){return r.clientNom===cl.nom&&r.statut!=='annule';}).reduce(function(s,r){return s+parseFloat(r.prix||0);},0);
+    var gains=db.reservations.filter(function(r){return r.clientNom===cl.nom&&r.statut!=='annule';}).reduce(function(s,r){var comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-comm);},0);
     var cid=cl.id;
     html+='<div class="item" data-id="'+cid+'" onclick="showDetailClient(this.dataset.id)">';
     if(cl.blacklist)html+='<div class="item-accent" style="background:var(--red2)"></div>';
@@ -2349,10 +2349,10 @@ function renderPayRepartition(){
     // Courses partenaires prépayées → groupe partenaires
     const k=(p==='prepaye'||r.partnerType==='prepaye')?'prepaye':(groups[p]?p:'cash');
     groups[k].res.push(r);});
-  const total=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const total=res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);
   let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
   Object.entries(groups).forEach(([key,g2])=>{
-    const amt=g2.res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+    const amt=g2.res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);
     const pct=total>0?Math.round(amt/total*100):0;
     const active=window._payFilter===key;
     html+='<div onclick="togglePayFilter(&quot;'+key+'&quot;)" style="background:'+(active?'#1a1a1a':'var(--card)')+';border:1.5px solid '+(active?g2.color:'var(--border)')+';border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all 0.2s">';
@@ -2436,7 +2436,7 @@ function saveClient(){
 function showDetailClient(id){
   const c=db.clients.find(x=>x.id===id);if(!c)return;
   const n=cntRes(c.nom),vip=isVip(c.nom);
-  const gains=db.reservations.filter(r=>r.clientNom===c.nom&&r.statut!=='annule').reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const gains=db.reservations.filter(r=>r.clientNom===c.nom&&r.statut!=='annule').reduce((s,r)=>{const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-comm);},0);
   const last=db.reservations.filter(r=>r.clientNom===c.nom).sort((a,b)=>new Date(b.dateAller)-new Date(a.dateAller)).slice(0,3);
   sv('dc-title',c.nom+(vip?' ⭐':'')+(c.blacklist?' ⛔':''));
   const dc=g('dc-content');
@@ -2451,7 +2451,23 @@ function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-
 function openFraisModal(editId){sv('frais-modal-title',editId?'Modifier frais':'Nouveau frais');g('frais-edit-id').value=editId||'';const f=editId?db.frais.find(x=>x.id===editId):null;g('frais-desc').value=f?.desc||'';g('frais-date').value=f?.date||new Date().toISOString().split('T')[0];g('frais-montant').value=f?.montant||'';g('frais-fournisseur').value=f?.fournisseur||'';setChips('frais-type-chips','frais-type',f?.type||'entretien');openModal('m-frais');}
 function saveFrais(){const editId=g('frais-edit-id').value;const f={id:editId||genId(),type:g('frais-type').value,desc:g('frais-desc').value.trim(),date:g('frais-date').value,montant:parseFloat(g('frais-montant').value)||0,fournisseur:g('frais-fournisseur').value.trim()};if(!f.montant||!f.date){alert('Date et montant requis');return;}if(editId){const i=db.frais.findIndex(x=>x.id===editId);if(i!==-1)db.frais[i]=f;}else db.frais.push(f);save();closeModal('m-frais');renderFin();}
 function openPartnerModal(editId){sv('partner-modal-title',editId?'Modifier partenaire':'Nouveau partenaire');g('partner-edit-id').value=editId||'';const p=editId?db.partners.find(x=>x.id===editId):null;g('p-nom').value=p?.nom||'';g('p-email').value=p?.email||'';g('p-tel').value=p?.tel||'';g('p-adresse').value=p?.adresse||'';g('p-tva').value=p?.tva||'';openModal('m-partner');}
-function savePartner(){const editId=g('partner-edit-id').value;const p={id:editId||genId(),nom:g('p-nom').value.trim(),email:g('p-email').value.trim(),tel:g('p-tel').value.trim(),adresse:g('p-adresse').value.trim(),tva:g('p-tva').value.trim()};if(!p.nom){alert('Nom requis');return;}if(editId){const i=db.partners.findIndex(x=>x.id===editId);if(i!==-1)db.partners[i]=p;}else db.partners.push(p);save();closeModal('m-partner');renderPartners();}
+function savePartner(){
+  const editId=g('partner-edit-id').value;
+  const oldPartner=editId?db.partners.find(x=>x.id===editId):null;
+  const oldNom=oldPartner?oldPartner.nom:'';
+  const p={id:editId||genId(),nom:g('p-nom').value.trim(),email:g('p-email').value.trim(),tel:g('p-tel').value.trim(),adresse:g('p-adresse').value.trim(),tva:g('p-tva').value.trim()};
+  if(!p.nom){alert('Nom requis');return;}
+  if(editId){
+    const i=db.partners.findIndex(x=>x.id===editId);if(i!==-1)db.partners[i]=p;
+    // Propager le nouveau nom dans les réservations liées
+    if(oldNom&&oldNom!==p.nom){
+      var nbSync=0;
+      db.reservations.forEach(function(r){if(r.source===oldNom){r.source=p.nom;nbSync++;}});
+      if(nbSync>0)console.log('[FM] '+nbSync+' réservation(s) mises à jour pour partenaire renommé.');
+    }
+  } else db.partners.push(p);
+  save();closeModal('m-partner');renderPartners();
+}
 function openObjModal(){g('obj-val').value=db.settings.objectif;openModal('m-objectif');}
 function saveObj(){db.settings.objectif=parseFloat(g('obj-val').value)||2000;save();closeModal('m-objectif');renderDash();}
 function saveHome(){const a=g('home-adr').value.trim();if(!a){alert('Adresse requise');return;}db.settings.homeAddress={adresse:a,lat:parseFloat(g('home-lat').value)||null,lon:parseFloat(g('home-lon').value)||null};save();closeModal('m-home');renderParams();}
