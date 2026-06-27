@@ -905,6 +905,7 @@ function fixDb(){
   if(!db.partners||!db.partners.length)db.partners=JSON.parse(JSON.stringify(PARTNERS_DEFAULT));
   if(!db.kmReels)db.kmReels=[];
   if(!db.clients)db.clients=[];
+  if(!db.partnerSoldes)db.partnerSoldes=[];
   if(!db.settings.homeAddress||!db.settings.homeAddress.lat)db.settings.homeAddress=HOME_DEFAULT;
   if(!db.settings.tarifs.round)db.settings.tarifs.round=5;
   if(!db.settings.tarifs.camion)db.settings.tarifs.camion=20;
@@ -1016,6 +1017,7 @@ function showPage(name,btn){
   else if(name==='params')renderParams();
 }
 function changeMonth(d){
+  window._payFilter=null; // réinitialiser le filtre paiement au changement de mois
   curMonth+=d;
   if(curMonth>11){curMonth=0;curYear++;}
   if(curMonth<0){curMonth=11;curYear--;}
@@ -1056,7 +1058,9 @@ function renderActive(){
 function renderDash(){
   sv('dash-month',MOIS[curMonth]+' '+curYear);
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
-  const recettes=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const recettesBrut=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const commissionsD=res.reduce((s,r)=>s+parseFloat(r.commission||0),0);
+  const recettes=recettesBrut-commissionsD; // net après commissions
   const totalKmC=res.reduce((s,r)=>s+getKmClient(r),0),totalKmR=res.reduce((s,r)=>s+getKmReels(r),0);
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0);
@@ -1229,7 +1233,9 @@ function renderClients(){
 function renderFin(){
   sv('fin-month',MOIS[curMonth]+' '+curYear);
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
-  const recettes=res.reduce((s,r)=>s+parseFloat(r.prix||0),0),enc=getEncaisseMois(curMonth,curYear);
+  const recettesBrutF=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const recettes=recettesBrutF-res.reduce((s,r)=>s+parseFloat(r.commission||0),0); // net
+  const enc=getEncaisseMois(curMonth,curYear);
   const totalKmC=res.reduce((s,r)=>s+getKmClient(r),0),totalKmR=res.reduce((s,r)=>s+getKmReels(r),0);
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
@@ -1325,7 +1331,7 @@ function renderPartners(){
 
       // Résumé financier
       var nbCourses=s.courses.filter(r=>r.statut!=='annule').length;
-      var totalEncaisse=s.courses.filter(r=>r.statut!=='annule').reduce((t,r)=>t+parseFloat(r.prix||0),0);
+      var totalEncaisse=s.courses.filter(r=>r.statut!=='annule').reduce((t,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return t+Math.max(0,parseFloat(r.prix||0)-c);},0);
       html+='<div style="background:rgba(255,255,255,0.1);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">';
       html+='<div style="font-size:0.62rem;color:var(--gold2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">💰 Situation financière</div>';
       html+='<div class="dr"><span class="dr-label" style="color:rgba(255,255,255,0.6)">Courses effectuées</span><span class="dr-val">'+nbCourses+' course'+(nbCourses>1?'s':'')+'</span></div>';
@@ -1359,6 +1365,17 @@ function renderPartners(){
         html+='<button class="btn btn-gold btn-full btn-sm" style="margin-bottom:8px" onclick="marquerFacturePaye(this.dataset.nom)" data-nom="'+p.nom+'">✓ Marquer facture envoyée ('+fmt(s.aFacturer)+')</button>';
       }
 
+      // Historique des règlements
+      if(db.partnerSoldes){
+        var histo=(db.partnerSoldes||[]).filter(function(h){return h.partenaire===p.nom;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+        if(histo.length){
+          html+='<div style="font-size:0.62rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:10px 0 6px">📋 Historique règlements</div>';
+          histo.forEach(function(h){
+            var label=h.type==='commission'?'💸 Commissions reversées':'💰 Facture encaissée';
+            html+='<div class="dr" style="background:rgba(0,200,100,0.05);border-radius:var(--radius-xs);padding:8px;margin-bottom:4px"><span class="dr-label" style="font-size:0.75rem;color:var(--green2)">✓ '+label+'<br><span style="color:var(--text3);font-size:0.68rem">'+new Date(h.date).toLocaleDateString('fr-BE',{day:'2-digit',month:'short',year:'numeric'})+' · '+h.nbCourses+' course'+(h.nbCourses>1?'s':'')+'</span></span><span class="dr-val" style="color:var(--green2);font-weight:700">'+fmt(h.montant)+'</span></div>';
+          });
+        }
+      }
       // Détail courses
       var coursesPartenaire=s.courses.filter(r=>r.statut!=='annule').sort((a,b)=>new Date(b.dateAller)-new Date(a.dateAller));
       if(coursesPartenaire.length){
@@ -1408,8 +1425,31 @@ function renderPartners(){
   }
 }
 
-function marquerCommissionPayee(p){if(!confirm('Commissions de '+p+' reversées ?'))return;db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='commission')r.commissionPayee=true;});save();renderAll();}
-function marquerFacturePaye(p){if(!confirm('Courses de '+p+' facturées ?'))return;db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='prepaye')r.facturePaye=true;});save();renderAll();}
+function marquerCommissionPayee(p){
+  var s=calcPartnerSoldes()[p];
+  if(!s||s.commissionsDues<=0)return;
+  var montant=s.commissionsDues;
+  if(!confirm('Confirmer : commissions de '+p+' reversées ('+fmt(montant)+') ?\n\nCes courses seront archivées et le solde remis à zéro.'))return;
+  // Archiver dans db.partnerSoldes
+  if(!db.partnerSoldes)db.partnerSoldes=[];
+  var courseIds=db.reservations.filter(r=>r.source===p&&r.partnerType==='commission'&&!r.commissionPayee&&r.statut!=='annule').map(r=>r.id);
+  db.partnerSoldes.push({id:genId(),partenaire:p,type:'commission',montant:montant,date:new Date().toISOString().split('T')[0],nbCourses:courseIds.length,courseIds:courseIds});
+  db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='commission')r.commissionPayee=true;});
+  save();renderAll();
+  alert('✅ '+fmt(montant)+' reversés à '+p+' — '+courseIds.length+' course(s) archivée(s).');
+}
+function marquerFacturePaye(p){
+  var s=calcPartnerSoldes()[p];
+  if(!s||s.aFacturer<=0)return;
+  var montant=s.aFacturer;
+  if(!confirm('Confirmer : facture de '+p+' payée ('+fmt(montant)+') ?\n\nCes courses seront archivées et le solde remis à zéro.'))return;
+  if(!db.partnerSoldes)db.partnerSoldes=[];
+  var courseIds=db.reservations.filter(r=>r.source===p&&r.partnerType==='prepaye'&&!r.facturePaye&&r.statut!=='annule').map(r=>r.id);
+  db.partnerSoldes.push({id:genId(),partenaire:p,type:'prepaye',montant:montant,date:new Date().toISOString().split('T')[0],nbCourses:courseIds.length,courseIds:courseIds});
+  db.reservations.forEach(r=>{if(r.source===p&&r.partnerType==='prepaye')r.facturePaye=true;});
+  save();renderAll();
+  alert('✅ Facture de '+fmt(montant)+' reçue de '+p+' — '+courseIds.length+' course(s) archivée(s).');
+}
 function renderParams(){
   var s=db.settings;
   loadNotifSettings();
@@ -1825,7 +1865,11 @@ function showDetailRes(id){
     var payLabel={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[r.paiement]||r.paiement;
     h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(r.paiement==='virement'?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(r.paiement==='virement'&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
     if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
-    if(parseFloat(r.commission||0)>0)h+='<div class="dr"><span class="dr-label">Commission</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>';
+    if(parseFloat(r.commission||0)>0){
+      h+='<div class="dr"><span class="dr-label">Commission partenaire</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>';
+      var netEnc=Math.max(0,parseFloat(r.prix||0)-parseFloat(r.commission||0));
+      h+='<div class="dr"><span class="dr-label" style="font-weight:700">Net encaissé</span><span class="dr-val c-green" style="font-weight:700">'+fmt(netEnc)+'</span></div>';
+    }
     h+='<div class="divider"></div>';
     h+='<div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1rem;font-weight:800">'+fmt(benef)+'</span></div>';
     h+='<div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
