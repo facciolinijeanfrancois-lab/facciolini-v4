@@ -1808,31 +1808,52 @@ function showDetailRes(id){
     else if(diff3>=0&&diff3<=3){drb.style.display='inline-flex';drb.textContent='🛬 Rappel retour';drb.onclick=function(){sendRappel(id,'retour');};}
     else drb.style.display='none';
   }
-  // Boutons avis Google (WhatsApp + SMS)
+  // Boutons avis Google (WhatsApp + SMS) — toujours visibles, grisés si déjà envoyé
   var dawb=g('dr-avis-wa-btn');
   var dasb=g('dr-avis-sms-btn');
   var nom=r.clientNom||r.client||'';
   var prenom=nom.split(' ')[0]||'';
   var dest=r.destination||r.arrivee||'';
-  var msgAvis='Bonjour '+prenom+' !\n\nMerci pour votre confiance'+(dest?' pour votre trajet vers '+dest:'')+'.\n\nSi vous etes satisfait(e) de la prestation, un petit avis Google nous aiderait enormement :\n https://share.google/wt1lsRQMDu7tYcfl5\n\nMerci d avance et a bientot !\nJean-Francois - Facciolini Mobility';
+  var langA=r.langue||'fr';
+  var lienGoogle='https://share.google/AJ8pUSSMmgaNqLw43';
+  var msgAvis='';
+  if(langA==='en'){
+    msgAvis='Hello '+prenom+' \uD83D\uDE0A\n\nThank you so much for choosing Facciolini Mobility'+(dest?' for your journey to '+dest:'')+'. It was a pleasure to drive you!\n\nIf you were happy with the service, a quick Google review would mean the world to us:\n\uD83D\uDC49 '+lienGoogle+'\n\nIt only takes 30 seconds and makes a huge difference \uD83D\uDE4F\n\nSee you soon!\nJean-Fran\u00E7ois \u2014 Facciolini Mobility \uD83D\uDE97\u2728';
+  } else if(langA==='nl'){
+    msgAvis='Hallo '+prenom+' \uD83D\uDE0A\n\nHartelijk dank dat u voor Facciolini Mobility heeft gekozen'+(dest?' voor uw rit naar '+dest:'')+'. Het was een plezier u te rijden!\n\nAls u tevreden was over de service, zou een korte Google-recensie voor ons enorm veel betekenen:\n\uD83D\uDC49 '+lienGoogle+'\n\nHet duurt slechts 30 seconden en maakt een groot verschil \uD83D\uDE4F\n\nTot ziens!\nJean-Fran\u00E7ois \u2014 Facciolini Mobility \uD83D\uDE97\u2728';
+  } else {
+    msgAvis='Bonjour '+prenom+' \uD83D\uDE0A\n\nMerci de tout c\u0153ur pour votre confiance'+(dest?' pour votre trajet vers '+dest:'')+'. C\'\u00E9tait un vrai plaisir de vous conduire !\n\nSi vous avez \u00E9t\u00E9 satisfait(e) de la prestation, un petit avis Google nous aiderait vraiment beaucoup :\n\uD83D\uDC49 '+lienGoogle+'\n\nCela ne prend que 30 secondes et fait une grande diff\u00E9rence pour nous \uD83D\uDE4F\n\n\u00C0 tr\u00E8s bient\u00F4t !\nJean-Fran\u00E7ois \u2014 Facciolini Mobility \uD83D\uDE97\u2728';
+  }
   var telRaw=r.clientTel||r.telephone||'';
+  var avisKey='avis_sent_'+id;
+  var avisDejaEnvoye=localStorage.getItem(avisKey)==='1';
+  function applyAvisEnvoye(){
+    if(dawb){dawb.disabled=true;dawb.style.opacity='0.45';dawb.style.cursor='default';dawb.textContent='\u2713 Avis demand\u00E9';dawb.onclick=null;}
+    if(dasb){dasb.disabled=true;dasb.style.opacity='0.45';dasb.style.cursor='default';dasb.textContent='\u2713 Avis demand\u00E9';dasb.onclick=null;}
+  }
   if(dawb){
-    if(r.statut==='termine'){
-      dawb.style.display='inline-flex';
+    dawb.style.display='inline-flex';
+    if(avisDejaEnvoye){applyAvisEnvoye();}
+    else{
+      dawb.disabled=false;dawb.style.opacity='1';dawb.style.cursor='';dawb.innerHTML='\uD83D\uDCAC Avis WhatsApp';
       dawb.onclick=function(){
         var tel=telRaw.replace(/[\s\-\+]/g,'').replace(/^0/,'32');
         window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msgAvis),'_blank');
+        localStorage.setItem(avisKey,'1');applyAvisEnvoye();
       };
-    } else { dawb.style.display='none'; }
+    }
   }
   if(dasb){
-    if(r.statut==='termine'){
-      dasb.style.display='inline-flex';
+    dasb.style.display='inline-flex';
+    if(avisDejaEnvoye){/* déjà géré */}
+    else{
+      dasb.disabled=false;dasb.style.opacity='1';dasb.style.cursor='';dasb.innerHTML='\uD83D\uDCF1 Avis SMS';
       dasb.onclick=function(){
         var tel=telRaw.replace(/\s/g,'');
         window.open('sms:'+tel+'?body='+encodeURIComponent(msgAvis),'_blank');
+        localStorage.setItem(avisKey,'1');applyAvisEnvoye();
       };
-    } else { dasb.style.display='none'; }
+    }
   }
   openModal('m-detail-res');
 }
