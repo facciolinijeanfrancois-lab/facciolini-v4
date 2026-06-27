@@ -953,6 +953,9 @@ function getBenef(r){const v=getV(r.vehicule);return parseFloat(r.prix||0)-getKm
 function getBenefReel(r){const v=getV(r.vehicule);return parseFloat(r.prix||0)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getV(idx){return db.settings.vehicles[parseInt(idx||0)]||db.settings.vehicles[0];}
 function getMonthRes(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);if(da.getMonth()===m&&da.getFullYear()===y)return true;if(r.type==='ar-diff'&&r.dateRetour){const dr=new Date(r.dateRetour);if(dr.getMonth()===m&&dr.getFullYear()===y)return true;}return false;});}
+// getMonthResAller : uniquement les courses dont l'ALLER est ce mois
+// Utilisé pour CA, bénéfice, km, nb courses (évite le double-comptage ar-diff inter-mois)
+function getMonthResAller(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);return da.getMonth()===m&&da.getFullYear()===y;});}
 function getMonthCarb(m,y){return db.carburant.filter(c=>{const d=new Date(c.date);return d.getMonth()===m&&d.getFullYear()===y;});}
 function getMonthFrais(m,y){return db.frais.filter(f=>{const d=new Date(f.date);return d.getMonth()===m&&d.getFullYear()===y;});}
 function getYearKm(y){return db.reservations.filter(r=>new Date(r.dateAller).getFullYear()===y).reduce((s,r)=>s+getKmClient(r),0);}
@@ -1058,15 +1061,16 @@ function renderActive(){
 function renderDash(){
   sv('dash-month',MOIS[curMonth]+' '+curYear);
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
-  const recettesBrut=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
-  const commissionsD=res.reduce((s,r)=>s+parseFloat(r.commission||0),0);
+  const resA=getMonthResAller(curMonth,curYear); // uniquement aller ce mois → CA/benef/km sans double-comptage
+  const recettesBrut=resA.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const commissionsD=resA.reduce((s,r)=>s+parseFloat(r.commission||0),0);
   const recettes=recettesBrut-commissionsD; // net après commissions
-  const totalKmC=res.reduce((s,r)=>s+getKmClient(r),0),totalKmR=res.reduce((s,r)=>s+getKmReels(r),0);
+  const totalKmC=resA.reduce((s,r)=>s+getKmClient(r),0),totalKmR=resA.reduce((s,r)=>s+getKmReels(r),0);
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0);
   const fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
-  const benef=res.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
-  const benefReel=res.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
+  const benef=resA.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
+  const benefReel=resA.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
   const marge=recettes>0?Math.round(benef/recettes*100):0;
   const enc=getEncaisseMois(curMonth,curYear),obj=db.settings.objectif;
   const pct=Math.min(100,Math.round(enc/obj*100));
@@ -1078,7 +1082,7 @@ function renderDash(){
   sv('d-marge','Marge '+marge+'% · Adam');
   // Comparaison mois précédent
   let prevM=curMonth-1,prevY=curYear;if(prevM<0){prevM=11;prevY--;}
-  const prevRes=getMonthRes(prevM,prevY);
+  const prevRes=getMonthResAller(prevM,prevY);
   const prevEnc=getEncaisseMois(prevM,prevY);
   const diffEnc=enc-prevEnc;
   const diffNb=res.length-prevRes.length;
@@ -1090,7 +1094,7 @@ function renderDash(){
   }
   const brEl=g('d-benef-reel');
   if(brEl){brEl.textContent='Réel: '+fmt(benefReel);brEl.style.color=benefReel>=0?'var(--green2)':'var(--red2)';}
-  sv('d-nb-res',res.length);sv('d-nb-sub',res.length+' course'+(res.length>1?'s':''));
+  sv('d-nb-res',resA.length);sv('d-nb-sub',resA.length+' course'+(resA.length>1?'s':''));
   sv('d-km',fmtKm(totalKmC));sv('d-km-reel',kmReel!==null?Math.round(kmReel)+' km':(totalKmR>0?'~'+Math.round(totalKmR)+' km':'—'));
   sv('d-diesel',fmt(diesel));sv('d-litres',carbs.reduce((s,c)=>s+parseFloat(c.litres||0),0).toFixed(1)+' L');
   sv('d-charges',fmt(charges));sv('d-frais',fmt(fraisT));
@@ -1110,13 +1114,13 @@ function renderDash(){
     if(kmRestant>0&&kmRestant<3000)alerts.push('<div class="alert alert-orange">🔧 '+e.type+' dans ~'+Math.round(kmRestant)+' km !</div>');
     else if(kmRestant<=0)alerts.push('<div class="alert alert-red">🔧 '+e.type+' dépassé de '+Math.round(Math.abs(kmRestant))+' km !</div>');
   });
-  const sc=res.filter(r=>getBenef(r)<0);if(sc.length)alerts.push('<div class="alert alert-red">⚠️ '+sc.length+' course'+(sc.length>1?'s':'')+' avec bénéfice négatif !</div>');
+  const sc=resA.filter(r=>getBenef(r)<0);if(sc.length)alerts.push('<div class="alert alert-red">⚠️ '+sc.length+' course'+(sc.length>1?'s':'')+' avec bénéfice négatif !</div>');
   const al=g('d-alerts');if(al)al.innerHTML=alerts.join('');
   const bars=[];for(let i=5;i>=0;i--){let m=curMonth-i,y=curYear;if(m<0){m+=12;y--;}const gv=getEncaisseMois(m,y);bars.push({m:MOIS_S[m],g:gv,cur:i===0});}
   const maxG=Math.max(...bars.map(b=>b.g),1),totalChart=bars.reduce((s,b)=>s+b.g,0);
   sv('d-chart-total','Total: '+fmt(totalChart));
   const dc=g('d-chart');if(dc)dc.innerHTML=bars.map(b=>'<div class="cbar-wrap">'+(b.g>0?'<div class="cbar-val">'+Math.round(b.g)+'€</div>':'<div class="cbar-val" style="opacity:0">0</div>')+'<div class="cbar '+(b.cur?'cur':'')+' '+(b.g>0?'has-data':'')+'" style="height:'+Math.max(b.g>0?8:3,b.g/maxG*92)+'px"></div><div class="cbar-label">'+b.m+'</div></div>').join('');
-  const cs={};res.forEach(r=>{const k=r.clientNom||'?';if(!cs[k])cs[k]={g:0,n:0};const commT=(r.partnerType==='commission')?parseFloat(r.commission||0):0;cs[k].g+=Math.max(0,parseFloat(r.prix||0)-commT);cs[k].n++;});
+  const cs={};resA.forEach(r=>{const k=r.clientNom||'?';if(!cs[k])cs[k]={g:0,n:0};const commT=(r.partnerType==='commission')?parseFloat(r.commission||0):0;cs[k].g+=Math.max(0,parseFloat(r.prix||0)-commT);cs[k].n++;});
   const top=Object.entries(cs).sort((a,b)=>b[1].g-a[1].g).slice(0,3);
   const topEl=g('d-top');
   if(topEl)topEl.innerHTML=top.length?top.map(([nom,s],i)=>'<div class="dr"><span class="dr-label">'+['🥇','🥈','🥉'][i]+' '+nom+(isVip(nom)?' ⭐':'')+'</span><span class="dr-val">'+fmt(s.g)+' · '+s.n+' course'+(s.n>1?'s':'')+'</span></div>').join(''):'<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Aucune course ce mois</div>';
@@ -1233,15 +1237,16 @@ function renderClients(){
 function renderFin(){
   sv('fin-month',MOIS[curMonth]+' '+curYear);
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
-  const recettesBrutF=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
-  const recettes=recettesBrutF-res.reduce((s,r)=>s+parseFloat(r.commission||0),0); // net
+  const resA=getMonthResAller(curMonth,curYear); // CA/benef/km sans double-comptage ar-diff
+  const recettesBrutF=resA.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const recettes=recettesBrutF-resA.reduce((s,r)=>s+parseFloat(r.commission||0),0); // net
   const enc=getEncaisseMois(curMonth,curYear);
-  const totalKmC=res.reduce((s,r)=>s+getKmClient(r),0),totalKmR=res.reduce((s,r)=>s+getKmReels(r),0);
+  const totalKmC=resA.reduce((s,r)=>s+getKmClient(r),0),totalKmR=resA.reduce((s,r)=>s+getKmReels(r),0);
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
-  const commissions=res.reduce((s,r)=>s+parseFloat(r.commission||0),0);
-  const benef=res.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
-  const benefReel=res.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
+  const commissions=resA.reduce((s,r)=>s+parseFloat(r.commission||0),0);
+  const benef=resA.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
+  const benefReel=resA.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
   const kmReel=getKmReelsMois(curMonth,curYear);
   const moisStr=curYear+'-'+String(curMonth+1).padStart(2,'0');
   const kmEntry=db.kmReels.find(k=>k.mois===moisStr);
@@ -2419,7 +2424,7 @@ function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .ch
 function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='upcoming')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='done')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function renderPayRepartition(){
-  const res=getMonthRes(curMonth,curYear);
+  const res=getMonthResAller(curMonth,curYear); // aller uniquement → pas de double comptage
   if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
   const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},carte:{label:'Carte',icon:'💳',color:'var(--blue2)',res:[]},virement:{label:'Virement',icon:'🏦',color:'var(--gold)',res:[]},prepaye:{label:'Partenaires',icon:'🤝',color:'var(--orange2)',res:[]}};
   res.forEach(r=>{const p=r.paiement||'cash';
@@ -2699,16 +2704,17 @@ function exportICS(r){
 }
 function genNoteFrais(){
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
-  const recettesBrut=res.reduce((s,r)=>s+parseFloat(r.prix||0),0);
-  const commissions=res.reduce((s,r)=>s+parseFloat(r.commission||0),0);
+  const resA=getMonthResAller(curMonth,curYear); // CA/benef/km sans double-comptage
+  const recettesBrut=resA.reduce((s,r)=>s+parseFloat(r.prix||0),0);
+  const commissions=resA.reduce((s,r)=>s+parseFloat(r.commission||0),0);
   const recettes=recettesBrut-commissions; // recettes nettes après commissions partenaires
   const enc=getEncaisseMois(curMonth,curYear);
-  const tKC=res.reduce((s,r)=>s+getKmClient(r),0),tKR=res.reduce((s,r)=>s+getKmReels(r),0);
+  const tKC=resA.reduce((s,r)=>s+getKmClient(r),0),tKR=resA.reduce((s,r)=>s+getKmReels(r),0);
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
-  const peages=res.reduce((s,r)=>s+parseFloat(r.peages||0),0),parkings=res.reduce((s,r)=>s+parseFloat(r.parking||0),0);
-  const benef=res.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
-  const benefR=res.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
+  const peages=resA.reduce((s,r)=>s+parseFloat(r.peages||0),0),parkings=resA.reduce((s,r)=>s+parseFloat(r.parking||0),0);
+  const benef=resA.reduce((s,r)=>s+getBenef(r),0)-charges-diesel-fraisT;
+  const benefR=resA.reduce((s,r)=>s+getBenefReel(r),0)-charges-diesel-fraisT;
   const kmReel=getKmReelsMois(curMonth,curYear);
   const fi={entretien:'🔧',pneus:'🛞',controle:'📋',assurance:'🛡',lavage:'🚿',accessoires:'🧴',autre:'📦'};
   sv('nf-title','Note de frais — '+MOIS[curMonth]+' '+curYear);
@@ -2716,7 +2722,7 @@ function genNoteFrais(){
   if(nc)nc.innerHTML='<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:0.73rem;color:var(--text2);line-height:1.7">'+MOI.nom+' · BCE '+MOI.bce+'<br>'+MOI.adresse+'<br>'+MOI.email+' · '+MOI.tel+'</div><div class="dr"><span class="dr-label">Facturé</span><span class="dr-val c-gold">'+fmt(recettes)+'</span></div><div class="dr"><span class="dr-label">Encaissé ce mois</span><span class="dr-val c-green">'+fmt(enc)+'</span></div><div class="dr"><span class="dr-label">Courses</span><span class="dr-val">'+res.length+'</span></div><div class="dr"><span class="dr-label">Km clients facturés</span><span class="dr-val c-blue">'+fmtKm(tKC)+'</span></div><div class="dr"><span class="dr-label">Km réels totaux</span><span class="dr-val c-purple">'+(kmReel?Math.round(kmReel)+' km (compteur)':fmtKm(tKR)+' (estimé)')+'</span></div><div class="dr"><span class="dr-label">Km annuels</span><span class="dr-val">'+fmtKm(getYearKm(curYear))+'</span></div><div class="divider"></div><div class="dr"><span class="dr-label">Carburant</span><span class="dr-val c-red">- '+fmt(diesel)+'</span></div><div class="dr"><span class="dr-label">Péages</span><span class="dr-val c-red">- '+fmt(peages)+'</span></div><div class="dr"><span class="dr-label">Parkings</span><span class="dr-val c-red">- '+fmt(parkings)+'</span></div><div class="dr"><span class="dr-label">Commissions</span><span class="dr-val c-red">- '+fmt(commissions)+'</span></div><div class="dr"><span class="dr-label">Frais exceptionnels</span><span class="dr-val c-red">- '+fmt(fraisT)+'</span></div>'+frais.map(f=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">'+(fi[f.type]||'📦')+' '+(f.desc||f.type)+(f.fournisseur?' · '+f.fournisseur:'')+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(f.montant)+'</span></div>').join('')+'<div class="dr"><span class="dr-label">Charges fixes</span><span class="dr-val c-red">- '+fmt(charges)+'</span></div>'+db.charges.map(c=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">· '+c.nom+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(c.montant)+'</span></div>').join('')+'<div class="divider"></div><div class="dr" style="background:var(--bg3);border-radius:var(--radius-xs);padding:12px"><span class="dr-label" style="font-weight:700;color:var(--text);font-size:0.95rem">BÉNÉFICE COMPTABLE</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1.2rem;font-family:\'Playfair Display\',serif">'+fmt(benef)+'</span></div><div class="dr" style="padding:10px 0"><span class="dr-label" style="color:var(--text2)">Bénéfice réel (km réels)</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div><div class="divider"></div><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Détail des courses</div>'+res.map(r=>{const kmC=getKmClient(r),kmR=getKmReels(r);return'<div class="dr"><span class="dr-label">'+new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+' · '+(r.clientNom||'—')+'<br><span style="font-size:0.7rem;color:var(--text3)">'+(r.depart||'').substring(0,16)+'→'+(r.arrivee||'').substring(0,16)+' · '+fmtKm(kmC)+' / '+fmtKm(kmR)+' réels'+(r.source!=='direct'?' · '+r.source:'')+'</span></span><span class="dr-val">'+fmt(r.prix)+(parseFloat(r.commission||0)>0?'<br><span style="font-size:0.68rem;color:var(--red2)">comm.-'+fmt(r.commission)+'</span>':'')+'</span></div>';}).join('');
   openModal('m-note-frais');
 }
-function exportNoteCSV(){const res=getMonthRes(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
+function exportNoteCSV(){const res=getMonthResAller(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
 function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
 function resetApp(){
