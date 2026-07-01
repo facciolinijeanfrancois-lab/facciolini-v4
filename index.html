@@ -272,10 +272,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="sec"><span class="sec-title">Courses</span><button class="btn btn-gold btn-sm" onclick="openNewRes()">+ Nouvelle</button></div>
   <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
     <div class="chip active" onclick="setResFilter('tous',this)">Tous</div>
-    <div class="chip" onclick="setResFilter('upcoming',this)">&#xc0; venir</div>
+    <div class="chip" onclick="setResFilter('semaine',this)">&#x1f4c6; Cette semaine</div>
     <div class="chip" onclick="setResFilter('today',this)">Aujourd&#x27;hui</div>
     <div class="chip" onclick="setResFilter('veille',this)">&#x1f514; Veille J-1</div>
-    <div class="chip" onclick="setResFilter('done',this)">Termin&#xe9;es</div>
+    <div class="chip" onclick="setResFilter('mois',this)">&#x1f5d3;&#xfe0f; Ce mois</div>
     <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
   </div>
   <div id="pay-filter-bar" style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
@@ -1281,10 +1281,10 @@ function renderRes(){
   sv2('res-month',MOIS[curMonth]+' '+curYear);
   var today=new Date();today.setHours(0,0,0,0);
   var res;
-  if(resFilter==='upcoming')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});
+  if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;lun.setDate(lun.getDate()-jourSem);var dim=new Date(lun);dim.setDate(lun.getDate()+6);dim.setHours(23,59,59,999);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d>=lun&&d<=dim;});}
   else if(resFilter==='today')res=db.reservations.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});
   else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()===demain.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()===demain.getTime();}return false;});}
-  else if(resFilter==='done')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});
+  else if(resFilter==='mois')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});
   else if(resFilter==='annule')res=db.reservations.filter(function(r){return r.statut==='annule';});
   else res=getMonthRes(curMonth,curYear);
   // Recherche texte
@@ -2660,7 +2660,7 @@ function wrapItemsWithSwipe(){
 }
 function setResFilter(f,el){resFilter=f;payFilter='tous';document.querySelectorAll('#page-res .chip:not(.chip-pay)').forEach(c=>c.classList.remove('active'));el.classList.add('active');document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.toggle('active',c.textContent.includes('Tous')||c.getAttribute('onclick')?.includes("'tous'")));renderRes();}
 function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
-function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='upcoming')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d>today;});else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='done')res=res.filter(function(r){var d=new Date(r.dateAller);d.setHours(0,0,0,0);return d<today&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
+function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;lun.setDate(lun.getDate()-jourSem);var dim=new Date(lun);dim.setDate(lun.getDate()+6);dim.setHours(23,59,59,999);res=res.filter(function(r){var d=new Date(r.dateAller);return d>=lun&&d<=dim;});}else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='mois')res=res.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function renderPayRepartition(){
   const res=getMonthResAller(curMonth,curYear); // aller uniquement → pas de double comptage
