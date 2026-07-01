@@ -1281,7 +1281,7 @@ function renderRes(){
   sv2('res-month',MOIS[curMonth]+' '+curYear);
   var today=new Date();today.setHours(0,0,0,0);
   var res;
-  if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;lun.setDate(lun.getDate()-jourSem);var dim=new Date(lun);dim.setDate(lun.getDate()+6);dim.setHours(23,59,59,999);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d>=lun&&d<=dim;});}
+  if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}
   else if(resFilter==='today')res=db.reservations.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});
   else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()===demain.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()===demain.getTime();}return false;});}
   else if(resFilter==='mois')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});
@@ -1327,16 +1327,18 @@ function renderRes(){
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
     if(r.passagers&&parseInt(r.passagers)>1)html+='<span class="badge badge-gray">👥'+r.passagers+'</span>';
     html+='</div>';
-    // Bouton rappel J-1 pour courses à venir
+    // Bouton rappel aller (J-3 à J-0, ou J-7)
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
-    if(diff2>=0&&diff2<=3&&r.clientTel){
-      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">💬 Rappel aller'+( diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)')+'</button>';
+    if(((diff2>=0&&diff2<=3)||diff2===7)&&r.clientTel){
+      var labelDiff2=diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':diff2===7?' (J-7)':' (dans '+Math.ceil(diff2)+'j)';
+      html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">💬 Rappel aller'+labelDiff2+'</button>';
     }
-    // Bouton rappel retour pour ar-diff
+    // Bouton rappel retour pour ar-diff (J-3 à J-0, ou J-7)
     if(r.type==='ar-diff'&&r.dateRetour&&r.clientTel){
       var diff3=(new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
-      if(diff3>=0&&diff3<=3){
-        html+='<button class="btn btn-full" style="margin-top:6px;font-size:0.8rem;background:var(--blue2);color:#fff;border:none;border-radius:10px;padding:10px" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;retour&quot;)">🛬 Rappel retour'+(diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':' (dans '+Math.ceil(diff3)+'j)')+'</button>';
+      if((diff3>=0&&diff3<=3)||diff3===7){
+        var labelDiff3=diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':diff3===7?' (J-7)':' (dans '+Math.ceil(diff3)+'j)';
+        html+='<button class="btn btn-full" style="margin-top:6px;font-size:0.8rem;background:var(--blue2);color:#fff;border:none;border-radius:10px;padding:10px" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;retour&quot;)">🛬 Rappel retour'+labelDiff3+'</button>';
       }
     }
     html+='</div>';
@@ -2660,7 +2662,7 @@ function wrapItemsWithSwipe(){
 }
 function setResFilter(f,el){resFilter=f;payFilter='tous';document.querySelectorAll('#page-res .chip:not(.chip-pay)').forEach(c=>c.classList.remove('active'));el.classList.add('active');document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.toggle('active',c.textContent.includes('Tous')||c.getAttribute('onclick')?.includes("'tous'")));renderRes();}
 function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
-function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;lun.setDate(lun.getDate()-jourSem);var dim=new Date(lun);dim.setDate(lun.getDate()+6);dim.setHours(23,59,59,999);res=res.filter(function(r){var d=new Date(r.dateAller);return d>=lun&&d<=dim;});}else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='mois')res=res.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
+function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return(r.paiement||'cash')===payFilter;});if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=res.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='mois')res=res.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') ?'))return;var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function renderPayRepartition(){
   const res=getMonthResAller(curMonth,curYear); // aller uniquement → pas de double comptage
