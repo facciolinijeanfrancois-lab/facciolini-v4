@@ -410,6 +410,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-fav')">+ Ajouter adresse</button>
   <div class="stitle">S&#xe9;curit&#xe9;</div>
   <div class="sitem"><div class="sitem-left"><div class="sitem-label">Code PIN</div><div class="sitem-sub">Protection de l'application</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-pin')">Modifier</button></div>
+  <div class="stitle">📊 Statistiques d'utilisation</div>
+  <div id="usage-stats-list" style="margin-bottom:8px"></div>
+  <button class="btn btn-outline btn-full" style="margin-bottom:8px;color:var(--text3);border-color:var(--border)" onclick="resetUsageStats()">↺ Réinitialiser les statistiques</button>
   <div class="stitle">Donn&#xe9;es</div>
   <button class="btn btn-outline btn-full" onclick="exportCSV()" style="margin-bottom:8px">&#x1f4ca; Exporter CSV comptable</button>
   <button class="btn btn-outline btn-full" onclick="exportBackup()" style="margin-bottom:8px">&#x1f4be; Sauvegarder donn&#xe9;es</button>
@@ -895,7 +898,7 @@ const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:
 const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zaventem',lat:50.9010,lon:4.4844},{id:'f2',nom:'Charleroi CRL',adresse:'Brussels South Charleroi Airport',lat:50.4592,lon:4.4538},{id:'f3',nom:'Gare de Mons',adresse:'Place Leopold, Mons',lat:50.4542,lon:3.9563},{id:'f4',nom:'Gare Charleroi',adresse:'Boulevard Tirou, Charleroi',lat:50.4108,lon:4.4446},{id:'f5',nom:'Gare du Midi',adresse:'Rue de France 2, Bruxelles',lat:50.8354,lon:4.3360}];
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
-let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.50,long:1.50,min:60,round:5,camion:20},vip:{seuil:4,reduc:10}}};
+let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],usage:{},settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.50,long:1.50,min:60,round:5,camion:20},vip:{seuil:4,reduc:10}}};
 let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous',payFilter='tous',clientSort='alpha',partnerHistFilter='tous';
 let acTimers={},acC={},calcTimers={};
 function save(){
@@ -918,6 +921,49 @@ function save(){
   }
 }
 function migrateR(r){return{distanceRetour:0,departRetour:'',arriveeRetour:'',depRetLat:null,depRetLon:null,arrRetLat:null,arrRetLon:null,kmPickup:0,kmPickupRetour:0,kmVideAller:0,kmVideAllerType:'maison',kmVideRetour:0,kmVideRetourType:'maison',langue:'fr',vehicule:0,facturePaye:false,commissionPayee:false,duree:90,volRetour:'',notesInternes:'',service:'depose',statut:'',stopNom:'',stopTel:'',stopAdresse:'',stopLat:null,stopLon:null,...r};}
+function trackUsage(key){
+  try{
+    if(!db.usage)db.usage={};
+    if(!db.usage[key])db.usage[key]={count:0,last:null};
+    db.usage[key].count++;
+    db.usage[key].last=new Date().toISOString();
+    save();
+  }catch(e){/* le suivi ne doit jamais bloquer l'app */}
+}
+var USAGE_LABELS={
+  'page:dash':'🏠 Page Dashboard','page:res':'📋 Page Courses','page:fin':'💰 Page Finances',
+  'page:clients':'👥 Page Clients','page:partners':'🤝 Page Partenaires','page:params':'⚙️ Page Paramètres',
+  'rappel:aller':'💬 Rappel client (aller)','rappel:retour':'🛬 Rappel client (retour)',
+  'arret-intermediaire':'👥➕ Arrêt intermédiaire (2ème passager)',
+  'export-ics':'📅 Export calendrier (ICS)','export-vcard':'📇 Export contact (vCard)',
+  'avis-google':'⭐ Demande d\'avis Google',
+  'partenaire-solder-commission':'🤝 Solder commission partenaire (par mois)',
+  'partenaire-solder-facture':'🤝 Solder facture partenaire (par mois)',
+  'reservation-nouvelle':'➕ Nouvelle réservation','reservation-modifiee':'✏️ Réservation modifiée',
+  '2eme-passager':'👥 Course avec 2ème passager'
+};
+function renderUsageStats(){
+  var el=document.getElementById('usage-stats-list');
+  if(!el)return;
+  var usage=db.usage||{};
+  var keys=Object.keys(usage);
+  if(!keys.length){el.innerHTML='<div style="color:var(--text3);font-size:0.82rem;padding:8px 2px">Pas encore de données — reviens dans quelques jours d\'utilisation.</div>';return;}
+  keys.sort(function(a,b){return usage[b].count-usage[a].count;});
+  var html='';
+  keys.forEach(function(k){
+    var u=usage[k];
+    var label=USAGE_LABELS[k]||k;
+    var lastStr=u.last?new Date(u.last).toLocaleDateString('fr-BE',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    html+='<div class="sitem"><div class="sitem-left"><div class="sitem-label">'+label+'</div><div class="sitem-sub">Dernière utilisation : '+lastStr+'</div></div><div style="font-weight:800;color:var(--gold2);font-family:Playfair Display,serif;font-size:1rem">'+u.count+'</div></div>';
+  });
+  el.innerHTML=html;
+}
+function resetUsageStats(){
+  if(!confirm('Réinitialiser les statistiques d\'utilisation ? Cette action est irréversible.'))return;
+  db.usage={};
+  save();
+  renderUsageStats();
+}
 function load(){const keys=['fm_v52','facciolini_v51','facciolini_v5'];for(const k of keys){const d=localStorage.getItem(k);if(d){try{const p=JSON.parse(d);db={...db,...p};fixDb();return;}catch(e){}}}const d4=localStorage.getItem('facciolini_v4');if(d4){try{const old=JSON.parse(d4);db.reservations=(old.reservations||[]).map(r=>migrateR(r));db.carburant=old.carburant||[];db.charges=(old.charges||[]).map(c=>{if(c.nom&&c.nom.toLowerCase().includes('comptable')&&parseFloat(c.montant)>50)return{...c,montant:50};return c;});db.kmReels=old.kmReels||[];if(old.settings)db.settings={...db.settings,...old.settings};fixDb();save();return;}catch(e){}}fixDb();}
 function fixDb(){
   if(!db.frais)db.frais=[];
@@ -1095,6 +1141,7 @@ function updDots(){for(let i=0;i<4;i++){const d=g('pd'+i);if(d)d.classList.toggl
 function checkPin(){if(!db.settings.pin){unlockApp();return;}if(pinBuf===db.settings.pin)unlockApp();else{const e=g('pin-err');if(e)e.textContent='PIN incorrect';pinBuf='';updDots();setTimeout(()=>{const e=g('pin-err');if(e)e.textContent='';},2000);}}
 function unlockApp(){const ps=g('pin-screen');if(ps)ps.style.display='none';const ap=g('app');if(ap)ap.style.display='block';renderAll();}
 function showPage(name,btn){
+  trackUsage('page:'+name);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(name!=='fin')window._payFilter=null;
@@ -1568,6 +1615,7 @@ function marquerFacturePaye(p){
 }
 function moisKeyRes(r){var d=new Date(r.dateAller);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function marquerCommissionPayeeMois(p,moisKey){
+  trackUsage('partenaire-solder-commission');
   var courses=db.reservations.filter(r=>r.source===p&&r.partnerType==='commission'&&!r.commissionPayee&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
   if(!courses.length)return;
   var montant=courses.reduce((t,r)=>t+parseFloat(r.commission||0),0);
@@ -1581,6 +1629,7 @@ function marquerCommissionPayeeMois(p,moisKey){
   alert('✅ '+fmt(montant)+' reversés à '+p+' pour '+moisLabel+' — '+courseIds.length+' course(s) archivée(s).');
 }
 function marquerFacturePayeMois(p,moisKey){
+  trackUsage('partenaire-solder-facture');
   var courses=db.reservations.filter(r=>r.source===p&&r.partnerType==='prepaye'&&!r.facturePaye&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
   if(!courses.length)return;
   var montant=courses.reduce((t,r)=>t+parseFloat(r.prix||0),0);
@@ -1595,6 +1644,7 @@ function marquerFacturePayeMois(p,moisKey){
 }
 function renderParams(){
   var s=db.settings;
+  renderUsageStats();
   loadNotifSettings();
   renderNotifStatus();
   // Alerte backup
@@ -1905,7 +1955,8 @@ function saveReservationCore(){
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
     duree:dist>0?Math.round(dist/60*60)+30:90
   };
-  if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;}else db.reservations.push(r);
+  if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;trackUsage('reservation-modifiee');}else{db.reservations.push(r);trackUsage('reservation-nouvelle');}
+  if(r.stopNom||r.stopAdresse)trackUsage('2eme-passager');
   save();
   renderAll();
   try{genResSummary();}catch(e){console.error('genResSummary:',e);}
@@ -2074,6 +2125,7 @@ function showDetailRes(id){
     else{
       dawb.disabled=false;dawb.style.opacity='1';dawb.style.cursor='';dawb.innerHTML='\uD83D\uDCAC Avis WhatsApp';
       dawb.onclick=function(){
+        trackUsage('avis-google');
         var tel=telRaw.replace(/[\s\-\+]/g,'').replace(/^0/,'32');
         window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msgAvis),'_blank');
         localStorage.setItem(avisKey,'1');applyAvisEnvoye();
@@ -2086,6 +2138,7 @@ function showDetailRes(id){
     else{
       dasb.disabled=false;dasb.style.opacity='1';dasb.style.cursor='';dasb.innerHTML='\uD83D\uDCF1 Avis SMS';
       dasb.onclick=function(){
+        trackUsage('avis-google');
         var tel=telRaw.replace(/\s/g,'');
         window.open('sms:'+tel+'?body='+encodeURIComponent(msgAvis),'_blank');
         localStorage.setItem(avisKey,'1');applyAvisEnvoye();
@@ -2184,6 +2237,7 @@ function setStatut(id,statut){
 function sendRappel(id,sens){
   var r=db.reservations.find(function(x){return x.id===id;});
   if(!r)return;
+  trackUsage('rappel:'+sens);
   var isRetour=sens==='retour'&&r.type==='ar-diff'&&r.dateRetour;
   var lang=r.langue||'fr';
   var date=new Date(r.dateAller);
@@ -2707,6 +2761,7 @@ function showDetailClient(id){
   openModal('m-detail-client');
 }
 function exportVCF(){
+  trackUsage('export-vcard');
   const id=window._currentClientId;
   if(!id)return;
   const c=db.clients.find(x=>x.id===id);
@@ -2860,6 +2915,7 @@ async function _calcDist(){
   }catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}
 }
 function toggleStop(){
+  trackUsage('arret-intermediaire');
   const box=g('r-stop-box');
   const btn=g('btn-add-stop');
   if(!box)return;
@@ -2914,6 +2970,7 @@ function setRetourMeme(){
   setTimeout(()=>calcKmVideAuto(),400);
 }
 function exportICS(r){
+  trackUsage('export-ics');
   const fmtDT=(ds,hs)=>{if(!ds)return'';const d=new Date(ds+'T'+(hs||'08:00')+':00');return d.getFullYear().toString()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'00';};
   const esc=s=>String(s||'').replace(/[\\,;]/g,' ');
   const escDesc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
