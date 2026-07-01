@@ -852,6 +852,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="modal-actions" style="margin-top:16px">
   <button class="btn btn-outline" onclick="closeModal('m-detail-res')">Fermer</button>
   <button class="btn btn-green btn-sm" id="dr-rappel-btn" style="display:none">&#x1f4ac; Rappel J-1</button>
+  <button class="btn btn-outline btn-sm" id="dr-rappel-j7-btn" style="display:none;color:var(--gold2);border-color:var(--gold)">&#x1f4e8; Message J-7</button>
   <button class="btn btn-gold btn-sm" id="dr-avis-wa-btn" style="display:none">&#x1f4ac; Avis WhatsApp</button>
   <button class="btn btn-outline btn-sm" id="dr-avis-sms-btn" style="display:none">&#x1f4f1; Avis SMS</button>
   <button class="btn btn-outline btn-sm" id="dr-stop-wa-btn" style="display:none">&#x1f4ac; WA 2ème passager</button>
@@ -1327,18 +1328,25 @@ function renderRes(){
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
     if(r.passagers&&parseInt(r.passagers)>1)html+='<span class="badge badge-gray">👥'+r.passagers+'</span>';
     html+='</div>';
-    // Bouton rappel aller (J-3 à J-0, ou J-7)
+    // Bouton rappel aller (J-3 à J-0 : rappel classique juste avant le départ)
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
-    if(((diff2>=0&&diff2<=3)||diff2===7)&&r.clientTel){
-      var labelDiff2=diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':diff2===7?' (J-7)':' (dans '+Math.ceil(diff2)+'j)';
+    if(diff2>=0&&diff2<=3&&r.clientTel){
+      var labelDiff2=diff2===0?' (aujourd\'hui)':diff2===1?' (demain)':' (dans '+Math.ceil(diff2)+'j)';
       html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">💬 Rappel aller'+labelDiff2+'</button>';
     }
-    // Bouton rappel retour pour ar-diff (J-3 à J-0, ou J-7)
+    // Bouton message J-7 (disponible tant que la course est à plus de 3 jours — pour rassurer tôt)
+    if(diff2>3&&r.clientTel){
+      html+='<button class="btn btn-outline btn-full" style="margin-top:8px;font-size:0.8rem;color:var(--gold2);border-color:var(--gold)" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">📨 Message J-7 (dans '+Math.ceil(diff2)+'j)</button>';
+    }
+    // Bouton rappel retour pour ar-diff (J-3 à J-0)
     if(r.type==='ar-diff'&&r.dateRetour&&r.clientTel){
       var diff3=(new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
-      if((diff3>=0&&diff3<=3)||diff3===7){
-        var labelDiff3=diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':diff3===7?' (J-7)':' (dans '+Math.ceil(diff3)+'j)';
+      if(diff3>=0&&diff3<=3){
+        var labelDiff3=diff3===0?' (aujourd\'hui)':diff3===1?' (demain)':' (dans '+Math.ceil(diff3)+'j)';
         html+='<button class="btn btn-full" style="margin-top:6px;font-size:0.8rem;background:var(--blue2);color:#fff;border:none;border-radius:10px;padding:10px" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;retour&quot;)">🛬 Rappel retour'+labelDiff3+'</button>';
+      }
+      if(diff3>3){
+        html+='<button class="btn btn-outline btn-full" style="margin-top:6px;font-size:0.8rem;color:var(--blue2);border-color:var(--blue2)" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;retour&quot;)">📨 Message retour J-7 (dans '+Math.ceil(diff3)+'j)</button>';
       }
     }
     html+='</div>';
@@ -2100,12 +2108,18 @@ function showDetailRes(id){
   });
   // Bouton rappel
   var drb=g('dr-rappel-btn');
+  var drb7=g('dr-rappel-j7-btn');
   if(drb){
     var diff2=(new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
     var diff3=r.type==='ar-diff'&&r.dateRetour?(new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000:-1;
-    if((diff2>=0&&diff2<=3)||diff2===7){drb.style.display='inline-flex';drb.textContent=diff2===7?'💬 Rappel aller (J-7)':'💬 Rappel aller';drb.onclick=function(){sendRappel(id,'aller');};}
-    else if((diff3>=0&&diff3<=3)||diff3===7){drb.style.display='inline-flex';drb.textContent=diff3===7?'🛬 Rappel retour (J-7)':'🛬 Rappel retour';drb.onclick=function(){sendRappel(id,'retour');};}
+    if(diff2>=0&&diff2<=3){drb.style.display='inline-flex';drb.textContent='💬 Rappel aller';drb.onclick=function(){sendRappel(id,'aller');};}
+    else if(diff3>=0&&diff3<=3){drb.style.display='inline-flex';drb.textContent='🛬 Rappel retour';drb.onclick=function(){sendRappel(id,'retour');};}
     else drb.style.display='none';
+    if(drb7){
+      if(diff2>3){drb7.style.display='inline-flex';drb7.textContent='📨 Message J-7';drb7.onclick=function(){sendRappel(id,'aller');};}
+      else if(diff3>3){drb7.style.display='inline-flex';drb7.textContent='📨 Message retour J-7';drb7.onclick=function(){sendRappel(id,'retour');};}
+      else drb7.style.display='none';
+    }
   }
   // Boutons avis Google (WhatsApp + SMS) — toujours visibles, grisés si déjà envoyé
   var dawb=g('dr-avis-wa-btn');
@@ -2328,7 +2342,7 @@ function sendRappel(id,sens){
     }
   }
   var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
-  var isJ7=isRetour?(typeof diffRet!=='undefined'&&diffRet===7):(diff===7);
+  var isJ7=isRetour?(typeof diffRet!=='undefined'&&diffRet>3):(diff>3);
   var champRappel=isJ7?'rappelJ7Envoye':'rappelEnvoye';
   var existing=document.getElementById('rappel-choice-popup');
   if(existing)existing.remove();
