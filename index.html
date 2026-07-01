@@ -1525,16 +1525,14 @@ function renderPartners(){
           var d0=new Date(coursesMois[0].dateAller);
           var moisLabel=d0.toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
           moisLabel=moisLabel.charAt(0).toUpperCase()+moisLabel.slice(1);
-          var duMois=coursesMois.reduce(function(t,r){
-            if(r.partnerType==='prepaye')return t+(r.facturePaye?0:parseFloat(r.prix||0));
-            if(r.partnerType==='commission')return t+(r.commissionPayee?0:parseFloat(r.commission||0));
-            return t;
-          },0);
           var commissionsDuesMois=coursesMois.filter(function(r){return r.partnerType==='commission'&&!r.commissionPayee;}).reduce(function(t,r){return t+parseFloat(r.commission||0);},0);
           var aFacturerMois=coursesMois.filter(function(r){return r.partnerType==='prepaye'&&!r.facturePaye;}).reduce(function(t,r){return t+parseFloat(r.prix||0);},0);
+          var netMois=aFacturerMois-commissionsDuesMois;
           html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">';
           html+='<span style="font-size:0.68rem;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:0.05em">📅 '+moisLabel+'</span>';
-          html+=(duMois>0?'<span style="font-size:0.68rem;font-weight:700;color:var(--red2)">Encore dû : '+fmt(duMois)+'</span>':'<span style="font-size:0.68rem;color:var(--green2)">Soldé ✓</span>');
+          if(netMois>0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--green2)">→ Tu factures '+fmt(netMois)+'</span>';}
+          else if(netMois<0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--red2)">→ Tu verses '+fmt(Math.abs(netMois))+'</span>';}
+          else{html+='<span style="font-size:0.68rem;color:var(--green2)">Soldé ✓</span>';}
           html+='</div>';
           if(commissionsDuesMois>0){
             html+='<button class="btn btn-outline btn-full btn-sm" style="margin-bottom:6px;color:var(--green2);border-color:var(--green2)" onclick="marquerCommissionPayeeMois(this.dataset.nom,this.dataset.mois)" data-nom="'+p.nom+'" data-mois="'+key+'">✓ Commissions reversées — '+moisLabel+' ('+fmt(commissionsDuesMois)+')</button>';
