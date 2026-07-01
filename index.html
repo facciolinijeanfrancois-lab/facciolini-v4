@@ -1276,6 +1276,7 @@ function renderRes(){
     if(r.vol)html+='<span class="badge badge-gold">✈ '+r.vol+'</span>';
     if(r.volRetour)html+='<span class="badge badge-blue">✈ '+r.volRetour+' (ret.)</span>';
     if(r.paiement==='virement'&&!r.vmtRecu)html+='<span class="badge badge-red">💸 ⏳</span>';
+    if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
     if(r.passagers&&parseInt(r.passagers)>1)html+='<span class="badge badge-gray">👥'+r.passagers+'</span>';
@@ -2262,6 +2263,8 @@ function sendRappel(id,sens){
     }
   }
   var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
+  var isJ7=isRetour?(typeof diffRet!=='undefined'&&diffRet===7):(diff===7);
+  var champRappel=isJ7?'rappelJ7Envoye':'rappelEnvoye';
   var existing=document.getElementById('rappel-choice-popup');
   if(existing)existing.remove();
   var popup=document.createElement('div');
@@ -2283,8 +2286,8 @@ function sendRappel(id,sens){
   document.body.appendChild(popup);
   document.getElementById('rappel-wa-btn').onclick=function(){popup.remove();window.open(waUrl,'_blank');};
   document.getElementById('rappel-sms-btn').onclick=function(){popup.remove();window.location.href=smsUrl;};
-  document.getElementById('rappel-wa-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx].rappelEnvoye=new Date().toISOString();save();renderRes();}}},true);
-  document.getElementById('rappel-sms-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx].rappelEnvoye=new Date().toISOString();save();renderRes();}}},true);
+  document.getElementById('rappel-wa-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx][champRappel]=new Date().toISOString();save();renderRes();}}},true);
+  document.getElementById('rappel-sms-btn').addEventListener('click',function(){if(r.id){const idx=db.reservations.findIndex(x=>x.id===r.id);if(idx!==-1){db.reservations[idx][champRappel]=new Date().toISOString();save();renderRes();}}},true);
   document.getElementById('rappel-cancel-btn').onclick=function(){popup.remove();};
 }
 function getStatusBadge(r){if(!r||typeof r.statut==='undefined')return '';
