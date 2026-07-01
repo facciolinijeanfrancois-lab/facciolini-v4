@@ -937,8 +937,7 @@ var USAGE_LABELS={
   'arret-intermediaire':'👥➕ Arrêt intermédiaire (2ème passager)',
   'export-ics':'📅 Export calendrier (ICS)','export-vcard':'📇 Export contact (vCard)',
   'avis-google':'⭐ Demande d\'avis Google',
-  'partenaire-solder-commission':'🤝 Solder commission partenaire (par mois)',
-  'partenaire-solder-facture':'🤝 Solder facture partenaire (par mois)',
+  'partenaire-solder-mois':'🤝 Régler partenaire (net, par mois)',
   'reservation-nouvelle':'➕ Nouvelle réservation','reservation-modifiee':'✏️ Réservation modifiée',
   '2eme-passager':'👥 Course avec 2ème passager'
 };
@@ -1504,8 +1503,20 @@ function renderPartners(){
         if(histo.length){
           html+='<div style="font-size:0.62rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:10px 0 6px">📋 Historique règlements</div>';
           histo.forEach(function(h){
-            var label=h.type==='commission'?'💸 Commissions reversées':'💰 Facture encaissée';
-            html+='<div class="dr" style="background:rgba(0,200,100,0.05);border-radius:var(--radius-xs);padding:8px;margin-bottom:4px"><span class="dr-label" style="font-size:0.75rem;color:var(--green2)">✓ '+label+'<br><span style="color:var(--text3);font-size:0.68rem">'+new Date(h.date).toLocaleDateString('fr-BE',{day:'2-digit',month:'short',year:'numeric'})+' · '+h.nbCourses+' course'+(h.nbCourses>1?'s':'')+'</span></span><span class="dr-val" style="color:var(--green2);font-weight:700">'+fmt(h.montant)+'</span></div>';
+            var label,montantAff,couleur;
+            if(h.type==='net'){
+              label=h.montant>0?'💰 Facturé (net)':h.montant<0?'💸 Versé (net)':'✓ Soldé';
+              montantAff=fmt(Math.abs(h.montant));
+              couleur=h.montant>0?'var(--green2)':h.montant<0?'var(--red2)':'var(--text3)';
+              if(typeof h.montantFacture==='number'&&typeof h.montantCommission==='number'&&(h.montantFacture>0||h.montantCommission>0)){
+                label+='<br><span style="font-size:0.62rem;color:var(--text3);font-weight:400">(facture '+fmt(h.montantFacture)+' − commission '+fmt(h.montantCommission)+')</span>';
+              }
+            }else{
+              label=h.type==='commission'?'💸 Commissions reversées':'💰 Facture encaissée';
+              montantAff=fmt(h.montant);
+              couleur='var(--green2)';
+            }
+            html+='<div class="dr" style="background:rgba(0,200,100,0.05);border-radius:var(--radius-xs);padding:8px;margin-bottom:4px"><span class="dr-label" style="font-size:0.75rem;color:var(--green2)">✓ '+label+'<br><span style="color:var(--text3);font-size:0.68rem">'+new Date(h.date).toLocaleDateString('fr-BE',{day:'2-digit',month:'short',year:'numeric'})+' · '+h.nbCourses+' course'+(h.nbCourses>1?'s':'')+'</span></span><span class="dr-val" style="color:'+couleur+';font-weight:700">'+montantAff+'</span></div>';
           });
         }
       }
@@ -1534,11 +1545,14 @@ function renderPartners(){
           else if(netMois<0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--red2)">→ Tu verses '+fmt(Math.abs(netMois))+'</span>';}
           else{html+='<span style="font-size:0.68rem;color:var(--green2)">Soldé ✓</span>';}
           html+='</div>';
-          if(commissionsDuesMois>0){
-            html+='<button class="btn btn-outline btn-full btn-sm" style="margin-bottom:6px;color:var(--green2);border-color:var(--green2)" onclick="marquerCommissionPayeeMois(this.dataset.nom,this.dataset.mois)" data-nom="'+p.nom+'" data-mois="'+key+'">✓ Commissions reversées — '+moisLabel+' ('+fmt(commissionsDuesMois)+')</button>';
-          }
-          if(aFacturerMois>0){
-            html+='<button class="btn btn-gold btn-full btn-sm" style="margin-bottom:6px" onclick="marquerFacturePayeMois(this.dataset.nom,this.dataset.mois)" data-nom="'+p.nom+'" data-mois="'+key+'">✓ Facture envoyée — '+moisLabel+' ('+fmt(aFacturerMois)+')</button>';
+          if(commissionsDuesMois>0||aFacturerMois>0){
+            if(netMois>0){
+              html+='<button class="btn btn-gold btn-full btn-sm" style="margin-bottom:6px" onclick="reglerMoisPartenaire(this.dataset.nom,this.dataset.mois)" data-nom="'+p.nom+'" data-mois="'+key+'">✓ Facturer '+moisLabel+' ('+fmt(netMois)+')</button>';
+            }else if(netMois<0){
+              html+='<button class="btn btn-outline btn-full btn-sm" style="margin-bottom:6px;color:var(--red2);border-color:var(--red2)" onclick="reglerMoisPartenaire(this.dataset.nom,this.dataset.mois)" data-nom="'+p.nom+'" data-mois="'+key+'">✓ Verser '+moisLabel+' ('+fmt(Math.abs(netMois))+')</button>';
+            }else{
+              html+='<button class="btn btn-outline btn-full btn-sm" style="margin-bottom:6px;color:var(--text3)" onclick="reglerMoisPartenaire(this.dataset.nom,this.dataset.mois)" data-nom="'+p.nom+'" data-mois="'+key+'">✓ Marquer '+moisLabel+' réglé (soldé)</button>';
+            }
           }
           coursesMois.forEach(function(r){
             var comm=parseFloat(r.commission||0);
@@ -1612,33 +1626,30 @@ function marquerFacturePaye(p){
   alert('✅ Facture de '+fmt(montant)+' reçue de '+p+' — '+courseIds.length+' course(s) archivée(s).');
 }
 function moisKeyRes(r){var d=new Date(r.dateAller);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-function marquerCommissionPayeeMois(p,moisKey){
-  trackUsage('partenaire-solder-commission');
-  var courses=db.reservations.filter(r=>r.source===p&&r.partnerType==='commission'&&!r.commissionPayee&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
-  if(!courses.length)return;
-  var montant=courses.reduce((t,r)=>t+parseFloat(r.commission||0),0);
-  var moisLabel=new Date(courses[0].dateAller).toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
-  if(!confirm('Confirmer : commissions de '+p+' pour '+moisLabel+' reversées ('+fmt(montant)+') ?\n\nCes courses seront archivées et ce mois repart à zéro.'))return;
+function reglerMoisPartenaire(p,moisKey){
+  trackUsage('partenaire-solder-mois');
+  var coursesCommission=db.reservations.filter(r=>r.source===p&&r.partnerType==='commission'&&!r.commissionPayee&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
+  var coursesPrepaye=db.reservations.filter(r=>r.source===p&&r.partnerType==='prepaye'&&!r.facturePaye&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
+  if(!coursesCommission.length&&!coursesPrepaye.length)return;
+  var commissionsDues=coursesCommission.reduce((t,r)=>t+parseFloat(r.commission||0),0);
+  var aFacturer=coursesPrepaye.reduce((t,r)=>t+parseFloat(r.prix||0),0);
+  var net=aFacturer-commissionsDues;
+  var refCourse=coursesPrepaye[0]||coursesCommission[0];
+  var moisLabel=new Date(refCourse.dateAller).toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
+  var nbTotal=coursesCommission.length+coursesPrepaye.length;
+  var msg;
+  if(net>0)msg='Confirmer : tu factures '+fmt(net)+' net à '+p+' pour '+moisLabel+' (facture '+fmt(aFacturer)+' − commission '+fmt(commissionsDues)+') ?';
+  else if(net<0)msg='Confirmer : tu verses '+fmt(Math.abs(net))+' net à '+p+' pour '+moisLabel+' (commission '+fmt(commissionsDues)+' − facture '+fmt(aFacturer)+') ?';
+  else msg='Confirmer : '+p+' pour '+moisLabel+' est soldé (facture et commission s\'annulent) ?';
+  msg+='\n\nCes '+nbTotal+' course(s) seront archivées et ce mois repart à zéro.';
+  if(!confirm(msg))return;
   if(!db.partnerSoldes)db.partnerSoldes=[];
-  var courseIds=courses.map(r=>r.id);
-  db.partnerSoldes.push({id:genId(),partenaire:p,type:'commission',montant:montant,date:new Date().toISOString().split('T')[0],nbCourses:courseIds.length,courseIds:courseIds});
-  courses.forEach(r=>{r.commissionPayee=true;});
+  var courseIds=coursesCommission.map(r=>r.id).concat(coursesPrepaye.map(r=>r.id));
+  db.partnerSoldes.push({id:genId(),partenaire:p,type:'net',montant:net,montantFacture:aFacturer,montantCommission:commissionsDues,date:new Date().toISOString().split('T')[0],nbCourses:courseIds.length,courseIds:courseIds});
+  coursesCommission.forEach(r=>{r.commissionPayee=true;});
+  coursesPrepaye.forEach(r=>{r.facturePaye=true;});
   save();renderAll();
-  alert('✅ '+fmt(montant)+' reversés à '+p+' pour '+moisLabel+' — '+courseIds.length+' course(s) archivée(s).');
-}
-function marquerFacturePayeMois(p,moisKey){
-  trackUsage('partenaire-solder-facture');
-  var courses=db.reservations.filter(r=>r.source===p&&r.partnerType==='prepaye'&&!r.facturePaye&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
-  if(!courses.length)return;
-  var montant=courses.reduce((t,r)=>t+parseFloat(r.prix||0),0);
-  var moisLabel=new Date(courses[0].dateAller).toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
-  if(!confirm('Confirmer : facture de '+p+' pour '+moisLabel+' payée ('+fmt(montant)+') ?\n\nCes courses seront archivées et ce mois repart à zéro.'))return;
-  if(!db.partnerSoldes)db.partnerSoldes=[];
-  var courseIds=courses.map(r=>r.id);
-  db.partnerSoldes.push({id:genId(),partenaire:p,type:'prepaye',montant:montant,date:new Date().toISOString().split('T')[0],nbCourses:courseIds.length,courseIds:courseIds});
-  courses.forEach(r=>{r.facturePaye=true;});
-  save();renderAll();
-  alert('✅ Facture de '+fmt(montant)+' reçue de '+p+' pour '+moisLabel+' — '+courseIds.length+' course(s) archivée(s).');
+  alert('✅ '+p+' — '+moisLabel+' réglé ('+(net>0?'facturé '+fmt(net):net<0?'versé '+fmt(Math.abs(net)):'soldé')+') — '+nbTotal+' course(s) archivée(s).');
 }
 function renderParams(){
   var s=db.settings;
