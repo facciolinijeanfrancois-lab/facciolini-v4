@@ -3011,22 +3011,8 @@ function exportICS(r){
   };
   const cl=db.clients.find(c=>c.nom===r.clientNom)||{};
   const tel=r.clientTel||cl.tel||cl.gsm||'';
-  // Statut paiement : direct (cash/carte/virement) ou partenaire (commission/prépayé)
-  const payLabelMap={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'};
-  const getPayStatus=()=>{
-    if(r.source&&r.source!=='direct'){
-      if(r.partnerType==='commission')return '🤝 '+r.source+' (commission) — '+(r.commissionPayee?'réglée ✅':'à percevoir ⏳');
-      return '🤝 '+r.source+' (prépayé) — '+(r.facturePaye?'facturé & payé ✅':'à facturer ⏳');
-    }
-    const lbl=payLabelMap[r.paiement]||r.paiement||'';
-    if(r.paiement==='virement')return lbl+' — '+(r.vmtRecu?'reçu ✅':'en attente ⏳');
-    return lbl+' — payé ✅';
-  };
-  const isPayPending=()=>{
-    if(r.source&&r.source!=='direct')return r.partnerType==='commission'?!r.commissionPayee:!r.facturePaye;
-    return r.paiement==='virement'&&!r.vmtRecu;
-  };
-  const payTag=isPayPending()?' ⏳':'';
+  // Statut paiement simplifié : Cash (payé sur place) ou Facturé (partenaire/prépayé)
+  const payLabel=(r.source&&r.source!=='direct')||r.paiement==='prepaye'?'Facturé':'Cash';
   // Notes ALLER propres, une info par ligne
   const isRec=(r.service==='recuperation');
   // DÉPOSE : départ=adresse client, arrivée=aéroport → 🛫 + nom aéroport arrivée
@@ -3043,14 +3029,13 @@ function exportICS(r){
     isRec?(addrClientAller?'🏠 Dépose: '+addrClientAller:''):('✈️ Dépose: '+aeroAller),
     r.passagers?'👥 Passagers: '+r.passagers:'',
     r.vol?'🛩️ Vol: '+r.vol:'',
-    '💰 Prix: '+fmt(r.prix),
+    '💰 Prix: '+fmt(r.prix)+' — '+payLabel,
     '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)),
-    '🧾 Paiement: '+getPayStatus(),
     r.notes?'📋 '+r.notes:'',
   ].filter(Boolean);
   const descAller=escDesc(linesAller.join('\n'));
   // Titre : 🛫 HH:MM - Zaventem - NomClient  OU  🛬 HH:MM - Zaventem - NomClient
-  const summaryAller=emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+r.clientNom+payTag;
+  const summaryAller=emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+r.clientNom;
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
@@ -3076,14 +3061,13 @@ function exportICS(r){
       r.passagers?'👥 Passagers: '+r.passagers:'',
       r.vol?'🛩️ Vol aller: '+r.vol:'',
       r.volRetour?'🛩️ Vol retour: '+r.volRetour:'',
-      '💰 Prix: '+fmt(r.prix),
+      '💰 Prix: '+fmt(r.prix)+' — '+payLabel,
       '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+solde,
-      '🧾 Paiement: '+getPayStatus(),
       r.notes?'📋 '+r.notes:'',
     ].filter(Boolean);
     const descRetour=escDesc(linesRetour.join('\n'));
     // Titre RETOUR : 🛬 HH:MM - Zaventem - NomClient
-    const summaryRetour='🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+r.clientNom+payTag;
+    const summaryRetour='🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+r.clientNom;
     events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:'+summaryRetour+'\r\nDESCRIPTION:'+descRetour+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
   }
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
