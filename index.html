@@ -628,7 +628,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div class="devis-detail" id="r-devis-detail">—</div>
       <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="applyDevis()">✓ Appliquer ce prix</button>
     </div>
-    <div class="fg"><label class="fl">Prix total (€)</label><input type="number" class="fi" id="r-prix" placeholder="Ex: 95" step="0.01" oninput="updCalc();updAcompte()"><div class="ferr" id="r-prix-hint"></div></div>
+    <div class="fg"><label class="fl">Prix total (€)</label><input type="number" class="fi" id="r-prix" placeholder="Ex: 95" step="0.01" oninput="acC['prixManual']=true;updCalc();updAcompte()"><div class="ferr" id="r-prix-hint"></div></div>
     <div class="fg"><label class="fl">Mode de paiement</label>
       <div class="chips" id="r-paiement-chips">
         <div class="chip active" onclick="selectChip(this,'r-paiement','cash');toggleVmt()">💵 Cash</div>
@@ -1723,6 +1723,8 @@ function updResType(){
   const pkrFg=g('r-km-pickup-retour-fg');if(pkrFg)pkrFg.style.display=type==='ar-diff'?'block':'none';
   if(curStep===3&&type!=='ar-diff')curStep=2;
   updResSteps();updCalc();
+  // Si le prix n'a pas été modifié manuellement, on applique automatiquement le nouveau devis (ex: aller -> A/R)
+  if(!acC['prixManual']&&acC['devis']){const pe=g('r-prix');if(pe)pe.value=acC['devis'];updCalc();updAcompte();}
 }
 function openNewRes(){
   g('res-edit-id').value='';
@@ -1907,7 +1909,7 @@ function updCalc(){
     acC['devis']=ps;
   }
 }
-function applyDevis(){if(acC['devis']){const el=g('r-prix');if(el)el.value=acC['devis'];updCalc();updAcompte();}}
+function applyDevis(){if(acC['devis']){const el=g('r-prix');if(el)el.value=acC['devis'];acC['prixManual']=false;updCalc();updAcompte();}}
 function updAcompte(){
   const prix=parseFloat(g('r-prix')?.value||0),acompte=parseFloat(g('r-acompte')?.value||0);
   const type=g('r-type')?.value||'aller';
@@ -3279,7 +3281,9 @@ function devisToRes(){
     const vidx=g('dv-veh')?.value||'0';if(g('r-vehicule'))g('r-vehicule').value=vidx;
     if(acC['dv-km']){const el=g('r-distance');if(el)el.value=acC['dv-km'];}
     if(acC['dv-prix']){const el=g('r-prix');if(el)el.value=acC['dv-prix'];}
-    updKmRecap();updCalc();
+    const dvType=g('dv-type')?.value||'aller';
+    if(dvType==='ar'){const chipsWrap=g('r-type-chips');if(chipsWrap){const chip=chipsWrap.querySelector('[onclick*="ar-jour"]');if(chip)selectChip(chip,'r-type','ar-jour');}updResType();}
+    else{updKmRecap();updCalc();}
   },400);
 }
 function shareDevis(){
