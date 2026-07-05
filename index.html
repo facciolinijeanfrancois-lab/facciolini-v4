@@ -3269,6 +3269,11 @@ async function calcDevis(){
   if(!dep||!arr)return;
   const dbox=g('dv-dist-box');if(dbox)dbox.style.display='flex';
   const dkm=g('dv-dist-km');if(dkm)dkm.textContent='...';
+  const dt0=g('dv-dist-time');if(dt0)dt0.textContent='';
+  // Afficher tout le bloc résultat dès le départ (avec placeholders), pour éviter le saut visuel en 2 temps
+  const res=g('dv-result');if(res)res.style.display='block';
+  const pr0=g('dv-price');if(pr0)pr0.textContent='…';
+  const dd0=g('dv-detail');if(dd0)dd0.textContent='Calcul en cours...';
   try{
     const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');
     const d=await r.json();
@@ -3286,10 +3291,17 @@ async function calcDevis(){
       const pr=g('dv-price');if(pr)pr.textContent=ps+' €';
       const dd=g('dv-detail');
       if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+t.camion+'€ Talento':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
-      const res=g('dv-result');if(res)res.style.display='block';
       acC['dv-km']=km;acC['dv-prix']=ps;acC['dv-tarif']=tarif;
+    }else{
+      if(dkm)dkm.textContent='—';
+      const pr=g('dv-price');if(pr)pr.textContent='—';
+      const dd=g('dv-detail');if(dd)dd.textContent='Itinéraire introuvable, réessayez.';
     }
-  }catch(e){if(dkm)dkm.textContent='Erreur calcul';}
+  }catch(e){
+    if(dkm)dkm.textContent='Erreur calcul';
+    const pr=g('dv-price');if(pr)pr.textContent='—';
+    const dd=g('dv-detail');if(dd)dd.textContent='Erreur réseau, réessayez.';
+  }
 }
 function devisToRes(){
   closeModal('m-devis-rapide');
