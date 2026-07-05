@@ -1783,11 +1783,19 @@ function resetResForm(){
 function renderFavChips(){
   const favs=db.favAddresses||[];
   const html=favs.map(f=>'<button class="chip" style="font-size:0.68rem;padding:4px 10px" onclick="applyFavChip(\''+f.id+'\',this)">📍 '+f.nom+'</button>').join('');
-  ['fav-chips-dep','fav-chips-arr','fav-chips-dep-ret','fav-chips-arr-ret'].forEach(id=>{const el=g(id);if(el)el.innerHTML=html;});
+  ['fav-chips-dep','fav-chips-arr','fav-chips-dep-ret','fav-chips-arr-ret','fav-chips-dv-dep','fav-chips-dv-arr'].forEach(id=>{const el=g(id);if(el)el.innerHTML=html;});
 }
 function applyFavChip(favId,btn){
   const f=db.favAddresses.find(x=>x.id===favId);if(!f||!btn)return;
   const c=btn.closest('[id^="fav-chips"]');if(!c)return;
+  // Cas spécial : Devis Rapide (champs simples, pas de lat/lon séparés)
+  if(c.id==='fav-chips-dv-dep'||c.id==='fav-chips-dv-arr'){
+    const role=c.id==='fav-chips-dv-dep'?'dv-depart':'dv-arrivee';
+    const inp=g(role);if(inp)inp.value=f.adresse;
+    if(f.lat)acC[role]={lat:f.lat,lon:f.lon};
+    if(acC['dv-depart']&&acC['dv-arrivee'])calcDevis();
+    return;
+  }
   const rm={'fav-chips-dep':'r-depart','fav-chips-arr':'r-arrivee','fav-chips-dep-ret':'r-depart-retour','fav-chips-arr-ret':'r-arrivee-retour'};
   const role=rm[c.id];if(!role)return;
   const fm={'r-depart':['r-depart','r-dep-lat','r-dep-lon'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon']};
@@ -3262,6 +3270,7 @@ function openDevisRapide(){
   acC['dv-depart']=null;acC['dv-arrivee']=null;
   setChips('dv-type-chips','dv-type','aller');
   setChips('dv-veh-chips','dv-veh','0');
+  renderFavChips();
   openModal('m-devis-rapide');
 }
 async function calcDevis(){
@@ -3522,6 +3531,7 @@ if(!db.settings.pin)unlockApp();
         <input type="text" class="fi" id="dv-depart" placeholder="Adresse de départ..." oninput="acSearch(this,'ac-dv-dep','dv-depart')" autocomplete="off">
         <div class="ac-drop" id="ac-dv-dep"></div>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="fav-chips-dv-dep"></div>
     </div>
     <div class="fg">
       <label class="fl">Arrivée</label>
@@ -3529,6 +3539,7 @@ if(!db.settings.pin)unlockApp();
         <input type="text" class="fi" id="dv-arrivee" placeholder="Adresse d'arrivée..." oninput="acSearch(this,'ac-dv-arr','dv-arrivee')" autocomplete="off">
         <div class="ac-drop" id="ac-dv-arr"></div>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="fav-chips-dv-arr"></div>
       <div class="dist-box" id="dv-dist-box" style="display:none">
         <div>
           <div class="dist-km" id="dv-dist-km">—</div>
