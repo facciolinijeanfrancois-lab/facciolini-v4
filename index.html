@@ -1713,6 +1713,8 @@ function getTotalSteps(){return(g('r-type')?.value||'aller')==='ar-diff'?6:5;}
 function updResSteps(){}
 // resStep supprimé - remplacé par saveReservation direct
 function updResType(){
+  const oldType=acC['_lastType']||'aller';
+  const oldDevis=computeDevisPour(oldType);
   const type=g('r-type').value;
   const spArJour=g('sp2-ar-jour');if(spArJour)spArJour.style.display=type==='ar-jour'?'block':'none';
   const sp3=g('sp3');if(sp3)sp3.style.display=type==='ar-diff'?'block':'none';
@@ -1723,8 +1725,15 @@ function updResType(){
   const pkrFg=g('r-km-pickup-retour-fg');if(pkrFg)pkrFg.style.display=type==='ar-diff'?'block':'none';
   if(curStep===3&&type!=='ar-diff')curStep=2;
   updResSteps();updCalc();
-  // Si le prix n'a pas été modifié manuellement, on applique automatiquement le nouveau devis (ex: aller -> A/R)
-  if(!acC['prixManual']&&acC['devis']){const pe=g('r-prix');if(pe)pe.value=acC['devis'];updCalc();updAcompte();}
+  // Prix considéré "système" (pas vraiment personnalisé) si non modifié manuellement,
+  // OU si la valeur tapée correspond exactement à ce qu'aurait donné le calcul pour l'ancien type
+  // (cas fréquent : prix tapé au clavier plutôt que via "Appliquer ce prix")
+  const curPrix=parseFloat(g('r-prix')?.value||0);
+  const correspondAncienDevis=oldDevis!==null&&Math.abs(curPrix-oldDevis)<0.01;
+  if((!acC['prixManual']||correspondAncienDevis)&&acC['devis']){
+    const pe=g('r-prix');if(pe)pe.value=acC['devis'];acC['prixManual']=false;updCalc();updAcompte();
+  }
+  acC['_lastType']=type;
 }
 function openNewRes(){
   g('res-edit-id').value='';
@@ -1880,6 +1889,17 @@ function updKmRecap(){
   sv('kr-total',kmR>0?fmtKm(kmR):'—');sv('kr-client',kmC>0?fmtKm(kmC):'—');
   acC['kmC']=kmC;acC['kmR']=kmR;updCalc();
 }
+function computeDevisPour(type){
+  const dist=parseFloat(g('r-distance')?.value||0);
+  if(dist<=0)return null;
+  const vidx=parseInt(g('r-vehicule')?.value||0),isTalento=vidx===1;
+  const t=db.settings.tarifs,tarif=dist>t.rayon?t.long:t.court;
+  const distR2=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
+  let pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);
+  const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
+  let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
+  return ps;
+}
 function updCalc(){
   const dist=parseFloat(g('r-distance')?.value||0);
   const type=g('r-type')?.value||'aller';
@@ -1898,13 +1918,14 @@ function updCalc(){
   const cr=g('prev-comm-row');if(cr){if(comm>0){cr.style.display='flex';sv('prev-comm','-'+fmt(comm));}else cr.style.display='none';}
   const ph=g('r-prix-hint');if(ph)ph.textContent=(prix>0&&benef<0)?'⚠️ Prix sous le coût — vous perdez '+fmt(Math.abs(benef)):'';
   if(dist>0){
-    const t=db.settings.tarifs,tarif=dist>t.rayon?t.long:t.court,isTalento=vidx===1;
-    const distR2=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
-    let pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);
-    const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
-    let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
+    const type2=g('r-type')?.value||'aller';
+    const isTalento=vidx===1;
+    const distR2=type2==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type2==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
+    const t=db.settings.tarifs,tarif=dist>t.rayon?t.long:t.court;
+    const ps=computeDevisPour(type2);
     const db2=g('r-devis-box');if(db2)db2.style.display='block';
     sv('r-devis-price',ps+' €');
+    const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
     sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+t.camion+'€':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
     acC['devis']=ps;
   }
@@ -2213,7 +2234,7 @@ function editRes(id){
   if(sc){sc.innerHTML='<div class="chip'+(r.source==='direct'?' active':'')+'" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip'+(r.source===p.nom?' active':'')+'" onclick="selectChip(this,\'r-source\',\''+p.nom.replace(/'/g,"\\'")+'\');updSourceUI()">'+p.nom+'</div>').join('');g('r-source').value=r.source||'direct';}
   updSourceUI();
   if(r.source!=='direct'){setChips('r-partner-type-chips','r-partner-type',r.partnerType||'commission');updPartnerType();const ce=g('r-commission');if(ce)ce.value=r.commission||'';}
-  setChips('r-type-chips','r-type',r.type||'aller');setChips('r-service-chips','r-service',r.service||'depose');
+  setChips('r-type-chips','r-type',r.type||'aller');acC['_lastType']=r.type||'aller';setChips('r-service-chips','r-service',r.service||'depose');
   g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';updDtDisplay('r-date-aller',r.dateAller||'');g('r-heure-aller').value=r.heure||'';updDtDisplay('r-heure-aller',r.heure||'');
   g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';g('r-distance').value=r.distance||'';g('r-vol').value=r.vol||'';
   if(r.type==='ar-diff'){updDtDisplay('r-date-retour',r.dateRetour||'');updDtDisplay('r-heure-retour',r.heureRetour||'');[['r-date-retour',r.dateRetour||''],['r-heure-retour',r.heureRetour||''],['r-depart-retour',r.departRetour||''],['r-arrivee-retour',r.arriveeRetour||''],['r-distance-retour',r.distanceRetour||'']].forEach(([id,val])=>{const el=g(id);if(el)el.value=val;});if(r.depRetLat)acC['r-depart-retour']={lat:r.depRetLat,lon:r.depRetLon};if(r.arrRetLat)acC['r-arrivee-retour']={lat:r.arrRetLat,lon:r.arrRetLon};}else if(r.type==='ar-jour'){const hj=g('r-heure-retour-jour');if(hj)hj.value=r.heureRetour||'';const dj=g('r-distance-retour-jour');if(dj)dj.value=r.distanceRetour||'';}
