@@ -238,7 +238,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div id="app-wrapper"><div id="app" style="display:none">
 <div class="topbar">
   <div><div class="topbar-name">Facciolini Mobility</div><div class="topbar-sub">Transport Priv&#xe9; &middot; Hainaut</div></div>
-  <div class="topbar-right"><div class="topbar-date" id="tb-date"></div><button class="btn btn-ghost btn-xs" onclick="openDevisRapide()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2)">&#x1f4b0; Devis</button><div class="topbar-badge" id="tb-month"></div></div>
+  <div class="topbar-right"><div class="topbar-date" id="tb-date"></div><button class="btn btn-ghost btn-xs" onclick="openDevisRapide()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2)">&#x1f4b0; Devis</button><button class="btn btn-ghost btn-xs" onclick="openStorySemaine()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2);margin-left:6px">&#x1f4f8; Story</button><div class="topbar-badge" id="tb-month"></div></div>
 </div>
 <div class="content">
 <div class="page active" id="page-dash">
@@ -3264,6 +3264,62 @@ function doImport(e){
   reader.readAsText(file);
   e.target.value='';
 }
+let storyPeriode='semaine';
+function setStoryPeriode(p,el){
+  storyPeriode=p;
+  document.querySelectorAll('#story-periode-chips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderStorySemaine();
+}
+function openStorySemaine(){
+  storyPeriode='semaine';
+  document.querySelectorAll('#story-periode-chips .chip').forEach((c,i)=>c.classList.toggle('active',i===0));
+  renderStorySemaine();
+  openModal('m-story');
+}
+function renderStorySemaine(){
+  const now=new Date();now.setHours(0,0,0,0);
+  let debut;
+  if(storyPeriode==='semaine'){
+    debut=new Date(now);
+    const jour=(debut.getDay()+6)%7; // lundi=0
+    debut.setDate(debut.getDate()-jour);
+    g('story-periode').textContent='CETTE SEMAINE';
+  }else{
+    debut=new Date(now.getFullYear(),now.getMonth(),1);
+    g('story-periode').textContent='CE MOIS';
+  }
+  const fin=new Date(now);fin.setDate(fin.getDate()+1); // inclure aujourd'hui
+  const list=db.reservations.filter(r=>{
+    if(r.statut==='annule')return false;
+    const dA=new Date(r.dateAller);
+    const inRangeAller=dA>=debut&&dA<fin;
+    let inRangeRetour=false;
+    if(r.type==='ar-diff'&&r.dateRetour){
+      const dR=new Date(r.dateRetour);
+      inRangeRetour=dR>=debut&&dR<fin;
+    }
+    return inRangeAller||inRangeRetour;
+  });
+  const isAeroport=txt=>{const t=(txt||'').toLowerCase();return t.includes('zaventem')||t.includes('charleroi')||t.includes('aéroport')||t.includes('aeroport')||t.includes('airport')||t.includes('bru')||t.includes('crl');};
+  const isGare=txt=>{const t=(txt||'').toLowerCase();return t.includes('gare');};
+  let nbAeroport=0,nbGare=0,nbAutre=0;
+  list.forEach(r=>{
+    const txt=(r.depart||'')+' '+(r.arrivee||'');
+    if(isAeroport(txt))nbAeroport++;
+    else if(isGare(txt))nbGare++;
+    else nbAutre++;
+  });
+  const total=list.length;
+  const stats=[
+    {val:total,lbl:'trajets'},
+    {val:nbAeroport,lbl:'aéroport'},
+  ];
+  if(nbGare>0)stats.push({val:nbGare,lbl:'gare'});
+  if(nbAutre>0)stats.push({val:nbAutre,lbl:'autres'});
+  const html=stats.map(s=>'<div><div style="color:#c9a84c;font-size:26px;font-weight:600">'+s.val+'</div><div style="color:#8a8a8a;font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px">'+s.lbl+'</div></div>').join('');
+  g('story-stats').innerHTML=html;
+}
 function openDevisRapide(){
   g('dv-depart').value='';g('dv-arrivee').value='';
   g('dv-dist-box').style.display='none';g('dv-result').style.display='none';
@@ -3578,6 +3634,45 @@ if(!db.settings.pin)unlockApp();
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-full" onclick="closeModal('m-devis-rapide')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-story">
+  <div class="modal" style="max-width:360px;margin:0 auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📸 Story de la semaine</div>
+    <div class="modal-subtitle">Générée automatiquement depuis tes vraies courses</div>
+
+    <div style="display:flex;justify-content:center;margin:16px 0">
+      <div id="story-canvas" style="width:280px;height:498px;background:#0a0a0a;border-radius:18px;border:1px solid #2a2a2a;display:flex;flex-direction:column;justify-content:space-between;padding:24px 20px;box-sizing:border-box">
+        <div style="text-align:center">
+          <svg viewBox="0 0 72 72" style="width:26px;height:26px" aria-hidden="true"><rect x="20" y="10" width="7" height="52" fill="#c9a84c"/><rect x="20" y="10" width="26" height="7" fill="#c9a84c"/><rect x="20" y="32" width="20" height="7" fill="#c9a84c"/></svg>
+          <div style="color:#f5f0e8;font-size:12px;letter-spacing:2.5px;margin-top:6px">FACCIOLINI</div>
+          <div style="color:#c9a84c;font-size:7px;letter-spacing:4px;margin-top:-2px">MOBILITY</div>
+        </div>
+        <div style="text-align:center">
+          <div style="color:#8a8a8a;font-size:10px;letter-spacing:1px;margin-bottom:16px" id="story-periode">CETTE SEMAINE</div>
+          <div style="display:flex;justify-content:center;gap:18px;flex-wrap:wrap" id="story-stats"></div>
+        </div>
+        <div style="text-align:center;color:#5a5a5a;font-size:8px;letter-spacing:1.5px">MERCI POUR VOTRE CONFIANCE</div>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Période</label>
+      <div class="chips" id="story-periode-chips">
+        <div class="chip active" onclick="setStoryPeriode('semaine',this)">Cette semaine</div>
+        <div class="chip" onclick="setStoryPeriode('mois',this)">Ce mois</div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:12px;padding:12px 14px;font-size:0.78rem;color:var(--text3);margin-top:6px">
+      💡 Fais une <b>capture d'écran</b> du cadre noir ci-dessus, puis publie-la en story. Aucune info client n'est affichée, juste des chiffres globaux.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('m-story')">Fermer</button>
     </div>
   </div>
 </div>
