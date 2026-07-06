@@ -3311,14 +3311,20 @@ function renderStorySemaine(){
     else nbAutre++;
   });
   const total=list.length;
-  const stats=[
-    {val:total,lbl:'trajets',icon:'🚗'},
-    {val:nbAeroport,lbl:'aéroport',icon:'✈️'},
-  ];
-  if(nbGare>0)stats.push({val:nbGare,lbl:'gare',icon:'🚆'});
-  if(nbAutre>0)stats.push({val:nbAutre,lbl:'autres',icon:'💼'});
-  const html=stats.map(s=>'<div style="background:#141414;border:0.5px solid #2a2a2a;border-radius:12px;padding:14px 8px;text-align:center"><div style="font-size:15px;margin-bottom:4px">'+s.icon+'</div><div style="color:#c9a84c;font-size:24px;font-weight:600;line-height:1">'+s.val+'</div><div style="color:#8a8a8a;font-size:8.5px;margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">'+s.lbl+'</div></div>').join('');
+  g('story-total').textContent=total;
+  const stats=[{val:nbAeroport,lbl:'aéroport'}];
+  if(nbGare>0)stats.push({val:nbGare,lbl:'gare'});
+  stats.push({val:nbAutre,lbl:nbGare>0?'privés':'autres'});
+  const html=stats.map(s=>'<div><div style="color:#f5f0e8;font-size:14px">'+s.val+'</div><div style="color:#6a6a6a;font-size:8px;letter-spacing:1px;margin-top:3px;text-transform:uppercase">'+s.lbl+'</div></div>').join('');
   g('story-stats').innerHTML=html;
+  // Jauge dynamique : proportion du trait doré selon le nombre de trajets (plafonné à 20 pour un arc plein)
+  const arc=document.getElementById('story-gauge-arc');
+  if(arc){
+    const len=arc.getTotalLength();
+    const ratio=Math.max(0.08,Math.min(total/20,1));
+    arc.style.strokeDasharray=len;
+    arc.style.strokeDashoffset=len*(1-ratio);
+  }
 }
 function openDevisRapide(){
   g('dv-depart').value='';g('dv-arrivee').value='';
@@ -3645,27 +3651,45 @@ if(!db.settings.pin)unlockApp();
     <div class="modal-subtitle">Générée automatiquement depuis tes vraies courses</div>
 
     <div style="display:flex;justify-content:center;margin:16px 0">
-      <div id="story-canvas" style="width:280px;height:498px;background:#0a0a0a;border-radius:18px;border:1px solid #2a2a2a;display:flex;flex-direction:column;justify-content:space-between;padding:28px 22px;box-sizing:border-box;position:relative;overflow:hidden">
-        <div style="position:absolute;top:14px;left:14px;width:16px;height:16px;border-left:1px solid #c9a84c;border-top:1px solid #c9a84c;opacity:0.6"></div>
-        <div style="position:absolute;top:14px;right:14px;width:16px;height:16px;border-right:1px solid #c9a84c;border-top:1px solid #c9a84c;opacity:0.6"></div>
-        <div style="position:absolute;bottom:14px;left:14px;width:16px;height:16px;border-left:1px solid #c9a84c;border-bottom:1px solid #c9a84c;opacity:0.6"></div>
-        <div style="position:absolute;bottom:14px;right:14px;width:16px;height:16px;border-right:1px solid #c9a84c;border-bottom:1px solid #c9a84c;opacity:0.6"></div>
+      <div id="story-canvas" style="width:280px;height:498px;background:#0a0a0a;border-radius:18px;border:1px solid #2a2a2a;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:26px 22px;box-sizing:border-box;position:relative;overflow:hidden">
 
         <div style="text-align:center">
-          <svg viewBox="0 0 72 72" style="width:28px;height:28px" aria-hidden="true"><rect x="20" y="10" width="7" height="52" fill="#c9a84c"/><rect x="20" y="10" width="26" height="7" fill="#c9a84c"/><rect x="20" y="32" width="20" height="7" fill="#c9a84c"/></svg>
+          <svg viewBox="0 0 220 220" style="width:34px;height:34px" aria-hidden="true">
+            <defs>
+              <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#f3d888"/>
+                <stop offset="45%" stop-color="#c9a84c"/>
+                <stop offset="100%" stop-color="#9c7a2e"/>
+              </linearGradient>
+            </defs>
+            <path d="M60,60 C55,45 68,32 85,32 L170,32 L150,52 L88,52 C82,52 78,56 78,62 L78,85 L135,85 L118,105 L78,105 L78,190 L60,190 Z" fill="url(#goldGrad)"/>
+          </svg>
           <div style="color:#f5f0e8;font-size:13px;letter-spacing:3px;margin-top:8px;font-weight:500">FACCIOLINI</div>
-          <div style="color:#c9a84c;font-size:7.5px;letter-spacing:4.5px;margin-top:-2px">MOBILITY</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:3px">
+            <div style="width:16px;height:1px;background:#c9a84c;opacity:0.7"></div>
+            <div style="color:#c9a84c;font-size:7.5px;letter-spacing:3px">MOBILITY</div>
+            <div style="width:16px;height:1px;background:#c9a84c;opacity:0.7"></div>
+          </div>
         </div>
 
-        <div style="text-align:center">
-          <div style="color:#8a8a8a;font-size:10.5px;letter-spacing:2px;margin-bottom:6px" id="story-periode">— CETTE SEMAINE —</div>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:18px" id="story-stats"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;position:relative">
+          <svg viewBox="0 0 220 130" style="width:210px">
+            <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="#1c1c1c" stroke-width="3"/>
+            <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="url(#goldGrad)" stroke-width="3" id="story-gauge-arc"/>
+          </svg>
+          <div style="position:absolute;top:34px;display:flex;flex-direction:column;align-items:center">
+            <div style="color:#5a5a5a;font-size:9px;letter-spacing:2px;margin-bottom:2px" id="story-periode">— CETTE SEMAINE —</div>
+            <div style="color:#f5f0e8;font-size:60px;font-family:Georgia,serif;font-style:italic;line-height:1" id="story-total">0</div>
+            <div style="color:#a8a8a8;font-size:11px;margin-top:2px">trajets effectués</div>
+          </div>
         </div>
 
-        <div style="text-align:center">
-          <div style="width:36px;height:1px;background:#c9a84c;opacity:0.5;margin:0 auto 10px"></div>
-          <div style="color:#8a8a8a;font-size:9.5px;letter-spacing:1.5px">MERCI POUR VOTRE CONFIANCE 🤍</div>
+        <div style="width:100%">
+          <div style="width:36px;height:1px;background:#c9a84c;margin:0 auto 16px;opacity:0.6"></div>
+          <div style="display:flex;justify-content:space-around;text-align:center" id="story-stats"></div>
         </div>
+
+        <div style="color:#5a5a5a;font-size:9px;letter-spacing:1.5px">MERCI POUR VOTRE CONFIANCE</div>
       </div>
     </div>
 
