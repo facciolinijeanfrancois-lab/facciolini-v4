@@ -415,6 +415,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="stitle">📊 Statistiques d'utilisation</div>
   <div id="usage-stats-list" style="margin-bottom:8px"></div>
   <button class="btn btn-outline btn-full" style="margin-bottom:8px;color:var(--text3);border-color:var(--border)" onclick="resetUsageStats()">↺ Réinitialiser les statistiques</button>
+  <div class="stitle">Application</div>
+  <button class="btn btn-outline btn-full" id="btn-check-update" onclick="checkForUpdateNow()" style="margin-bottom:8px">&#x1f504; V&#xe9;rifier les mises &#xe0; jour</button>
+
   <div class="stitle">Donn&#xe9;es</div>
   <button class="btn btn-outline btn-full" onclick="exportCSV()" style="margin-bottom:8px">&#x1f4ca; Exporter CSV comptable</button>
   <button class="btn btn-outline btn-full" onclick="exportBackup()" style="margin-bottom:8px">&#x1f4be; Sauvegarder donn&#xe9;es</button>
@@ -3774,6 +3777,38 @@ if('serviceWorker' in navigator){
   });
 }
 
+async function checkForUpdateNow(){
+  const btn=document.getElementById('btn-check-update');
+  if(!btn)return;
+  const texteOriginal=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='🔄 Vérification en cours...';
+  if(!('serviceWorker' in navigator)){
+    btn.textContent='⚠️ Non disponible sur ce navigateur';
+    setTimeout(()=>{btn.textContent=texteOriginal;btn.disabled=false;},2500);
+    return;
+  }
+  try{
+    const reg=await navigator.serviceWorker.getRegistration();
+    if(!reg){
+      btn.textContent='⚠️ Application non installée en PWA';
+      setTimeout(()=>{btn.textContent=texteOriginal;btn.disabled=false;},2500);
+      return;
+    }
+    await reg.update();
+    // Laisser le temps à l'événement 'updatefound' de se déclencher si une nouvelle version existe
+    setTimeout(()=>{
+      const bannerVisible=document.getElementById('update-banner');
+      if(!bannerVisible){
+        btn.textContent='✅ Vous avez déjà la dernière version';
+      }
+      setTimeout(()=>{btn.textContent=texteOriginal;btn.disabled=false;},2500);
+    },1500);
+  }catch(e){
+    btn.textContent='❌ Erreur, réessaie plus tard';
+    setTimeout(()=>{btn.textContent=texteOriginal;btn.disabled=false;},2500);
+  }
+}
 function showUpdateBanner(newSW){
   const existing = document.getElementById('update-banner');
   if(existing) return;
