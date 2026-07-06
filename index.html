@@ -211,6 +211,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .fab{position:fixed;bottom:calc(var(--nav-h) + 18px);right:max(18px, calc(50% - 222px));width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 28px rgba(240,168,32,0.55),0 2px 8px rgba(0,0,0,0.3);z-index:99;font-size:1.6rem;color:#000;font-weight:900;transition:all 0.2s}
 .fab:active{transform:scale(0.92)}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -3273,14 +3274,17 @@ function setStoryPeriode(p,el){
 }
 function openStorySemaine(){
   storyPeriode='semaine';
-  document.querySelectorAll('#story-periode-chips .chip').forEach((c,i)=>c.classList.toggle('active',i===0));
+  document.querySelectorAll('#story-periode-chips .chip').forEach((c,i)=>c.classList.toggle('active',i===1));
   renderStorySemaine();
   openModal('m-story');
 }
 function renderStorySemaine(){
   const now=new Date();now.setHours(0,0,0,0);
   let debut;
-  if(storyPeriode==='semaine'){
+  if(storyPeriode==='jour'){
+    debut=new Date(now);
+    g('story-periode').textContent='— AUJOURD\'HUI —';
+  }else if(storyPeriode==='semaine'){
     debut=new Date(now);
     const jour=(debut.getDay()+6)%7; // lundi=0
     debut.setDate(debut.getDate()-jour);
@@ -3324,6 +3328,36 @@ function renderStorySemaine(){
     const ratio=Math.max(0.08,Math.min(total/20,1));
     arc.style.strokeDasharray=len;
     arc.style.strokeDashoffset=len*(1-ratio);
+  }
+  // Garder les données en mémoire pour le téléchargement et la légende
+  window._storyData={total,nbAeroport,nbGare,nbAutre,periode:storyPeriode};
+}
+async function downloadStoryImage(){
+  const canvas=document.getElementById('story-canvas');
+  if(!canvas||typeof html2canvas==='undefined'){alert('Erreur : impossible de générer l\'image, réessaie.');return;}
+  try{
+    const result=await html2canvas(canvas,{backgroundColor:'#0a0a0a',scale:3});
+    const link=document.createElement('a');
+    const d=new Date();
+    const nomFichier='facciolini-story-'+d.toISOString().split('T')[0]+'.png';
+    link.download=nomFichier;
+    link.href=result.toDataURL('image/png');
+    link.click();
+  }catch(e){alert('Erreur lors de la génération de l\'image : '+e.message);}
+}
+function copyStoryLegende(){
+  const d=window._storyData;
+  if(!d){alert('Génère d\'abord la story.');return;}
+  const periodeTxt=d.periode==='jour'?'Aujourd\'hui':d.periode==='semaine'?'Cette semaine':'Ce mois-ci';
+  let detail='';
+  if(d.nbAeroport>0)detail+=d.nbAeroport+' transfert'+(d.nbAeroport>1?'s':'')+' aéroport';
+  if(d.nbGare>0)detail+=(detail?', ':'')+d.nbGare+' vers la gare';
+  if(d.nbAutre>0)detail+=(detail?', ':'')+d.nbAutre+' trajet'+(d.nbAutre>1?'s':'')+' privé'+(d.nbAutre>1?'s':'');
+  const legende=periodeTxt+' chez Facciolini Mobility : '+d.total+' trajet'+(d.total>1?'s':'')+' effectué'+(d.total>1?'s':'')+(detail?' ('+detail+')':'')+'. Merci pour votre confiance ! 🚗✨\n\n#FaccioliniMobility #ChauffeurPrive #NavetteAeroport #Hainaut #Charleroi #Zaventem';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(legende).then(()=>alert('✅ Légende copiée ! Colle-la sous ta story.')).catch(()=>alert('Impossible de copier automatiquement, voici le texte :\n\n'+legende));
+  }else{
+    alert('Voici la légende à copier :\n\n'+legende);
   }
 }
 function openDevisRapide(){
@@ -3696,13 +3730,17 @@ if(!db.settings.pin)unlockApp();
     <div class="fg">
       <label class="fl">Période</label>
       <div class="chips" id="story-periode-chips">
+        <div class="chip" onclick="setStoryPeriode('jour',this)">Aujourd'hui</div>
         <div class="chip active" onclick="setStoryPeriode('semaine',this)">Cette semaine</div>
         <div class="chip" onclick="setStoryPeriode('mois',this)">Ce mois</div>
       </div>
     </div>
 
-    <div style="background:var(--bg2);border-radius:12px;padding:12px 14px;font-size:0.78rem;color:var(--text3);margin-top:6px">
-      💡 Fais une <b>capture d'écran</b> du cadre noir ci-dessus, puis publie-la en story. Aucune info client n'est affichée, juste des chiffres globaux.
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-gold btn-full" onclick="downloadStoryImage()">⬇️ Télécharger l'image</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-outline btn-full" onclick="copyStoryLegende()">📋 Copier la légende</button>
     </div>
 
     <div class="modal-actions">
