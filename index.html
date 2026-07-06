@@ -3284,10 +3284,10 @@ function renderStorySemaine(){
     debut=new Date(now);
     const jour=(debut.getDay()+6)%7; // lundi=0
     debut.setDate(debut.getDate()-jour);
-    g('story-periode').textContent='CETTE SEMAINE';
+    g('story-periode').textContent='— CETTE SEMAINE —';
   }else{
     debut=new Date(now.getFullYear(),now.getMonth(),1);
-    g('story-periode').textContent='CE MOIS';
+    g('story-periode').textContent='— CE MOIS —';
   }
   const fin=new Date(now);fin.setDate(fin.getDate()+1); // inclure aujourd'hui
   const list=db.reservations.filter(r=>{
@@ -3312,12 +3312,12 @@ function renderStorySemaine(){
   });
   const total=list.length;
   const stats=[
-    {val:total,lbl:'trajets'},
-    {val:nbAeroport,lbl:'aéroport'},
+    {val:total,lbl:'trajets',icon:'🚗'},
+    {val:nbAeroport,lbl:'aéroport',icon:'✈️'},
   ];
-  if(nbGare>0)stats.push({val:nbGare,lbl:'gare'});
-  if(nbAutre>0)stats.push({val:nbAutre,lbl:'autres'});
-  const html=stats.map(s=>'<div><div style="color:#c9a84c;font-size:26px;font-weight:600">'+s.val+'</div><div style="color:#8a8a8a;font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px">'+s.lbl+'</div></div>').join('');
+  if(nbGare>0)stats.push({val:nbGare,lbl:'gare',icon:'🚆'});
+  if(nbAutre>0)stats.push({val:nbAutre,lbl:'autres',icon:'💼'});
+  const html=stats.map(s=>'<div style="background:#141414;border:0.5px solid #2a2a2a;border-radius:12px;padding:14px 8px;text-align:center"><div style="font-size:15px;margin-bottom:4px">'+s.icon+'</div><div style="color:#c9a84c;font-size:24px;font-weight:600;line-height:1">'+s.val+'</div><div style="color:#8a8a8a;font-size:8.5px;margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">'+s.lbl+'</div></div>').join('');
   g('story-stats').innerHTML=html;
 }
 function openDevisRapide(){
@@ -3645,17 +3645,27 @@ if(!db.settings.pin)unlockApp();
     <div class="modal-subtitle">Générée automatiquement depuis tes vraies courses</div>
 
     <div style="display:flex;justify-content:center;margin:16px 0">
-      <div id="story-canvas" style="width:280px;height:498px;background:#0a0a0a;border-radius:18px;border:1px solid #2a2a2a;display:flex;flex-direction:column;justify-content:space-between;padding:24px 20px;box-sizing:border-box">
+      <div id="story-canvas" style="width:280px;height:498px;background:#0a0a0a;border-radius:18px;border:1px solid #2a2a2a;display:flex;flex-direction:column;justify-content:space-between;padding:28px 22px;box-sizing:border-box;position:relative;overflow:hidden">
+        <div style="position:absolute;top:14px;left:14px;width:16px;height:16px;border-left:1px solid #c9a84c;border-top:1px solid #c9a84c;opacity:0.6"></div>
+        <div style="position:absolute;top:14px;right:14px;width:16px;height:16px;border-right:1px solid #c9a84c;border-top:1px solid #c9a84c;opacity:0.6"></div>
+        <div style="position:absolute;bottom:14px;left:14px;width:16px;height:16px;border-left:1px solid #c9a84c;border-bottom:1px solid #c9a84c;opacity:0.6"></div>
+        <div style="position:absolute;bottom:14px;right:14px;width:16px;height:16px;border-right:1px solid #c9a84c;border-bottom:1px solid #c9a84c;opacity:0.6"></div>
+
         <div style="text-align:center">
-          <svg viewBox="0 0 72 72" style="width:26px;height:26px" aria-hidden="true"><rect x="20" y="10" width="7" height="52" fill="#c9a84c"/><rect x="20" y="10" width="26" height="7" fill="#c9a84c"/><rect x="20" y="32" width="20" height="7" fill="#c9a84c"/></svg>
-          <div style="color:#f5f0e8;font-size:12px;letter-spacing:2.5px;margin-top:6px">FACCIOLINI</div>
-          <div style="color:#c9a84c;font-size:7px;letter-spacing:4px;margin-top:-2px">MOBILITY</div>
+          <svg viewBox="0 0 72 72" style="width:28px;height:28px" aria-hidden="true"><rect x="20" y="10" width="7" height="52" fill="#c9a84c"/><rect x="20" y="10" width="26" height="7" fill="#c9a84c"/><rect x="20" y="32" width="20" height="7" fill="#c9a84c"/></svg>
+          <div style="color:#f5f0e8;font-size:13px;letter-spacing:3px;margin-top:8px;font-weight:500">FACCIOLINI</div>
+          <div style="color:#c9a84c;font-size:7.5px;letter-spacing:4.5px;margin-top:-2px">MOBILITY</div>
         </div>
+
         <div style="text-align:center">
-          <div style="color:#8a8a8a;font-size:10px;letter-spacing:1px;margin-bottom:16px" id="story-periode">CETTE SEMAINE</div>
-          <div style="display:flex;justify-content:center;gap:18px;flex-wrap:wrap" id="story-stats"></div>
+          <div style="color:#8a8a8a;font-size:10.5px;letter-spacing:2px;margin-bottom:6px" id="story-periode">— CETTE SEMAINE —</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:18px" id="story-stats"></div>
         </div>
-        <div style="text-align:center;color:#5a5a5a;font-size:8px;letter-spacing:1.5px">MERCI POUR VOTRE CONFIANCE</div>
+
+        <div style="text-align:center">
+          <div style="width:36px;height:1px;background:#c9a84c;opacity:0.5;margin:0 auto 10px"></div>
+          <div style="color:#8a8a8a;font-size:9.5px;letter-spacing:1.5px">MERCI POUR VOTRE CONFIANCE 🤍</div>
+        </div>
       </div>
     </div>
 
