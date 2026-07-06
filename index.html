@@ -3301,7 +3301,7 @@ function renderStorySemaine(){
     }
     return inRangeAller||inRangeRetour;
   });
-  const isAeroport=txt=>{const t=(txt||'').toLowerCase();return t.includes('zaventem')||t.includes('charleroi')||t.includes('aéroport')||t.includes('aeroport')||t.includes('airport')||t.includes('bru')||t.includes('crl');};
+  const isAeroport=txt=>{const t=(txt||'').toLowerCase();return t.includes('zaventem')||t.includes('aéroport')||t.includes('aeroport')||t.includes('airport')||/\bcrl\b/.test(t)||/\bbru\b/.test(t);};
   const isGare=txt=>{const t=(txt||'').toLowerCase();return t.includes('gare');};
   let nbAeroport=0,nbGare=0,nbAutre=0;
   list.forEach(r=>{
