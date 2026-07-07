@@ -3284,6 +3284,7 @@ function setStoryPeriode(p,el){
 function openStorySemaine(){
   storyPeriode='semaine';
   document.querySelectorAll('#story-periode-chips .chip').forEach((c,i)=>c.classList.toggle('active',i===1));
+  const ajEl=document.getElementById('story-ajustement');if(ajEl)ajEl.value=0;
   renderStorySemaine();
   openModal('m-story');
 }
@@ -3324,7 +3325,9 @@ function renderStorySemaine(){
     else nbAutre++;
   });
   const total=list.length;
-  g('story-total').textContent=total;
+  const ajustement=parseInt(document.getElementById('story-ajustement')?.value||0)||0;
+  const totalAffiche=Math.max(0,total+ajustement);
+  g('story-total').textContent=totalAffiche;
   const stats=[{val:nbAeroport,lbl:'aéroport'}];
   if(nbGare>0)stats.push({val:nbGare,lbl:'gare'});
   stats.push({val:nbAutre,lbl:nbGare>0?'privés':'autres'});
@@ -3334,12 +3337,12 @@ function renderStorySemaine(){
   const arc=document.getElementById('story-gauge-arc');
   if(arc){
     const len=arc.getTotalLength();
-    const ratio=Math.max(0.08,Math.min(total/20,1));
+    const ratio=Math.max(0.08,Math.min(totalAffiche/20,1));
     arc.style.strokeDasharray=len;
     arc.style.strokeDashoffset=len*(1-ratio);
   }
   // Garder les données en mémoire pour le téléchargement et la légende
-  window._storyData={total,nbAeroport,nbGare,nbAutre,periode:storyPeriode};
+  window._storyData={total:totalAffiche,nbAeroport,nbGare,nbAutre,periode:storyPeriode};
 }
 async function downloadStoryImage(){
   const canvas=document.getElementById('story-canvas');
@@ -3743,6 +3746,11 @@ if(!db.settings.pin)unlockApp();
         <div class="chip active" onclick="setStoryPeriode('semaine',this)">Cette semaine</div>
         <div class="chip" onclick="setStoryPeriode('mois',this)">Ce mois</div>
       </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Ajustement manuel (courses hors app, +/-)</label>
+      <input type="number" class="fi" id="story-ajustement" value="0" oninput="renderStorySemaine()">
     </div>
 
     <div style="display:flex;gap:8px;margin-top:10px">
