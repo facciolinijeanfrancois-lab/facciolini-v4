@@ -3057,6 +3057,8 @@ function exportICS(r){
   const tel=r.clientTel||cl.tel||cl.gsm||'';
   // Statut paiement simplifié : Cash (payé sur place) ou Facturé (partenaire/prépayé)
   const payLabel=(r.source&&r.source!=='direct')||r.paiement==='prepaye'?'Facturé':'Cash';
+  // Détecte si une adresse est un aéroport (pour ne raccourcir QUE dans ce cas, pas les adresses normales)
+  const isAeroport=txt=>{const t=(txt||'').toLowerCase();return t.includes('zaventem')||t.includes('aéroport')||t.includes('aeroport')||t.includes('airport')||/\bcrl\b/.test(t)||/\bbru\b/.test(t);};
   // Notes ALLER propres, une info par ligne
   const isRec=(r.service==='recuperation');
   // DÉPOSE : départ=adresse client, arrivée=aéroport → 🛫 + nom aéroport arrivée
@@ -3064,17 +3066,20 @@ function exportICS(r){
   const aeroAller=isRec?shortAero(r.depart):shortAero(r.arrivee);
   const emojiAller=isRec?'🛬':'🛫';
   const addrClientAller=isRec?r.arrivee:r.depart;
+  // Ligne destination ALLER : nom court UNIQUEMENT si c'est un aéroport, sinon adresse complète
+  const depoLabelAller=isRec?(addrClientAller?'🏠 Dépose: '+addrClientAller:''):(isAeroport(r.arrivee)?('✈️ Dépose: '+aeroAller):('📍 Arrivée: '+(r.arrivee||'')));
   const linesAller=[
     '👤 '+r.clientNom,
     tel?'📞 '+tel:'',
     '🕐 Prise en charge: '+(r.heure||''),
     isRec?('🛬 Récupération: '+aeroAller):('🏠 Adresse: '+r.depart),
     r.stopAdresse?('📍 Arrêt: '+r.stopAdresse+(r.stopNom?' ('+r.stopNom+')'+(r.stopTel?' — '+r.stopTel:''):'')):'',
-    isRec?(addrClientAller?'🏠 Dépose: '+addrClientAller:''):('✈️ Dépose: '+aeroAller),
+    depoLabelAller,
     r.passagers?'👥 Passagers: '+r.passagers:'',
+    r.siegesBebe?'👶 Sièges bébé: '+r.siegesBebe:'',
     r.vol?'🛩️ Vol: '+r.vol:'',
     '💰 Prix: '+fmt(r.prix)+' — '+payLabel,
-    '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0)),
+    parseFloat(r.acompte||0)>0?('💳 Acompte: '+fmt(r.acompte)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0))):'',
     r.notes?'📋 '+r.notes:'',
   ].filter(Boolean);
   const descAller=escDesc(linesAller.join('\n'));
@@ -3103,10 +3108,11 @@ function exportICS(r){
       '🛬 Prise en charge: '+shortAero(depRet),
       arrRet?'🏠 Dépose: '+arrRet:'',
       r.passagers?'👥 Passagers: '+r.passagers:'',
+      r.siegesBebe?'👶 Sièges bébé: '+r.siegesBebe:'',
       r.vol?'🛩️ Vol aller: '+r.vol:'',
       r.volRetour?'🛩️ Vol retour: '+r.volRetour:'',
       '💰 Prix: '+fmt(r.prix)+' — '+payLabel,
-      '💳 Acompte: '+fmt(r.acompte||0)+' — Solde: '+solde,
+      parseFloat(r.acompte||0)>0?('💳 Acompte: '+fmt(r.acompte)+' — Solde: '+solde):'',
       r.notes?'📋 '+r.notes:'',
     ].filter(Boolean);
     const descRetour=escDesc(linesRetour.join('\n'));
