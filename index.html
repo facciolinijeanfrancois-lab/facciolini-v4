@@ -3722,8 +3722,15 @@ if(!db.settings.pin)unlockApp();
 
         <div style="display:flex;flex-direction:column;align-items:center;position:relative">
           <svg viewBox="0 0 220 130" style="width:210px">
+            <defs>
+              <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#f3d888"/>
+                <stop offset="45%" stop-color="#c9a84c"/>
+                <stop offset="100%" stop-color="#9c7a2e"/>
+              </linearGradient>
+            </defs>
             <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="#1c1c1c" stroke-width="3"/>
-            <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="url(#goldGrad)" stroke-width="3" id="story-gauge-arc"/>
+            <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="url(#goldGrad2)" stroke-width="3" id="story-gauge-arc"/>
           </svg>
           <div style="position:absolute;top:34px;display:flex;flex-direction:column;align-items:center">
             <div style="color:#5a5a5a;font-size:9px;letter-spacing:2px;margin-bottom:2px" id="story-periode">— CETTE SEMAINE —</div>
