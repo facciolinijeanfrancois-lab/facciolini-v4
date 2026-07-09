@@ -978,6 +978,7 @@ function fixDb(){
   if(!db.kmReels)db.kmReels=[];
   if(!db.clients)db.clients=[];
   if(!db.partnerSoldes)db.partnerSoldes=[];
+  if(!db.partnerMoisMasques)db.partnerMoisMasques={};
   if(!db.settings.homeAddress||!db.settings.homeAddress.lat)db.settings.homeAddress=HOME_DEFAULT;
   if(!db.settings.tarifs.round)db.settings.tarifs.round=5;
   if(!db.settings.tarifs.camion)db.settings.tarifs.camion=20;
@@ -1547,7 +1548,12 @@ function renderPartners(){
           if(!moisGroupes[key]){moisGroupes[key]=[];moisOrdre.push(key);}
           moisGroupes[key].push(r);
         });
+        var moisMasquesPartner=(db.partnerMoisMasques&&db.partnerMoisMasques[p.nom])||[];
+        var now=new Date();var moisCourantKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+        var nbMasques=moisOrdre.filter(function(k){return moisMasquesPartner.includes(k)&&k!==moisCourantKey;}).length;
         moisOrdre.forEach(function(key){
+          var estMasque=moisMasquesPartner.includes(key)&&key!==moisCourantKey;
+          if(estMasque)return;
           var coursesMois=moisGroupes[key];
           var d0=new Date(coursesMois[0].dateAller);
           var moisLabel=d0.toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
@@ -1557,9 +1563,14 @@ function renderPartners(){
           var netMois=aFacturerMois-commissionsDuesMois;
           html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">';
           html+='<span style="font-size:0.68rem;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:0.05em">📅 '+moisLabel+'</span>';
+          html+='<div style="display:flex;align-items:center;gap:8px">';
           if(netMois>0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--green2)">→ Tu factures '+fmt(netMois)+'</span>';}
           else if(netMois<0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--red2)">→ Tu verses '+fmt(Math.abs(netMois))+'</span>';}
           else{html+='<span style="font-size:0.68rem;color:var(--green2)">Soldé ✓</span>';}
+          if(key!==moisCourantKey){
+            html+='<span style="cursor:pointer;font-size:0.9rem" title="Ne plus afficher ce mois ici" onclick="masquerMoisPartenaire(\''+p.nom.replace(/'/g,"\\'")+'\',\''+key+'\')">🗑️</span>';
+          }
+          html+='</div>';
           html+='</div>';
           if(commissionsDuesMois>0||aFacturerMois>0){
             if(netMois>0){
@@ -1590,6 +1601,9 @@ function renderPartners(){
             html+='</div></div></div>';
           });
         });
+        if(nbMasques>0){
+          html+='<div style="text-align:center;margin-top:10px"><span style="font-size:0.68rem;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="reafficherMoisPartenaire(\''+p.nom.replace(/'/g,"\\'")+'\')">'+nbMasques+' mois masqué'+(nbMasques>1?'s':'')+' · Réafficher</span></div>';
+        }
       }
       html+='</div>';
     });
@@ -1666,6 +1680,20 @@ function reglerMoisPartenaire(p,moisKey){
   coursesPrepaye.forEach(r=>{r.facturePaye=true;});
   save();renderAll();
   alert('✅ '+p+' — '+moisLabel+' réglé ('+(net>0?'facturé '+fmt(net):net<0?'versé '+fmt(Math.abs(net)):'soldé')+') — '+nbTotal+' course(s) archivée(s).');
+}
+function masquerMoisPartenaire(p,moisKey){
+  var d=new Date(moisKey+'-01');
+  var moisLabel=d.toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
+  if(!confirm('Ne plus afficher '+moisLabel+' dans la fiche de '+p+' ?\n\nLes courses restent bien enregistrées et dans tes stats/Finances, elles seront juste masquées ici.'))return;
+  if(!db.partnerMoisMasques)db.partnerMoisMasques={};
+  if(!db.partnerMoisMasques[p])db.partnerMoisMasques[p]=[];
+  if(!db.partnerMoisMasques[p].includes(moisKey))db.partnerMoisMasques[p].push(moisKey);
+  save();renderAll();
+}
+function reafficherMoisPartenaire(p){
+  if(!db.partnerMoisMasques||!db.partnerMoisMasques[p]||!db.partnerMoisMasques[p].length)return;
+  db.partnerMoisMasques[p]=[];
+  save();renderAll();
 }
 function renderParams(){
   var s=db.settings;
