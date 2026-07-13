@@ -1018,6 +1018,16 @@ function fmt(n){return parseFloat(n||0).toFixed(2).replace('.',',')+' €';}
 function escQ(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function fmtKm(n){return parseFloat(n||0).toFixed(1).replace('.',',')+' km';}
 function roundTo(n,r){return Math.ceil(n/(r||5))*(r||5);}
+function getPrixFixeZone(depTxt,arrTxt,isTalento){
+  if(!depTxt||!arrTxt)return null;
+  const d=depTxt.toLowerCase(),a=arrTxt.toLowerCase();
+  const isCarnieres=d.includes('carnière')||d.includes('carnieres')||d.includes('morlanwelz')||d.includes("bois-d'haine")||d.includes("bois d'haine")||d.includes('saint-eloi')||d.includes('7141');
+  const isCharleroi=a.includes('charleroi')||a.includes('crl');
+  const isZaventem=a.includes('zaventem')||a.includes('bru')||a.includes('brussels airport')||a.includes('bruxelles national');
+  if(isCarnieres&&isCharleroi)return isTalento?80:60;
+  if(isCarnieres&&isZaventem)return isTalento?120:95;
+  return null;
+}
 function g(id){return document.getElementById(id);}
 function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!==undefined)el.className=cls;}
 function getKmClient(r){let km=parseFloat(r.distance||0);if(r.type==='ar-jour')km+=parseFloat(r.distanceRetour||r.distance||0);else if(r.type==='ar-diff')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
@@ -1937,7 +1947,11 @@ function computeDevisPour(type){
   const vidx=parseInt(g('r-vehicule')?.value||0),isTalento=vidx===1;
   const t=db.settings.tarifs,tarif=dist>t.rayon?t.long:t.court;
   const distR2=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
-  let pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);
+  const isAR=type==='ar-diff'||type==='ar-jour';
+  const prixFixe=getPrixFixeZone(g('r-depart')?.value||'',g('r-arrivee')?.value||'',isTalento);
+  let pb;
+  if(prixFixe!==null){pb=isAR?prixFixe*2:prixFixe;}
+  else{pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);}
   const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
   let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
   return ps;
@@ -1968,7 +1982,12 @@ function updCalc(){
     const db2=g('r-devis-box');if(db2)db2.style.display='block';
     sv('r-devis-price',ps+' €');
     const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
-    sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+t.camion+'€':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
+    const prixFixe2=getPrixFixeZone(g('r-depart')?.value||'',g('r-arrivee')?.value||'',isTalento);
+    if(prixFixe2!==null){
+      sv('r-devis-detail','Tarif fixe Carnières'+(prixFixe2>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe2+'€'+((type2==='ar-diff'||type2==='ar-jour')?' × 2 (A/R)':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':''));
+    }else{
+      sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+t.camion+'€':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
+    }
     acC['devis']=ps;
   }
 }
@@ -3433,11 +3452,20 @@ async function calcDevis(){
       const t=db.settings.tarifs,isTalento=vidx===1;
       const tarif=km>t.rayon?t.long:t.court;
       const distTotal=type==='ar'?km*2:km;
-      let pb=distTotal*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);
-      const ps=roundTo(pb,t.round);
-      const pr=g('dv-price');if(pr)pr.textContent=ps+' €';
+      const prixFixe=getPrixFixeZone(g('dv-depart')?.value||'',g('dv-arrivee')?.value||'',isTalento);
+      let ps;
+      const pr=g('dv-price');
       const dd=g('dv-detail');
-      if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+t.camion+'€ Talento':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
+      if(prixFixe!==null){
+        ps=type==='ar'?prixFixe*2:prixFixe;
+        if(pr)pr.textContent=ps+' €';
+        if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixe>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe+'€'+(type==='ar'?' × 2 (A/R)':'');
+      }else{
+        let pb=distTotal*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);
+        ps=roundTo(pb,t.round);
+        if(pr)pr.textContent=ps+' €';
+        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+t.camion+'€ Talento':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
+      }
       acC['dv-km']=km;acC['dv-prix']=ps;acC['dv-tarif']=tarif;
     }else{
       if(dkm)dkm.textContent='—';
