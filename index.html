@@ -3377,9 +3377,10 @@ function renderStorySemaine(){
   const ajustement=parseInt(document.getElementById('story-ajustement')?.value||0)||0;
   const totalAffiche=Math.max(0,total+ajustement);
   g('story-total').textContent=totalAffiche;
+  const nbAutreAffiche=Math.max(0,nbAutre+ajustement); // intègre l'ajustement manuel pour que la répartition corresponde au total
   const stats=[{val:nbAeroport,lbl:'aéroport'}];
   if(nbGare>0)stats.push({val:nbGare,lbl:'gare'});
-  stats.push({val:nbAutre,lbl:nbGare>0?'privés':'autres'});
+  stats.push({val:nbAutreAffiche,lbl:nbGare>0?'privés':'autres'});
   const html=stats.map(s=>'<div><div style="color:#f5f0e8;font-size:14px">'+s.val+'</div><div style="color:#6a6a6a;font-size:8px;letter-spacing:1px;margin-top:3px;text-transform:uppercase">'+s.lbl+'</div></div>').join('');
   g('story-stats').innerHTML=html;
   // Jauge dynamique : proportion du trait doré selon le nombre de trajets (plafond différent selon la période)
@@ -3393,7 +3394,7 @@ function renderStorySemaine(){
     arc.style.strokeDashoffset=len*(1-ratio);
   }
   // Garder les données en mémoire pour le téléchargement et la légende
-  window._storyData={total:totalAffiche,nbAeroport,nbGare,nbAutre,periode:storyPeriode};
+  window._storyData={total:totalAffiche,nbAeroport,nbGare,nbAutre:nbAutreAffiche,periode:storyPeriode};
 }
 async function downloadStoryImage(){
   const canvas=document.getElementById('story-canvas');
