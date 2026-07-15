@@ -3333,7 +3333,7 @@ function setStoryPeriode(p,el){
 function openStorySemaine(){
   storyPeriode='semaine';
   document.querySelectorAll('#story-periode-chips .chip').forEach((c,i)=>c.classList.toggle('active',i===1));
-  const ajEl=document.getElementById('story-ajustement');if(ajEl)ajEl.value=0;
+  ['story-adj-aeroport','story-adj-gare','story-adj-autre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
   openModal('m-story');
   setTimeout(renderStorySemaine,50);
 }
@@ -3374,13 +3374,17 @@ function renderStorySemaine(){
     else nbAutre++;
   });
   const total=list.length;
-  const ajustement=parseInt(document.getElementById('story-ajustement')?.value||0)||0;
-  const totalAffiche=Math.max(0,total+ajustement);
+  const adjAero=parseInt(document.getElementById('story-adj-aeroport')?.value||0)||0;
+  const adjGare=parseInt(document.getElementById('story-adj-gare')?.value||0)||0;
+  const adjAutre=parseInt(document.getElementById('story-adj-autre')?.value||0)||0;
+  const nbAeroportAffiche=Math.max(0,nbAeroport+adjAero);
+  const nbGareAffiche=Math.max(0,nbGare+adjGare);
+  const nbAutreAffiche=Math.max(0,nbAutre+adjAutre);
+  const totalAffiche=Math.max(0,total+adjAero+adjGare+adjAutre);
   g('story-total').textContent=totalAffiche;
-  const nbAutreAffiche=Math.max(0,nbAutre+ajustement); // intègre l'ajustement manuel pour que la répartition corresponde au total
-  const stats=[{val:nbAeroport,lbl:'aéroport'}];
-  if(nbGare>0)stats.push({val:nbGare,lbl:'gare'});
-  stats.push({val:nbAutreAffiche,lbl:nbGare>0?'privés':'autres'});
+  const stats=[{val:nbAeroportAffiche,lbl:'aéroport'}];
+  if(nbGareAffiche>0)stats.push({val:nbGareAffiche,lbl:'gare'});
+  stats.push({val:nbAutreAffiche,lbl:nbGareAffiche>0?'privés':'autres'});
   const html=stats.map(s=>'<div><div style="color:#f5f0e8;font-size:14px">'+s.val+'</div><div style="color:#6a6a6a;font-size:8px;letter-spacing:1px;margin-top:3px;text-transform:uppercase">'+s.lbl+'</div></div>').join('');
   g('story-stats').innerHTML=html;
   // Jauge dynamique : proportion du trait doré selon le nombre de trajets (plafond différent selon la période)
@@ -3394,7 +3398,7 @@ function renderStorySemaine(){
     arc.style.strokeDashoffset=len*(1-ratio);
   }
   // Garder les données en mémoire pour le téléchargement et la légende
-  window._storyData={total:totalAffiche,nbAeroport,nbGare,nbAutre:nbAutreAffiche,periode:storyPeriode};
+  window._storyData={total:totalAffiche,nbAeroport:nbAeroportAffiche,nbGare:nbGareAffiche,nbAutre:nbAutreAffiche,periode:storyPeriode};
 }
 async function downloadStoryImage(){
   const canvas=document.getElementById('story-canvas');
@@ -3841,7 +3845,20 @@ if(!db.settings.pin)unlockApp();
 
     <div class="fg">
       <label class="fl">Ajustement manuel (courses hors app, +/-)</label>
-      <input type="number" class="fi" id="story-ajustement" value="0" oninput="renderStorySemaine()">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label class="fl" style="font-size:0.68rem;opacity:0.75">Aéroport</label>
+          <input type="number" class="fi" id="story-adj-aeroport" value="0" oninput="renderStorySemaine()">
+        </div>
+        <div style="flex:1">
+          <label class="fl" style="font-size:0.68rem;opacity:0.75">Gare</label>
+          <input type="number" class="fi" id="story-adj-gare" value="0" oninput="renderStorySemaine()">
+        </div>
+        <div style="flex:1">
+          <label class="fl" style="font-size:0.68rem;opacity:0.75">Autres</label>
+          <input type="number" class="fi" id="story-adj-autre" value="0" oninput="renderStorySemaine()">
+        </div>
+      </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:10px">
