@@ -167,6 +167,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .status-enroute{background:rgba(232,160,32,0.2);color:var(--gold);border:1px solid rgba(232,160,32,0.5);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700;animation:pulse 1.5s infinite}
 .status-annule{background:rgba(224,48,64,0.12);color:var(--red2);border:1px solid rgba(224,48,64,0.3);padding:3px 9px;border-radius:99px;font-size:0.65rem;font-weight:700}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.app-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg4);border:1px solid var(--gold);color:var(--text);padding:11px 20px;border-radius:14px;font-size:0.85rem;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:99999;opacity:0;pointer-events:none;transition:opacity 0.25s,transform 0.25s;max-width:88vw;text-align:center}
+.app-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .res-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px}
 .res-section-title{font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold2);margin-bottom:14px}
 #res-form-scroll{max-height:72vh;overflow-y:auto;padding-right:2px}
@@ -2336,6 +2338,19 @@ function editRes(id){
   setTimeout(()=>{const s=g('res-form-scroll');if(s)s.scrollTop=0;},100);
 }
 var currentDetailId=null;
+function showToast(msg){
+  var t=g('app-toast');
+  if(!t){
+    t=document.createElement('div');
+    t.id='app-toast';
+    t.className='app-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(function(){t.classList.remove('show');},2200);
+}
 function setStatut(id,statut){
   var r=db.reservations.find(function(x){return x.id===id;});
   if(!r)return;
@@ -2344,11 +2359,16 @@ function setStatut(id,statut){
   // Mettre à jour le badge dans le modal sans le fermer
   var labels={confirme:'✓ Confirmée',enroute:'🚗 En route',termine:'✅ Terminée',annule:'❌ Annulée'};
   var classes={confirme:'status-confirme',enroute:'status-enroute',termine:'status-done',annule:'status-annule'};
-  // Highlight le bouton actif
+  // Highlight le bouton actif (fond + bordure, pas juste la bordure)
+  var activeBg={confirme:'rgba(13,184,107,0.18)',enroute:'rgba(232,160,32,0.22)',termine:'rgba(13,184,107,0.18)',annule:'rgba(224,48,64,0.22)'};
   ['confirme','enroute','termine','annule'].forEach(function(s){
     var btn=g('dr-s-'+s);
-    if(btn)btn.style.borderColor=s===statut?'var(--gold)':'';
+    if(btn){
+      btn.style.borderColor=s===statut?'var(--gold)':'';
+      btn.style.background=s===statut?activeBg[s]:'';
+    }
   });
+  showToast(labels[statut]);
   renderDash();renderRes();
 }
 function sendRappel(id,sens){
