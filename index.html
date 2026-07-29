@@ -675,9 +675,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
         <input type="hidden" id="r-langue" value="fr">
       </div>
       <!-- Km pickup -->
-      <div class="fg"><label class="fl">Km pickup (Carnières → client)</label><input type="number" class="fi" id="r-km-pickup" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-hint">Calculé automatiquement depuis votre adresse</div></div>
+      <div class="fg"><label class="fl" id="lbl-km-pickup">Km pickup (Carnières → client)</label><input type="number" class="fi" id="r-km-pickup" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-hint">Calculé automatiquement depuis votre adresse</div></div>
       <!-- Retour vide aller -->
-      <div class="fg"><label class="fl">Retour après dépose (J1)</label>
+      <div class="fg"><label class="fl" id="lbl-vide-aller">Retour après dépose (J1)</label>
         <div class="chips" id="r-vide-aller-chips">
           <div class="chip active" onclick="selectChip(this,'r-vide-aller-type','maison');updVideAller()">🏠 Maison</div>
           <div class="chip" onclick="selectChip(this,'r-vide-aller-type','depart');updVideAller()">📍 Point départ</div>
@@ -687,7 +687,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
         <input type="hidden" id="r-vide-aller-type" value="maison">
         <div id="r-vide-aller-calc" style="margin-top:8px;font-size:0.78rem;color:var(--blue2);font-weight:600"></div>
       </div>
-      <div id="r-vide-aller-manuel-box" style="display:none"><div class="fg"><label class="fl">Km retour vide (J1)</label><input type="number" class="fi" id="r-km-vide-aller" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
+      <div id="r-vide-aller-manuel-box" style="display:none"><div class="fg"><label class="fl" id="lbl-km-vide-aller">Km retour vide (J1)</label><input type="number" class="fi" id="r-km-vide-aller" placeholder="Ex: 65" step="0.1" oninput="updKmRecap();updCalc()"></div></div>
       <!-- Retour vide retour (AR diff) -->
       <div id="sp4-retour-section" style="display:none">
         <div class="res-section-title" id="sp4-j2-label" style="margin-bottom:10px">Jour 2 — Retour</div>
@@ -2567,6 +2567,9 @@ function updVolField(){
   const ld=g('lbl-date-aller');if(ld)ld.textContent=soloRec?'Date récupération':'Date aller';
   const lh=g('lbl-heure-aller');if(lh)lh.textContent=soloRec?'Heure atterrissage':'Heure aller';
   const lk=g('lbl-dist-aller');if(lk)lk.textContent=soloRec?'Distance retour (km)':'Distance aller (km)';
+  const lp=g('lbl-km-pickup');if(lp)lp.textContent=soloRec?'Km pickup (Carnières → aéroport)':'Km pickup (Carnières → client)';
+  const lva=g('lbl-vide-aller');if(lva)lva.textContent=soloRec?'Retour après récupération':'Retour après dépose (J1)';
+  const lkva=g('lbl-km-vide-aller');if(lkva)lkva.textContent=soloRec?'Km retour vide':'Km retour vide (J1)';
   showClientAddrBtns();
 }
 // ===== NOTIFICATIONS PUSH =====
