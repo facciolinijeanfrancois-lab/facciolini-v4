@@ -278,7 +278,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="chip" onclick="setResFilter('semaine',this)">&#x1f4c6; Cette semaine</div>
     <div class="chip" onclick="setResFilter('today',this)">Aujourd&#x27;hui</div>
     <div class="chip" onclick="setResFilter('veille',this)">&#x1f514; Veille J-1</div>
-    <div class="chip" onclick="setResFilter('j7',this)">&#x1f4e8; J-7</div>
+    <div class="chip" onclick="setResFilter('j7',this)">&#x1f4e8; 7 prochains jours</div>
     <div class="chip" onclick="setResFilter('mois',this)">&#x1f5d3;&#xfe0f; Ce mois</div>
     <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
   </div>
@@ -1304,7 +1304,7 @@ function renderRes(){
   if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}
   else if(resFilter==='today')res=db.reservations.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});
   else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()===demain.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()===demain.getTime();}return false;});}
-  else if(resFilter==='j7'){var dans7=new Date(today);dans7.setDate(dans7.getDate()+7);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()===dans7.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()===dans7.getTime();}return false;});}
+  else if(resFilter==='j7'){var dans7=new Date(today);dans7.setDate(dans7.getDate()+7);dans7.setHours(23,59,59,999);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()>=today.getTime()&&dA.getTime()<=dans7.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()>=today.getTime()&&dR.getTime()<=dans7.getTime();}return false;});}
   else if(resFilter==='mois')res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});
   else if(resFilter==='annule')res=db.reservations.filter(function(r){return r.statut==='annule';});
   else res=getMonthRes(curMonth,curYear);
