@@ -480,7 +480,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="res-section-title">🗺️ Trajet</div>
     <div class="fg"><label class="fl">Type de course</label>
       <div class="chips" id="r-type-chips">
-        <div class="chip active" onclick="selectChip(this,'r-type','aller');updResType()">Aller simple</div>
+        <div class="chip active" onclick="selectChip(this,'r-type','aller');updResType()">Trajet simple</div>
         <div class="chip" onclick="selectChip(this,'r-type','ar-jour');updResType()">A/R même jour</div>
         <div class="chip" onclick="selectChip(this,'r-type','ar-diff');updResType()">A/R date différente</div>
       </div>
@@ -497,7 +497,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     </div>
     <div class="fr">
       <div class="fg">
-        <label class="fl">Date aller</label>
+        <label class="fl" id="lbl-date-aller">Date aller</label>
         <div class="dt-field" onclick="openDtPicker('r-date-aller','date','📅 Date aller')">
           <span class="dt-field-icon">📅</span>
           <span class="dt-field-val empty" id="r-date-aller-disp">Choisir une date</span>
@@ -505,7 +505,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
         <input type="hidden" id="r-date-aller">
       </div>
       <div class="fg">
-        <label class="fl">Heure aller</label>
+        <label class="fl" id="lbl-heure-aller">Heure aller</label>
         <div class="dt-field" onclick="openDtPicker('r-heure-aller','time','🕐 Heure aller')">
           <span class="dt-field-icon">🕐</span>
           <span class="dt-field-val empty" id="r-heure-aller-disp">Choisir l'heure</span>
@@ -545,7 +545,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     </div>
     <div id="dist-loading" style="display:none" class="dist-box loading"><div style="color:var(--gold);font-size:0.82rem">⏳ Calcul distance...</div></div>
     <div id="dist-ok" style="display:none" class="dist-box ok"><div style="flex:1"><div class="dist-km" id="dist-km">—</div><div class="dist-time" id="dist-time">—</div></div><button class="btn btn-ghost btn-xs" onclick="calcDist()">↺</button></div>
-    <div class="fg"><label class="fl">Distance aller (km)</label><input type="number" class="fi" id="r-distance" placeholder="Calculé automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
+    <div class="fg"><label class="fl" id="lbl-dist-aller">Distance aller (km)</label><input type="number" class="fi" id="r-distance" placeholder="Calculé automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
     <!-- Vol - affiché seulement si récupération -->
     <div class="fg" id="r-vol-fg" style="display:none"><label class="fl">Numéro de vol</label><input type="text" class="fi" id="r-vol" placeholder="Ex: SN3724" style="text-transform:uppercase"></div>
     <!-- AR même jour -->
@@ -1322,7 +1322,7 @@ function renderRes(){
   res.forEach(function(r){
     var benef=getBenef(r),kmC=getKmClient(r),kmR=getKmReels(r);
     var dStr=new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'});
-    var tLabel={aller:'Aller','ar-jour':'A/R jour','ar-diff':'A/R diff.'}[r.type]||r.type;
+    var tLabel={aller:'Aller','ar-jour':'A/R jour','ar-diff':'A/R diff.'}[r.type]||r.type;if(r.type==='aller'&&r.service==='recuperation')tLabel='🛬 Retour';
     var isP=r.source&&r.source!=='direct',vip=isVip(r.clientNom);
     var rid=r.id;
     html+='<div class="item" data-id="'+rid+'" onclick="showDetailRes(this.dataset.id)">';
@@ -1760,6 +1760,7 @@ function getTotalSteps(){return(g('r-type')?.value||'aller')==='ar-diff'?6:5;}
 function updResSteps(){}
 // resStep supprimé - remplacé par saveReservation direct
 function updResType(){
+  setTimeout(function(){try{updVolField();}catch(e){}},0);
   const oldType=acC['_lastType']||'aller';
   const oldDevis=computeDevisPour(oldType);
   const type=g('r-type').value;
@@ -2115,7 +2116,7 @@ function showDetailRes(id){
   currentDetailId=id;
   var r=db.reservations.find(function(x){return x.id===id;});if(!r)return;
   var v=getV(r.vehicule),kmC=getKmClient(r),kmR=getKmReels(r),benef=getBenef(r),benefR=getBenefReel(r);
-  var tLabel={aller:'Aller simple','ar-jour':'A/R même jour','ar-diff':'A/R date différente'}[r.type]||r.type;
+  var tLabel={aller:'Aller simple','ar-jour':'A/R même jour','ar-diff':'A/R date différente'}[r.type]||r.type;if(r.type==='aller'&&r.service==='recuperation')tLabel='🛬 Retour simple (récupération)';
   sv('dr-title',r.clientNom||'Course');
   var dc=g('dr-content');
   if(dc){
@@ -2147,7 +2148,7 @@ function showDetailRes(id){
     h+='</span></div>';
     h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';
     if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
-    h+='<div class="dr"><span class="dr-label">Aller</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
+    h+='<div class="dr"><span class="dr-label">'+((r.type==='aller'&&r.service==='recuperation')?'🛬 Récupération':'Aller')+'</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
     if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">Retour</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
     if(r.type==='ar-jour'&&r.heureRetour)h+='<div class="dr"><span class="dr-label">Retour même jour</span><span class="dr-val">'+r.heure+' → '+r.heureRetour+'</span></div>';
     h+='<div class="dr"><span class="dr-label">Trajet</span><span class="dr-val">'+(r.depart||'—').substring(0,22)+' → '+(r.arrivee||'—').substring(0,22)+'</span></div>';
@@ -2559,6 +2560,13 @@ function updVolField(){
   const service=g('r-service')?.value||'depose';
   const volFg=g('r-vol-fg');
   if(volFg)volFg.style.display=service==='recuperation'?'block':'none';
+  // Libellés dynamiques : en récupération, la course EST le retour
+  const isRecL=(service==='recuperation');
+  const typeL=g('r-type')?.value||'aller';
+  const soloRec=isRecL&&typeL==='aller';
+  const ld=g('lbl-date-aller');if(ld)ld.textContent=soloRec?'Date récupération':'Date aller';
+  const lh=g('lbl-heure-aller');if(lh)lh.textContent=soloRec?'Heure atterrissage':'Heure aller';
+  const lk=g('lbl-dist-aller');if(lk)lk.textContent=soloRec?'Distance retour (km)':'Distance aller (km)';
   showClientAddrBtns();
 }
 // ===== NOTIFICATIONS PUSH =====
