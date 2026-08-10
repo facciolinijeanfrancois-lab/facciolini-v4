@@ -617,8 +617,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="res-section">
     <div class="res-section-title">🚗 Véhicule & passagers</div>
     <div class="fr">
-      <div class="fg"><label class="fl">Véhicule</label><select class="fs" id="r-vehicule"><option value="0">🚗 Seat Leon</option><option value="1">🚐 Talento (+20€)</option></select></div>
-      <div class="fg"><label class="fl">Passagers</label><input type="number" class="fi" id="r-passagers" value="1" min="1" max="8"></div>
+      <div class="fg"><label class="fl">Véhicule</label><select class="fs" id="r-vehicule" onchange="checkCapaciteApp()"><option value="0">🚗 Seat Leon</option><option value="1">🚐 Talento (+20€)</option></select></div>
+      <div class="fg"><label class="fl">Passagers</label><input type="number" class="fi" id="r-passagers" value="1" min="1" max="8" oninput="checkCapaciteApp()"></div>
+      <div id="r-capacite-hint" style="display:none;font-size:0.78rem;margin:-6px 0 12px;padding:8px 10px;border-radius:8px"></div>
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">🧳 Bagages</label><input type="number" class="fi" id="r-bagages" value="0" min="0" max="20" oninput="updVehiculeAuto()"></div>
@@ -1825,6 +1826,7 @@ function resetResForm(){
   const volInp=g('r-vol');if(volInp)volInp.value='';
   const volRetInp=g('r-vol-retour');if(volRetInp)volRetInp.value='';
   const volRetJourInp=g('r-vol-retour-jour');if(volRetJourInp)volRetJourInp.value='';
+  const capHint=g('r-capacite-hint');if(capHint){capHint.style.display='none';capHint.textContent='';}
   updVolField();
   const saveBtn=g('res-btn-save');if(saveBtn){saveBtn.textContent='✓ Enregistrer';saveBtn.onclick=saveReservation;}
 }
@@ -1961,6 +1963,28 @@ function computeDevisPour(type){
   const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
   let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
   return ps;
+}
+function checkCapaciteApp(){
+  const passagers=parseInt(g('r-passagers')?.value||1)||1;
+  const vehEl=g('r-vehicule');
+  const hint=g('r-capacite-hint');
+  if(!vehEl||!hint)return;
+  if(passagers>=4&&vehEl.value==='0'){
+    vehEl.value='1';
+    hint.style.display='block';
+    hint.style.background='rgba(240,165,0,0.12)';
+    hint.style.color='var(--gold2)';
+    hint.textContent='🚐 Minivan sélectionné automatiquement (4 passagers ou plus).';
+    updCalc();
+  } else if(passagers>=4&&vehEl.value==='1'){
+    hint.style.display='block';
+    hint.style.background='rgba(240,165,0,0.12)';
+    hint.style.color='var(--gold2)';
+    hint.textContent='🚐 Minivan requis pour '+passagers+' passagers.';
+  } else {
+    hint.style.display='none';
+    hint.textContent='';
+  }
 }
 function updCalc(){
   const dist=parseFloat(g('r-distance')?.value||0);
@@ -2327,7 +2351,7 @@ function editRes(id){
   if(r.type==='ar-diff')kmR+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);
   else if(r.type==='ar-jour')kmR+=parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);
   acC['kmC']=kmC;acC['kmR']=kmR;
-  updResType();toggleVmt();updVideAller();updVideRetour();updVolField();
+  updResType();toggleVmt();updVideAller();updVideRetour();updVolField();checkCapaciteApp();
   // Ouvrir options avancées si des infos avancées sont remplies
   const hasAdv=r.notes||r.notesInternes||r.langue!=='fr';
   if(hasAdv){const adv=g('res-advanced');if(adv)adv.style.display='block';const btn=g('btn-adv-toggle');if(btn)btn.textContent='⚙️ Masquer les options';}
@@ -2736,6 +2760,22 @@ function showLocalNotification(title, body, tag){
     tag: tag || 'fm', vibrate: [200,100,200]
   });
   notif.onclick = () => { window.focus(); notif.close(); };
+}
+
+function checkBackupReminder(){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const lastBk=localStorage.getItem('fm_last_backup');
+  const daysSince=lastBk?Math.round((Date.now()-parseInt(lastBk))/86400000):999;
+  if(daysSince<7)return;
+  const todayStr=new Date().toISOString().split('T')[0];
+  const lastNotif=localStorage.getItem('fm_last_backup_notif_date');
+  if(lastNotif===todayStr)return;
+  localStorage.setItem('fm_last_backup_notif_date',todayStr);
+  showLocalNotification(
+    '💾 Pensez à sauvegarder !',
+    lastBk?'Dernière sauvegarde il y a '+daysSince+' jours. Réglages > Données > Sauvegarder.':'Aucune sauvegarde n\'a jamais été faite. Réglages > Données > Sauvegarder.',
+    'fm-backup-reminder'
+  );
 }
 
 function testNotification(){
@@ -3749,6 +3789,7 @@ function selectChip(el,hiddenId,val){const c=el.closest('.chips');if(!c)return;c
 function setChips(contId,hiddenId,val){const c=g(contId);if(!c)return;c.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',(x.getAttribute('onclick')||'').includes("'"+val+"'")));const h=g(hiddenId);if(h)h.value=val;}
 load();
 if(!db.settings.pin)unlockApp();
+setTimeout(checkBackupReminder,3000);
 
 </script>
 
