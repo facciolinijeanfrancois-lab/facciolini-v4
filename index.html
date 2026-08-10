@@ -847,7 +847,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="overlay" id="m-objectif"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Objectif mensuel</div><div class="fg"><label class="fl">Objectif (&#x20ac;)</label><input type="number" class="fi" id="obj-val" placeholder="Ex: 2000"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-objectif')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveObj()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-home"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Adresse maison</div><div class="fg"><label class="fl">Domicile</label><div class="ac-wrap"><input type="text" class="fi" id="home-adr" placeholder="Tapez votre adresse..." autocomplete="off" oninput="acSearch(this,'ac-home','home')"><input type="hidden" id="home-lat"><input type="hidden" id="home-lon"><div class="ac-drop" id="ac-home"></div></div></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-home')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveHome()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-vehicle"><div class="modal"><div class="modal-handle"></div><div class="modal-title" id="vehicle-title">V&#xe9;hicule</div><input type="hidden" id="vehicle-idx"><div class="fg"><label class="fl">Nom</label><input type="text" class="fi" id="v-nom"></div><div class="fg"><label class="fl">Co&#xfb;t au km (&#x20ac;)</label><input type="number" class="fi" id="v-cout" step="0.01"></div><div class="fg"><label class="fl">Consommation (L/100km)</label><input type="number" class="fi" id="v-conso" step="0.1"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-vehicle')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveVehicle()">Enregistrer</button></div></div></div>
-<div class="overlay" id="m-tarifs"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Tarification</div><div class="fg"><label class="fl">Rayon local (km)</label><input type="number" class="fi" id="t-rayon" placeholder="Ex: 30"></div><div class="fg"><label class="fl">Tarif court (&#x20ac;/km)</label><input type="number" class="fi" id="t-court" step="0.01" placeholder="1.40"></div><div class="fg"><label class="fl">Tarif long (&#x20ac;/km)</label><input type="number" class="fi" id="t-long" step="0.01" placeholder="1.50"></div><div class="fg"><label class="fl">Prix minimum (&#x20ac;)</label><input type="number" class="fi" id="t-min" step="0.5" placeholder="50"></div><div class="fg"><label class="fl">Arrondi au (&#x20ac;)</label><input type="number" class="fi" id="t-round" step="1" placeholder="5"></div><div class="fg"><label class="fl">Suppl&#xe9;ment camionnette (&#x20ac;)</label><input type="number" class="fi" id="t-camion" step="0.5" placeholder="20"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-tarifs')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveTarifs()">Enregistrer</button></div></div></div>
+<div class="overlay" id="m-tarifs"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Tarification</div><div class="fg"><label class="fl">Rayon local (km)</label><input type="number" class="fi" id="t-rayon" placeholder="Ex: 30"></div><div class="fg"><label class="fl">Tarif court (&#x20ac;/km)</label><input type="number" class="fi" id="t-court" step="0.01" placeholder="1.40"></div><div class="fg"><label class="fl">Tarif long (&#x20ac;/km)</label><input type="number" class="fi" id="t-long" step="0.01" placeholder="1.50"></div><div class="fg"><label class="fl">Prix minimum (&#x20ac;)</label><input type="number" class="fi" id="t-min" step="0.5" placeholder="50"></div><div class="fg"><label class="fl">Arrondi au (&#x20ac;)</label><input type="number" class="fi" id="t-round" step="1" placeholder="5"></div><div class="fg"><label class="fl">Suppl&#xe9;ment camionnette (&#x20ac;)</label><input type="number" class="fi" id="t-camion" step="0.5" placeholder="20"></div><div class="fg"><label class="fl">R&#xe9;duction automatique A/R (&#x20ac;)</label><input type="number" class="fi" id="t-remise-ar" step="0.5" placeholder="10"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-tarifs')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveTarifs()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-vip"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Programme VIP</div><div class="fr"><div class="fg"><label class="fl">Seuil (courses)</label><input type="number" class="fi" id="vip-seuil" min="1"></div><div class="fg"><label class="fl">R&#xe9;duction (%)</label><input type="number" class="fi" id="vip-reduc" min="1" max="50"></div></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-vip')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveVip()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-charge"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Charge fixe mensuelle</div><div class="fg"><label class="fl">Nom</label><input type="text" class="fi" id="ch-nom" placeholder="Ex: Assurance TL..."></div><div class="fg"><label class="fl">Montant mensuel (&#x20ac;)</label><input type="number" class="fi" id="ch-montant" step="0.01"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-charge')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveCharge()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-entretien"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Entretien v&#xe9;hicule</div><div class="fg"><label class="fl">Type</label><input type="text" class="fi" id="ent-type" placeholder="Ex: Vidange, Pneus..."></div><div class="fr"><div class="fg"><label class="fl">Km actuel</label><input type="number" class="fi" id="ent-km-last" placeholder="Ex: 54000"></div><div class="fg"><label class="fl">Intervalle (km)</label><input type="number" class="fi" id="ent-intervalle" placeholder="Ex: 15000"></div></div><div class="fg"><label class="fl">Prochain entretien (date)</label><input type="date" class="fi" id="ent-date"></div><div class="fg"><label class="fl">Notes</label><textarea class="ft" id="ent-notes"></textarea></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-entretien')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveEntretien()">Enregistrer</button></div></div></div>
@@ -1962,6 +1962,7 @@ function computeDevisPour(type){
   else{pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion*(isAR?2:1);pb=Math.max(t.min,pb);}
   const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
   let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
+  if(isAR&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
   return ps;
 }
 function checkCapaciteApp(){
@@ -2014,9 +2015,9 @@ function updCalc(){
     sv('r-devis-price',ps+' €');
     const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
     if(prixFixe2!==null){
-      sv('r-devis-detail','Tarif fixe Carnières'+(prixFixe2>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe2+'€'+((type2==='ar-diff'||type2==='ar-jour')?' × 2 (A/R)':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':''));
+      sv('r-devis-detail','Tarif fixe Carnières'+(prixFixe2>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe2+'€'+((type2==='ar-diff'||type2==='ar-jour')?' × 2 (A/R)':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+((type2==='ar-diff'||type2==='ar-jour')&&t.remiseAR?' · Remise A/R -'+t.remiseAR+'€':''));
     }else{
-      sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+(t.camion*(isAR?2:1))+'€'+(isAR?' (Talento ×2)':''):'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
+      sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+(t.camion*((type2==='ar-diff'||type2==='ar-jour')?2:1))+'€'+((type2==='ar-diff'||type2==='ar-jour')?' (Talento ×2)':''):'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+((type2==='ar-diff'||type2==='ar-jour')&&t.remiseAR?' · Remise A/R -'+t.remiseAR+'€':'')+' · Arrondi '+t.round+'€');
     }
     acC['devis']=ps;
   }
@@ -3046,8 +3047,8 @@ function saveObj(){db.settings.objectif=parseFloat(g('obj-val').value)||2000;sav
 function saveHome(){const a=g('home-adr').value.trim();if(!a){alert('Adresse requise');return;}db.settings.homeAddress={adresse:a,lat:parseFloat(g('home-lat').value)||null,lon:parseFloat(g('home-lon').value)||null};save();closeModal('m-home');renderParams();}
 function openVehicleModal(idx){const v=db.settings.vehicles[idx];g('vehicle-idx').value=idx;sv('vehicle-title',idx===0?'🚗 Seat Leon':'🚐 Talento');g('v-nom').value=v.nom||'';g('v-cout').value=v.cout||'';g('v-conso').value=v.conso||'';openModal('m-vehicle');}
 function saveVehicle(){const idx=parseInt(g('vehicle-idx').value);db.settings.vehicles[idx]={nom:g('v-nom').value,cout:parseFloat(g('v-cout').value)||0.30,conso:parseFloat(g('v-conso').value)||5};save();closeModal('m-vehicle');renderParams();}
-function openTarifModal(){const t=db.settings.tarifs;g('t-rayon').value=t.rayon;g('t-court').value=t.court;g('t-long').value=t.long;g('t-min').value=t.min;g('t-round').value=t.round||5;g('t-camion').value=t.camion||20;openModal('m-tarifs');}
-function saveTarifs(){db.settings.tarifs={rayon:parseInt(g('t-rayon').value)||30,court:parseFloat(g('t-court').value)||1.50,long:parseFloat(g('t-long').value)||1.50,min:parseFloat(g('t-min').value)||60,round:parseInt(g('t-round').value)||5,camion:parseFloat(g('t-camion').value)||20};save();closeModal('m-tarifs');renderParams();}
+function openTarifModal(){const t=db.settings.tarifs;g('t-rayon').value=t.rayon;g('t-court').value=t.court;g('t-long').value=t.long;g('t-min').value=t.min;g('t-round').value=t.round||5;g('t-camion').value=t.camion||20;g('t-remise-ar').value=t.remiseAR||0;openModal('m-tarifs');}
+function saveTarifs(){db.settings.tarifs={rayon:parseInt(g('t-rayon').value)||30,court:parseFloat(g('t-court').value)||1.50,long:parseFloat(g('t-long').value)||1.50,min:parseFloat(g('t-min').value)||60,round:parseInt(g('t-round').value)||5,camion:parseFloat(g('t-camion').value)||20,remiseAR:parseFloat(g('t-remise-ar').value)||0};save();closeModal('m-tarifs');renderParams();}
 function openVipModal(){g('vip-seuil').value=db.settings.vip.seuil;g('vip-reduc').value=db.settings.vip.reduc;openModal('m-vip');}
 function saveVip(){db.settings.vip={seuil:parseInt(g('vip-seuil').value)||4,reduc:parseInt(g('vip-reduc').value)||10};save();closeModal('m-vip');renderAll();}
 function saveCharge(){const c={id:genId(),nom:g('ch-nom').value.trim(),montant:parseFloat(g('ch-montant').value)||0};if(!c.nom){alert('Nom requis');return;}db.charges.push(c);save();closeModal('m-charge');renderParams();}
@@ -3542,13 +3543,15 @@ async function calcDevis(){
       const dd=g('dv-detail');
       if(prixFixe!==null){
         ps=type==='ar'?prixFixe*2:prixFixe;
+        if(type==='ar'&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
         if(pr)pr.textContent=ps+' €';
-        if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixe>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe+'€'+(type==='ar'?' × 2 (A/R)':'');
+        if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixe>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe+'€'+(type==='ar'?' × 2 (A/R)':'')+((type==='ar'&&t.remiseAR)?' · Remise A/R -'+t.remiseAR+'€':'');
       }else{
         let pb=distTotal*tarif;if(isTalento)pb+=t.camion*(type==='ar'?2:1);pb=Math.max(t.min,pb);
         ps=roundTo(pb,t.round);
+        if(type==='ar'&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
         if(pr)pr.textContent=ps+' €';
-        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+(t.camion*(type==='ar'?2:1))+'€ Talento'+(type==='ar'?' (×2)':''):'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
+        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+(t.camion*(type==='ar'?2:1))+'€ Talento'+(type==='ar'?' (×2)':''):'')+((type==='ar'&&t.remiseAR)?' · Remise A/R -'+t.remiseAR+'€':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
       }
       acC['dv-km']=km;acC['dv-prix']=ps;acC['dv-tarif']=tarif;
     }else{
@@ -3558,9 +3561,10 @@ async function calcDevis(){
       const pr=g('dv-price');
       const dd=g('dv-detail');
       if(prixFixeF!==null){
-        const psF=typeF==='ar'?prixFixeF*2:prixFixeF;
+        let psF=typeF==='ar'?prixFixeF*2:prixFixeF;
+        const t2=db.settings.tarifs;if(typeF==='ar'&&t2.remiseAR)psF=Math.max(0,psF-t2.remiseAR);
         if(pr)pr.textContent=psF+' €';
-        if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixeF>=95?' → Zaventem':' → Charleroi')+' · '+prixFixeF+'€'+(typeF==='ar'?' × 2 (A/R)':'')+' (distance non calculée)';
+        if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixeF>=95?' → Zaventem':' → Charleroi')+' · '+prixFixeF+'€'+(typeF==='ar'?' × 2 (A/R)':'')+((typeF==='ar'&&t2.remiseAR)?' · Remise A/R -'+t2.remiseAR+'€':'')+' (distance non calculée)';
         acC['dv-prix']=psF;
       }else{
         if(pr)pr.textContent='—';
@@ -3573,10 +3577,11 @@ async function calcDevis(){
     const pr=g('dv-price');
     const dd=g('dv-detail');
     if(prixFixeF!==null){
-      const psF=typeF==='ar'?prixFixeF*2:prixFixeF;
+      let psF=typeF==='ar'?prixFixeF*2:prixFixeF;
+      const t2=db.settings.tarifs;if(typeF==='ar'&&t2.remiseAR)psF=Math.max(0,psF-t2.remiseAR);
       if(dkm)dkm.textContent='—';
       if(pr)pr.textContent=psF+' €';
-      if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixeF>=95?' → Zaventem':' → Charleroi')+' · '+prixFixeF+'€'+(typeF==='ar'?' × 2 (A/R)':'')+' (distance non calculée)';
+      if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixeF>=95?' → Zaventem':' → Charleroi')+' · '+prixFixeF+'€'+(typeF==='ar'?' × 2 (A/R)':'')+((typeF==='ar'&&t2.remiseAR)?' · Remise A/R -'+t2.remiseAR+'€':'')+' (distance non calculée)';
       acC['dv-prix']=psF;
     }else{
       if(dkm)dkm.textContent='Erreur calcul';
