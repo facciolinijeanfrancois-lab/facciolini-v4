@@ -1959,7 +1959,7 @@ function computeDevisPour(type){
   const distR2=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
   let pb;
   if(prixFixe!==null){pb=isAR?prixFixe*2:prixFixe;}
-  else{pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);}
+  else{pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion*(isAR?2:1);pb=Math.max(t.min,pb);}
   const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
   let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
   return ps;
@@ -2016,7 +2016,7 @@ function updCalc(){
     if(prixFixe2!==null){
       sv('r-devis-detail','Tarif fixe Carnières'+(prixFixe2>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe2+'€'+((type2==='ar-diff'||type2==='ar-jour')?' × 2 (A/R)':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':''));
     }else{
-      sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+t.camion+'€':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
+      sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+(t.camion*(isAR?2:1))+'€'+(isAR?' (Talento ×2)':''):'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
     }
     acC['devis']=ps;
   }
@@ -3545,10 +3545,10 @@ async function calcDevis(){
         if(pr)pr.textContent=ps+' €';
         if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixe>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe+'€'+(type==='ar'?' × 2 (A/R)':'');
       }else{
-        let pb=distTotal*tarif;if(isTalento)pb+=t.camion;pb=Math.max(t.min,pb);
+        let pb=distTotal*tarif;if(isTalento)pb+=t.camion*(type==='ar'?2:1);pb=Math.max(t.min,pb);
         ps=roundTo(pb,t.round);
         if(pr)pr.textContent=ps+' €';
-        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+t.camion+'€ Talento':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
+        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+(t.camion*(type==='ar'?2:1))+'€ Talento'+(type==='ar'?' (×2)':''):'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
       }
       acC['dv-km']=km;acC['dv-prix']=ps;acC['dv-tarif']=tarif;
     }else{
