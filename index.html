@@ -2084,6 +2084,7 @@ function genResSummary(){
   const encA=type==='ar-diff'?(acompte>0?Math.min(acompte,netS):Math.round(netS/2*100)/100):netS;
   const encR=type==='ar-diff'?Math.max(0,Math.round((netS-encA)*100)/100):0;
   const tLabel={aller:'Aller simple','ar-jour':'A/R même jour','ar-diff':'A/R date différente'}[type];
+  const isAR=type==='ar-diff'||type==='ar-jour';
   const kmC=acC['kmC']||0,kmR=acC['kmR']||0;
   const vidx=parseInt(g('r-vehicule')?.value||0),v=getV(vidx);
   const p=parseFloat(g('r-peages')?.value||0)+parseFloat(g('r-parking')?.value||0);
@@ -2094,7 +2095,7 @@ function genResSummary(){
   const volRetour=(type==='ar-diff'?(g('r-vol-retour')?.value||''):type==='ar-jour'?(g('r-vol-retour-jour')?.value||''):'').toUpperCase();
   const nomC=g('r-client-nom').value;
   const rs=g('res-summary');
-  if(rs)rs.innerHTML='<div class="dr"><span class="dr-label">Client</span><span class="dr-val">'+nomC+(isVip(nomC)?' ⭐':'')+'</span></div><div class="dr"><span class="dr-label">Source</span><span class="dr-val">'+(source==='direct'?'Direct':'🤝 '+source)+'</span></div>'+(source!=='direct'?'<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">'+(pt==='commission'?'Commission -'+fmt(comm):'Prépayé')+'</span></div>':'')+'<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div><div class="dr"><span class="dr-label">Date aller</span><span class="dr-val">'+g('r-date-aller').value+' '+g('r-heure-aller').value+'</span></div>'+(type==='ar-diff'?'<div class="dr"><span class="dr-label">Date retour</span><span class="dr-val">'+(dateRet||'—')+' '+heureRet+'</span></div>':'')+'<div class="dr"><span class="dr-label">Trajet aller</span><span class="dr-val">'+dep.substring(0,20)+' → '+arr.substring(0,20)+'</span></div>'+(type==='ar-diff'?'<div class="dr"><span class="dr-label">Trajet retour</span><span class="dr-val">'+depRet.substring(0,20)+' → '+arrRet.substring(0,20)+'</span></div>':'')+'<div class="dr"><span class="dr-label">Km facturés</span><span class="dr-val c-blue">'+fmtKm(kmC)+'</span></div><div class="dr"><span class="dr-label">Km réels</span><span class="dr-val c-purple">'+fmtKm(kmR)+'</span></div><div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-family:\'Playfair Display\',serif;font-size:1rem">'+fmt(prix)+'</span></div>'+(type==='ar-diff'?'<div class="pay-split pay-aller" style="margin:4px 0">✅ À l\'aller : <b>'+fmt(encA)+'</b></div><div class="pay-split pay-retour" style="margin:4px 0">⏳ Au retour : <b>'+fmt(encR)+'</b></div>':'')+'<div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'">'+fmt(benef)+'</span></div><div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
+  if(rs)rs.innerHTML='<div class="dr"><span class="dr-label">Client</span><span class="dr-val">'+nomC+(isVip(nomC)?' ⭐':'')+'</span></div><div class="dr"><span class="dr-label">Source</span><span class="dr-val">'+(source==='direct'?'Direct':'🤝 '+source)+'</span></div>'+(source!=='direct'?'<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">'+(pt==='commission'?'Commission -'+fmt(comm):'Prépayé')+'</span></div>':'')+'<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div><div class="dr"><span class="dr-label">Date aller</span><span class="dr-val">'+g('r-date-aller').value+' '+g('r-heure-aller').value+'</span></div>'+(isAR?'<div class="dr"><span class="dr-label">Date retour</span><span class="dr-val">'+(dateRet||'—')+' '+heureRet+'</span></div>':'')+'<div class="dr"><span class="dr-label">Trajet aller</span><span class="dr-val">'+dep.substring(0,20)+' → '+arr.substring(0,20)+'</span></div>'+(isAR?'<div class="dr"><span class="dr-label">Trajet retour</span><span class="dr-val">'+depRet.substring(0,20)+' → '+arrRet.substring(0,20)+'</span></div>':'')+'<div class="dr"><span class="dr-label">Km facturés</span><span class="dr-val c-blue">'+fmtKm(kmC)+'</span></div><div class="dr"><span class="dr-label">Km réels</span><span class="dr-val c-purple">'+fmtKm(kmR)+'</span></div><div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-family:\'Playfair Display\',serif;font-size:1rem">'+fmt(prix)+'</span></div>'+(type==='ar-diff'?'<div class="pay-split pay-aller" style="margin:4px 0">✅ À l\'aller : <b>'+fmt(encA)+'</b></div><div class="pay-split pay-retour" style="margin:4px 0">⏳ Au retour : <b>'+fmt(encR)+'</b></div>':'')+'<div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'">'+fmt(benef)+'</span></div><div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
   const date=g('r-date-aller').value?new Date(g('r-date-aller').value).toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}):'';
   const heure=g('r-heure-aller').value||'',lang=g('r-langue').value||'fr';
   const fmtDL=(ds,hs)=>ds?new Date(ds).toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})+' à '+hs:'';
@@ -2398,6 +2399,7 @@ function sendRappel(id,sens){
     msg+='🚗 Pickup: '+dep+'\n';
     msg+='📍 Drop-off: '+arr+'\n';
     if(r.vol)msg+='✈️ Flight: '+r.vol+'\n';
+    if(r.type==='ar-jour'&&r.heureRetour)msg+='\n🛬 Return pickup same day: '+r.heureRetour+(r.volRetour?' (flight '+r.volRetour+')':'')+'\n';
     if(solde>0)msg+='\n💶 Balance to pay on arrival: '+fmt(solde)+'\n';
     msg+='\nSee you soon!\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');
   } else if(lang==='nl'){
@@ -2407,6 +2409,7 @@ function sendRappel(id,sens){
     msg+='🚗 Ophalen: '+dep+'\n';
     msg+='📍 Bestemming: '+arr+'\n';
     if(r.vol)msg+='✈️ Vlucht: '+r.vol+'\n';
+    if(r.type==='ar-jour'&&r.heureRetour)msg+='\n🛬 Terugreis ophalen zelfde dag: '+r.heureRetour+(r.volRetour?' (vlucht '+r.volRetour+')':'')+'\n';
     if(solde>0)msg+='\n💶 Saldo te betalen bij aankomst: '+fmt(solde)+'\n';
     msg+='\nTot binnenkort!\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');
   } else {
@@ -2416,6 +2419,7 @@ function sendRappel(id,sens){
     msg+='🚗 Départ : '+dep+'\n';
     msg+='📍 Arrivée : '+arr+'\n';
     if(r.vol)msg+='✈️ Vol : '+r.vol+'\n';
+    if(r.type==='ar-jour'&&r.heureRetour)msg+='\n🛬 Récupération retour (même jour) : '+r.heureRetour+(r.volRetour?' (vol '+r.volRetour+')':'')+'\n';
     if(solde>0)msg+='\n💶 Solde à régler à l\'arrivée : '+fmt(solde)+'\n';
     msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');
   }
