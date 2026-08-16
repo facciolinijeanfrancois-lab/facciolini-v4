@@ -1959,7 +1959,7 @@ function computeDevisPour(type){
   const distR2=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
   let pb;
   if(prixFixe!==null){pb=isAR?prixFixe*2:prixFixe;}
-  else{pb=(dist+distR2)*tarif;if(isTalento)pb+=t.camion*(isAR?2:1);pb=Math.max(t.min,pb);}
+  else{const pA=Math.max(t.min,dist*tarif);const pR=isAR?Math.max(t.min,(distR2||dist)*tarif):0;pb=pA+pR;if(isTalento)pb+=t.camion*(isAR?2:1);}
   const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
   let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
   if(isAR&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
@@ -3547,7 +3547,7 @@ async function calcDevis(){
         if(pr)pr.textContent=ps+' €';
         if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixe>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe+'€'+(type==='ar'?' × 2 (A/R)':'')+((type==='ar'&&t.remiseAR)?' · Remise A/R -'+t.remiseAR+'€':'');
       }else{
-        let pb=distTotal*tarif;if(isTalento)pb+=t.camion*(type==='ar'?2:1);pb=Math.max(t.min,pb);
+        const pA=Math.max(t.min,km*tarif);const pR=type==='ar'?Math.max(t.min,km*tarif):0;let pb=pA+pR;if(isTalento)pb+=t.camion*(type==='ar'?2:1);
         ps=roundTo(pb,t.round);
         if(type==='ar'&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
         if(pr)pr.textContent=ps+' €';
