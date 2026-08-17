@@ -279,6 +279,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="chip" onclick="setResFilter('today',this)">Aujourd&#x27;hui</div>
     <div class="chip" onclick="setResFilter('veille',this)">&#x1f514; Veille J-1</div>
     <div class="chip" onclick="setResFilter('j7',this)">&#x1f4e8; 7 prochains jours</div>
+  </div>
+  <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
+    <div class="chip" onclick="openRelanceJ7()" style="background:var(--gold);color:#000;font-weight:700">&#x1f4e8; Relances J-7 <span id="chip-relance-count"></span></div>
     <div class="chip" onclick="setResFilter('mois',this)">&#x1f5d3;&#xfe0f; Ce mois</div>
     <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
   </div>
@@ -1299,6 +1302,7 @@ function renderDash(){
   else if(sEl)sEl.innerHTML='';
 }
 function renderRes(){
+  try{if(typeof majBadgeRelance==='function')majBadgeRelance();}catch(e){}
   var sv2=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
   sv2('res-month',MOIS[curMonth]+' '+curYear);
   var today=new Date();today.setHours(0,0,0,0);
@@ -2400,10 +2404,7 @@ function setStatut(id,statut){
   showToast(labels[statut]);
   renderDash();renderRes();
 }
-function sendRappel(id,sens){
-  var r=db.reservations.find(function(x){return x.id===id;});
-  if(!r)return;
-  trackUsage('rappel:'+sens);
+function buildMsgRappel(r,sens){
   var isRetour=sens==='retour'&&r.type==='ar-diff'&&r.dateRetour;
   var lang=r.langue||'fr';
   var date=new Date(r.dateAller);
@@ -2485,9 +2486,20 @@ function sendRappel(id,sens){
       msg+='\nÀ bientôt !\nFacciolini Mobility 🚗\n📞 '+MOI.tel+(isVip(r.clientNom)?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');
     }
   }
+  return msg;
+}
+
+function sendRappel(id,sens){
+  var r=db.reservations.find(function(x){return x.id===id;});
+  if(!r)return;
+  trackUsage('rappel:'+sens);
+  var isRetour=sens==='retour'&&r.type==='ar-diff'&&r.dateRetour;
+  var diff=Math.round((new Date(r.dateAller).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
+  var diffRet=(r.type==='ar-diff'&&r.dateRetour)?Math.round((new Date(r.dateRetour).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000):undefined;
+  var msg=buildMsgRappel(r,sens);
   var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
   var isJ7=isRetour?(typeof diffRet!=='undefined'&&diffRet>3):(diff>3);
-  var champRappel=isJ7?'rappelJ7Envoye':'rappelEnvoye';
+  var champRappel=isJ7?(isRetour?'rappelJ7RetourEnvoye':'rappelJ7Envoye'):'rappelEnvoye';
   var existing=document.getElementById('rappel-choice-popup');
   if(existing)existing.remove();
   var popup=document.createElement('div');
@@ -4049,6 +4061,122 @@ function applyUpdate(){
     window._pendingSW.postMessage('skipWaiting');
   }
   document.getElementById('update-banner')?.remove();
+}
+</script>
+
+<script>
+/* ===== RELANCE GROUPEE J-7 ===== */
+function getRelancesJ7(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var out=[];
+  db.reservations.forEach(function(r){
+    if(r.statut==='annule')return;
+    var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);
+    var dj=Math.round((dA-today)/86400000);
+    if(dj>3&&dj<=10&&!r.rappelJ7Envoye) out.push({r:r,sens:'aller',jours:dj,date:dA});
+    if(r.type==='ar-diff'&&r.dateRetour){
+      var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);
+      var djr=Math.round((dR-today)/86400000);
+      if(djr>3&&djr<=10&&!r.rappelJ7RetourEnvoye) out.push({r:r,sens:'retour',jours:djr,date:dR});
+    }
+  });
+  out.sort(function(a,b){return a.jours-b.jours;});
+  return out;
+}
+
+function majBadgeRelance(){
+  var el=document.getElementById('chip-relance-count');
+  if(!el)return;
+  var n=getRelancesJ7().length;
+  el.textContent=n?'('+n+')':'';
+}
+
+function openRelanceJ7(){
+  var list=getRelancesJ7();
+  var ex=document.getElementById('relance-j7-overlay');
+  if(ex)ex.remove();
+  var ov=document.createElement('div');
+  ov.id='relance-j7-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:var(--bg,#111);z-index:9998;overflow-y:auto;-webkit-overflow-scrolling:touch';
+
+  var html='<div style="padding:18px 16px 40px;max-width:600px;margin:0 auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
+    +'<div style="font-size:1.15rem;font-weight:800">&#x1f4e8; Relances J-7</div>'
+    +'<button onclick="closeRelanceJ7()" style="background:var(--border);color:var(--text2);border:none;border-radius:12px;padding:8px 16px;font-size:0.9rem;cursor:pointer">Fermer</button>'
+    +'</div>'
+    +'<div style="font-size:0.78rem;color:var(--text3);margin-bottom:16px">Courses entre 4 et 10 jours, pas encore relanc&eacute;es. Un appui par client.</div>';
+
+  if(!list.length){
+    html+='<div style="text-align:center;padding:50px 20px;color:var(--text3)">'
+      +'<div style="font-size:2.4rem;margin-bottom:12px">&#x2705;</div>'
+      +'<div style="font-weight:700;margin-bottom:6px">Tout est relanc&eacute;</div>'
+      +'<div style="font-size:0.82rem">Aucun client &agrave; recontacter pour l\'instant.</div></div>';
+  } else {
+    html+='<div id="relance-list">';
+    list.forEach(function(it){
+      var r=it.sens==='retour'?it.r:it.r;
+      var titre=(it.sens==='retour'?'&#x1f6ec; Retour':'&#x1f6eb; Aller');
+      var dstr=it.date.toLocaleDateString('fr-BE',{weekday:'short',day:'numeric',month:'short'});
+      var heure=it.sens==='retour'?(r.heureRetour||''):(r.heure||'');
+      var trajet=it.sens==='retour'?((r.departRetour||r.arrivee||'')+' &rarr; '+(r.arriveeRetour||r.depart||'')):((r.depart||'')+' &rarr; '+(r.arrivee||''));
+      html+='<div class="card" id="relance-card-'+r.id+'-'+it.sens+'" style="margin-bottom:12px;padding:14px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">'
+        +'<div style="font-weight:700;font-size:0.98rem">'+(r.clientNom||'—')+'</div>'
+        +'<div style="font-size:0.72rem;background:var(--gold);color:#000;border-radius:20px;padding:3px 10px;font-weight:700;white-space:nowrap">J-'+it.jours+'</div>'
+        +'</div>'
+        +'<div style="font-size:0.78rem;color:var(--text3);margin-bottom:3px">'+titre+' &middot; '+dstr+(heure?' &agrave; '+heure:'')+'</div>'
+        +'<div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px">'+trajet+'</div>'
+        +'<div style="display:flex;gap:8px">'
+        +'<button onclick="relanceEnvoyer(\''+r.id+'\',\''+it.sens+'\')" style="flex:1;padding:11px;background:#25D366;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:0.88rem;cursor:pointer">&#x1f4f1; Envoyer</button>'
+        +'<button onclick="relanceMarquer(\''+r.id+'\',\''+it.sens+'\')" style="padding:11px 14px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:0.82rem;cursor:pointer" title="Marquer comme fait sans envoyer">&#x2713;</button>'
+        +'</div></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  ov.innerHTML=html;
+  document.body.appendChild(ov);
+}
+
+function closeRelanceJ7(){
+  var ov=document.getElementById('relance-j7-overlay');
+  if(ov)ov.remove();
+  majBadgeRelance();
+  renderRes();
+}
+
+/* Marque comme relance + retire visuellement la carte */
+function relanceMarquer(id,sens,silencieux){
+  var idx=db.reservations.findIndex(function(x){return x.id===id;});
+  if(idx===-1)return;
+  var champ=sens==='retour'?'rappelJ7RetourEnvoye':'rappelJ7Envoye';
+  db.reservations[idx][champ]=new Date().toISOString();
+  save();
+  var card=document.getElementById('relance-card-'+id+'-'+sens);
+  if(card){
+    card.style.transition='opacity .25s,transform .25s';
+    card.style.opacity='0.35';
+    card.style.transform='scale(0.97)';
+    var btns=card.querySelectorAll('button');
+    btns.forEach(function(b){b.disabled=true;b.style.cursor='default';});
+    var done=document.createElement('div');
+    done.style.cssText='margin-top:8px;font-size:0.8rem;color:var(--green2,#3ecf8e);font-weight:700;text-align:center';
+    done.innerHTML='&#x2705; Message envoy&eacute; &mdash; '+new Date().toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
+    card.appendChild(done);
+  }
+  majBadgeRelance();
+}
+
+/* Ouvre WhatsApp avec le message pre-rempli, puis marque comme fait */
+function relanceEnvoyer(id,sens){
+  var r=db.reservations.find(function(x){return x.id===id;});
+  if(!r)return;
+  trackUsage('rappel:'+sens);
+  var msg=buildMsgRappel(r,sens);
+  var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
+  var url=tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+  relanceMarquer(id,sens);
 }
 </script>
 </body>
