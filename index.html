@@ -2093,6 +2093,16 @@ function saveReservationCore(){
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
     duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90)
   };
+  try{
+    var _cf=detecterConflits(r,editId);
+    if(_cf.length){
+      var _grave=_cf.some(function(x){return x.type==='chevauchement';});
+      var _txt=(_grave?'⚠️ CONFLIT D\'HORAIRE':'⏱️ Créneau serré')+'\n\nCette course entre en conflit avec :'+messageConflits(_cf)
+        +'\n\n'+(_grave?'Deux courses se chevauchent — vous ne pourrez pas assurer les deux.':'Moins de 20 minutes de battement.')
+        +'\n\nEnregistrer quand même ?';
+      if(!confirm(_txt)){if(saveBtn)saveBtn.disabled=false;return;}
+    }
+  }catch(e){console.error('conflits:',e);}
   if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;trackUsage('reservation-modifiee');}else{db.reservations.push(r);trackUsage('reservation-nouvelle');}
   if(r.stopNom||r.stopAdresse)trackUsage('2eme-passager');
   save();
@@ -2672,8 +2682,48 @@ function loadNotifSettings(){
   if(h2) h2.value = ns.matinHeure || '07:00';
 }
 
+function rattraperNotifsManquees(){
+  /* Les setTimeout meurent quand l'app est fermee : au retour, on affiche
+     ce qui aurait du etre notifie et ne l'a pas ete. */
+  try{
+    if(!('Notification' in window) || Notification.permission!=='granted') return;
+    var ns=db.settings.notifs||{};
+    if(!ns.j1 && !ns.matin) return;
+    var vues=JSON.parse(localStorage.getItem('fm_notifs_vues')||'{}');
+    var today=new Date(); today.setHours(0,0,0,0);
+    var now=new Date();
+    var aSignaler=[];
+    db.reservations.forEach(function(r){
+      if(r.statut==='annule') return;
+      var dA=new Date(r.dateAller); dA.setHours(0,0,0,0);
+      var dj=Math.round((dA-today)/86400000);
+      if(ns.matin && dj===0){
+        var hm=(ns.matinHeure||'07:00').split(':');
+        var t=new Date(); t.setHours(parseInt(hm[0],10),parseInt(hm[1],10),0,0);
+        var k=r.id+'-matin-'+dA.getTime();
+        if(now>=t && !vues[k]){ aSignaler.push({r:r,k:k,quand:"aujourd'hui"}); }
+      }
+      if(ns.j1 && dj===1){
+        var hj=(ns.j1Heure||'20:00').split(':');
+        var t2=new Date(); t2.setHours(parseInt(hj[0],10),parseInt(hj[1],10),0,0);
+        var k2=r.id+'-j1-'+dA.getTime();
+        if(now>=t2 && !vues[k2]){ aSignaler.push({r:r,k:k2,quand:'demain'}); }
+      }
+    });
+    aSignaler.forEach(function(it){
+      vues[it.k]=Date.now();
+      showLocalNotification('🚗 Course '+it.quand+' !',
+        (it.r.heure||'')+' · '+(it.r.clientNom||'')+' · '+(it.r.depart||'').substring(0,30), it.r.id);
+    });
+    /* purge des cles de plus de 30 jours */
+    Object.keys(vues).forEach(function(k){ if(Date.now()-vues[k]>2592000000) delete vues[k]; });
+    localStorage.setItem('fm_notifs_vues',JSON.stringify(vues));
+  }catch(e){console.error('rattrapage notifs:',e);}
+}
+
 function scheduleAllNotifications(){
   if(Notification.permission !== 'granted') return;
+  rattraperNotifsManquees();
   const ns = db.settings.notifs || {};
   const now = new Date();
   const today = new Date(); today.setHours(0,0,0,0);
@@ -3286,7 +3336,7 @@ function genNoteFrais(){
 }
 function exportNoteCSV(){const res=getMonthResAller(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
-function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
+function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());try{if(typeof majBanniereSauvegarde==='function')setTimeout(majBanniereSauvegarde,300);}catch(e){}const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+new Date().toISOString().split('T')[0]+'.json';a.click();}
 function resetApp(){
   if(!confirm("Effacer TOUTES les données (ancienne et nouvelle app) ?\n\nCette action est irréversible."))return;
   if(!confirm("Dernière confirmation — tout sera supprimé."))return;
@@ -3971,6 +4021,16 @@ setTimeout(checkBackupReminder,3000);
 
 <script>
 // Service Worker - mise à jour automatique
+/* Persistance du stockage + controle de sauvegarde au demarrage */
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    try{
+      assurerPersistance();
+      if(typeof rattraperNotifsManquees==='function') rattraperNotifsManquees();
+    }catch(e){console.error('init persistance:',e);}
+  }, 1200);
+});
+
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').then(reg => {
     // Vérifier les mises à jour toutes les 30 min
@@ -4177,6 +4237,141 @@ function relanceEnvoyer(id,sens){
   var url=tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg);
   window.open(url,'_blank');
   relanceMarquer(id,sens);
+}
+</script>
+
+<script>
+/* ============================================================
+   1. PERSISTANCE DU STOCKAGE
+   Sans cette permission, le navigateur peut effacer les donnees
+   (Android sous pression memoire, Safari iOS apres 7 jours).
+   ============================================================ */
+async function assurerPersistance(){
+  var etat={supporte:false,persistant:false,usageMo:null,quotaMo:null};
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      etat.supporte=true;
+      etat.persistant=await navigator.storage.persisted();
+      if(!etat.persistant) etat.persistant=await navigator.storage.persist();
+    }
+    if(navigator.storage && navigator.storage.estimate){
+      var e=await navigator.storage.estimate();
+      etat.usageMo=(e.usage/1048576).toFixed(1);
+      etat.quotaMo=(e.quota/1048576).toFixed(0);
+    }
+  }catch(err){console.error('persistance:',err);}
+  window._persistState=etat;
+  majBanniereSauvegarde();
+  return etat;
+}
+
+/* ============================================================
+   2. SAUVEGARDE — banniere bloquante si trop ancienne
+   ============================================================ */
+function joursDepuisBackup(){
+  var t=parseInt(localStorage.getItem('fm_last_backup')||'0',10);
+  if(!t) return null;
+  return Math.floor((Date.now()-t)/86400000);
+}
+
+function majBanniereSauvegarde(){
+  var ex=document.getElementById('backup-warn-banner');
+  if(ex) ex.remove();
+  var j=joursDepuisBackup();
+  var p=window._persistState||{};
+  var jamais=(j===null);
+  if(!jamais && j<7 && p.persistant) return;
+
+  var grave=jamais||j>=14;
+  var b=document.createElement('div');
+  b.id='backup-warn-banner';
+  b.style.cssText='position:fixed;left:0;right:0;bottom:calc(var(--nav-h,64px) + 8px);z-index:9500;margin:0 12px;padding:12px 14px;border-radius:14px;font-size:0.8rem;line-height:1.45;box-shadow:0 6px 22px rgba(0,0,0,.45);'
+    +(grave?'background:#7f1d1d;color:#fff;border:1px solid #ef4444':'background:#78350f;color:#fff;border:1px solid #f59e0b');
+
+  var txt;
+  if(jamais) txt='<b>Aucune sauvegarde n\'a jamais &eacute;t&eacute; faite.</b><br>Vos donn&eacute;es n\'existent que sur cet appareil.';
+  else if(j>=7) txt='<b>Derni&egrave;re sauvegarde il y a '+j+' jours.</b><br>Pensez &agrave; exporter vos donn&eacute;es.';
+  else txt='<b>Stockage non prot&eacute;g&eacute;.</b><br>Le navigateur pourrait effacer vos donn&eacute;es.';
+
+  if(p.supporte && !p.persistant) txt+='<br><span style="opacity:.85">Stockage persistant refus&eacute; par le navigateur.</span>';
+
+  b.innerHTML='<div style="display:flex;gap:12px;align-items:center">'
+    +'<div style="flex:1">'+txt+'</div>'
+    +'<button onclick="exportBackup();majBanniereSauvegarde();" style="background:#fff;color:#111;border:none;border-radius:10px;padding:9px 14px;font-weight:800;font-size:0.78rem;white-space:nowrap;cursor:pointer">Sauvegarder</button>'
+    +'<button onclick="document.getElementById(\'backup-warn-banner\').remove()" style="background:transparent;color:#fff;border:none;font-size:1.1rem;cursor:pointer;padding:0 2px" aria-label="Fermer">&times;</button>'
+    +'</div>';
+  document.body.appendChild(b);
+}
+
+/* ============================================================
+   3. DETECTION DE CONFLITS D'HORAIRE
+   Evite d'accepter deux courses qui se chevauchent.
+   ============================================================ */
+var MARGE_MIN=20; /* minutes de battement minimum entre 2 courses */
+
+function _dureeEstimee(r,sens){
+  var dist=sens==='retour'?(parseFloat(r.distanceRetour)||parseFloat(r.distance)||0):(parseFloat(r.distance)||0);
+  var d=parseFloat(r.duree)||0;
+  if(d>0 && sens!=='retour') return d;
+  if(dist>0) return Math.round(dist/55*60)+15; /* 55 km/h moyen + 15 min sur place */
+  return 60;
+}
+
+function _creneaux(r){
+  var out=[];
+  function push(dateStr,heure,sens){
+    if(!dateStr||!heure) return;
+    var parts=String(heure).split(':');
+    if(parts.length<2) return;
+    var d=new Date(dateStr);
+    d.setHours(parseInt(parts[0],10),parseInt(parts[1],10),0,0);
+    var dur=_dureeEstimee(r,sens);
+    out.push({debut:d.getTime(),fin:d.getTime()+dur*60000,sens:sens});
+  }
+  push(r.dateAller,r.heure,'aller');
+  if(r.type==='ar-jour'&&r.heureRetour) push(r.dateAller,r.heureRetour,'retour');
+  if(r.type==='ar-diff'&&r.dateRetour&&r.heureRetour) push(r.dateRetour,r.heureRetour,'retour');
+  return out;
+}
+
+function detecterConflits(cible,ignoreId){
+  var conflits=[];
+  var cc=_creneaux(cible);
+  if(!cc.length) return conflits;
+  var vCible=cible.vehicule;
+  db.reservations.forEach(function(o){
+    if(o.statut==='annule') return;
+    if(ignoreId && o.id===ignoreId) return;
+    if(o.id===cible.id) return;
+    if(vCible!==undefined && o.vehicule!==undefined && o.vehicule!==vCible) return; /* vehicules differents = pas de conflit */
+    _creneaux(o).forEach(function(oc){
+      cc.forEach(function(x){
+        var ecart=Math.min(Math.abs(x.debut-oc.fin),Math.abs(oc.debut-x.fin));
+        var chevauche=(x.debut < oc.fin) && (oc.debut < x.fin);
+        if(chevauche || ecart < MARGE_MIN*60000){
+          conflits.push({
+            res:o, sensAutre:oc.sens, sensCible:x.sens,
+            type:chevauche?'chevauchement':'serre',
+            minutes:Math.round(ecart/60000)
+          });
+        }
+      });
+    });
+  });
+  return conflits;
+}
+
+function messageConflits(conflits){
+  var m='';
+  conflits.slice(0,4).forEach(function(cf){
+    var r=cf.res;
+    var d=new Date(cf.sensAutre==='retour'&&r.type==='ar-diff'?r.dateRetour:r.dateAller);
+    var h=cf.sensAutre==='retour'?(r.heureRetour||''):(r.heure||'');
+    m+='\n• '+(r.clientNom||'—')+' — '+d.toLocaleDateString('fr-BE',{day:'numeric',month:'short'})+' '+h
+      +(cf.type==='chevauchement'?'  (CHEVAUCHEMENT)':'  (seulement '+cf.minutes+' min d\'écart)');
+  });
+  if(conflits.length>4) m+='\n• … et '+(conflits.length-4)+' autre(s)';
+  return m;
 }
 </script>
 </body>
