@@ -1,5 +1,5 @@
-// Facciolini Mobility - Service Worker v6.1
-const CACHE_NAME = 'fm-v6-1';
+// Facciolini Mobility - Service Worker v6.2
+const CACHE_NAME = 'fm-v6-2';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -50,14 +50,10 @@ self.addEventListener('notificationclick', e => {
 
 self.addEventListener('message', e => {
   if(e.data === 'skipWaiting') self.skipWaiting();
-  // Planifier les notifications locales
-  if(e.data?.type === 'schedule-notifs'){
-    scheduleNotifications(e.data.courses, e.data.settings);
-  }
 });
 
-// Notification locale via setTimeout (fonctionne en arrière-plan)
-async function scheduleNotifications(courses, settings){
-  // Cette fonction est appelée depuis l'app principale
-  // Les notifs sont gérées côté client avec Notification API
-}
+/* Note : la planification des rappels se fait cote application.
+   Un Service Worker peut etre arrete a tout moment par le systeme,
+   il ne peut donc pas tenir de minuteries fiables.
+   Le rattrapage des rappels manques est assure par
+   rattraperNotifsManquees() a chaque ouverture de l'application. */
