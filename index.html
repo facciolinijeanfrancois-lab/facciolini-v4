@@ -1855,8 +1855,8 @@ function applyFavChip(favId,btn){
   const fm={'r-depart':['r-depart','r-dep-lat','r-dep-lon'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon']};
   const m=fm[role];if(!m)return;
   const e0=g(m[0]);if(e0)e0.value=f.adresse;if(f.lat){const e1=g(m[1]);if(e1)e1.value=f.lat;const e2=g(m[2]);if(e2)e2.value=f.lon;acC[role]={lat:f.lat,lon:f.lon};}
-  if((role==='r-depart'||role==='r-arrivee')&&acC['r-depart']&&acC['r-arrivee'])calcDist();
-  if((role==='r-depart-retour'||role==='r-arrivee-retour')&&acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();
+  if(role==='r-depart'||role==='r-arrivee')assurerDistanceAller();
+  if(role==='r-depart-retour'||role==='r-arrivee-retour')assurerDistanceRetour();
   setTimeout(()=>calcKmVideAuto(),300);
 }
 function updSourceUI(){const s=g('r-source').value;const ro=g('r-partner-opts');if(ro)ro.style.display=s!=='direct'?'block':'none';updCalc();}
@@ -2093,6 +2093,16 @@ function saveReservationCore(){
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
     duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90)
   };
+  try{
+    var _dist=parseFloat(r.distance||0);
+    var _fixe=(typeof getPrixFixeZone==='function')?getPrixFixeZone(r.depart||'',r.arrivee||'',r.vehicule===1):null;
+    if(_dist<=0 && _fixe===null && (r.depart||'').trim() && (r.arrivee||'').trim()){
+      if(!confirm('⚠️ DISTANCE À 0 km\n\nLes adresses sont remplies mais la distance n\'a pas pu être calculée.\n\nLe prix de '+(r.prix||0)+'€ repose donc uniquement sur le tarif minimum — il est probablement FAUX.\n\nConseil : sélectionnez les adresses dans la liste déroulante, ou entrez la distance à la main dans les options avancées.\n\nEnregistrer quand même ?')){
+        if(saveBtn)saveBtn.disabled=false;return;
+      }
+    }
+  }catch(e){console.error('garde distance:',e);}
+
   try{
     var _cf=detecterConflits(r,editId);
     if(_cf.length){
@@ -2607,7 +2617,8 @@ function fillClientAddrSimple(field){
   const acKey=field==='depart'?'r-depart':'r-arrivee';
   const otherKey=field==='depart'?'r-arrivee':'r-depart';
   g(inputId).value=c.adresse;
-  if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(acC[otherKey])calcDist();}
+  if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};const ids=(acKey==='r-depart')?['r-dep-lat','r-dep-lon']:['r-arr-lat','r-arr-lon'];if(g(ids[0]))g(ids[0]).value=c.lat;if(g(ids[1]))g(ids[1]).value=c.lon;}
+  assurerDistanceAller();
 }
 function updVolField(){
   const service=g('r-service')?.value||'depose';
@@ -3083,7 +3094,7 @@ function exportVCF(){
   setTimeout(()=>alert('📲 Fichier contact téléchargé !\n\nOuvre-le pour l\'ajouter à ton répertoire.'),300);
 }
 function acClient(input){const q=input.value.toLowerCase(),drop=g('ac-client-drop');if(q.length<2){drop.style.display='none';return;}const m=db.clients.filter(c=>!c.blacklist&&(c.nom.toLowerCase().includes(q)||(c.tel||'').includes(q))).slice(0,6);if(!m.length){drop.style.display='none';return;}drop.innerHTML=m.map(c=>'<div class="ac-item" onclick="fillClient(\''+c.id+'\')"><div class="ac-main">'+c.nom+(isVip(c.nom)?' ⭐':'')+'</div><div class="ac-sub">'+(c.tel||'')+(c.adresse?' · '+c.adresse.substring(0,30):'')+'</div></div>').join('');drop.style.display='block';}
-function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';const svc=g('r-service')?.value||'depose';const isRec=(svc==='recuperation');const addrField=isRec?'r-arrivee':'r-depart';const latField=isRec?'r-arr-lat':'r-dep-lat';const lonField=isRec?'r-arr-lon':'r-dep-lon';const acKey=isRec?'r-arrivee':'r-depart';const otherKey=isRec?'r-depart':'r-arrivee';if(c.adresse&&!g(addrField).value){g(addrField).value=c.adresse;if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(acC[otherKey])calcDist();}}updCalc();setTimeout(showClientAddrBtns,100);}
+function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';const svc=g('r-service')?.value||'depose';const isRec=(svc==='recuperation');const addrField=isRec?'r-arrivee':'r-depart';const latField=isRec?'r-arr-lat':'r-dep-lat';const lonField=isRec?'r-arr-lon':'r-dep-lon';const acKey=isRec?'r-arrivee':'r-depart';const otherKey=isRec?'r-depart':'r-arrivee';if(c.adresse&&!g(addrField).value){g(addrField).value=c.adresse;if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(g(latField))g(latField).value=c.lat;if(g(lonField))g(lonField).value=c.lon;}assurerDistanceAller();}updCalc();setTimeout(showClientAddrBtns,100);}
 function openFraisModal(editId){sv('frais-modal-title',editId?'Modifier frais':'Nouveau frais');g('frais-edit-id').value=editId||'';const f=editId?db.frais.find(x=>x.id===editId):null;g('frais-desc').value=f?.desc||'';g('frais-date').value=f?.date||new Date().toISOString().split('T')[0];g('frais-montant').value=f?.montant||'';g('frais-fournisseur').value=f?.fournisseur||'';setChips('frais-type-chips','frais-type',f?.type||'entretien');openModal('m-frais');}
 function saveFrais(){const editId=g('frais-edit-id').value;const f={id:editId||genId(),type:g('frais-type').value,desc:g('frais-desc').value.trim(),date:g('frais-date').value,montant:parseFloat(g('frais-montant').value)||0,fournisseur:g('frais-fournisseur').value.trim()};if(!f.montant||!f.date){alert('Date et montant requis');return;}if(editId){const i=db.frais.findIndex(x=>x.id===editId);if(i!==-1)db.frais[i]=f;}else db.frais.push(f);save();closeModal('m-frais');renderFin();}
 function openPartnerModal(editId){sv('partner-modal-title',editId?'Modifier partenaire':'Nouveau partenaire');g('partner-edit-id').value=editId||'';const p=editId?db.partners.find(x=>x.id===editId):null;g('p-nom').value=p?.nom||'';g('p-email').value=p?.email||'';g('p-tel').value=p?.tel||'';g('p-adresse').value=p?.adresse||'';g('p-tva').value=p?.tva||'';openModal('m-partner');}
@@ -3141,7 +3152,7 @@ function acSel(role,display,lat,lon){
     if(acC['dv-depart']&&acC['dv-arrivee'])calcDevis();
     return;
   }
-  const map={'r-depart':['r-depart','r-dep-lat','r-dep-lon','ac-r-dep'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon','ac-r-arr'],'r-stop-adresse':['r-stop-adresse','r-stop-lat','r-stop-lon','ac-r-stop'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','ac-r-dep-ret'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','ac-r-arr-ret'],'c-adresse':['c-adresse','c-lat','c-lon','ac-c-adr'],'home':['home-adr','home-lat','home-lon','ac-home'],'fav-addr':['fav-adresse','fav-lat','fav-lon','ac-fav']};const m=map[role];if(m){const e0=g(m[0]);if(e0)e0.value=display;const e1=g(m[1]);if(e1)e1.value=lat;const e2=g(m[2]);if(e2)e2.value=lon;const e3=g(m[3]);if(e3)e3.style.display='none';}if(role==='r-depart'||role==='r-arrivee'||role==='r-stop-adresse'){if(acC['r-depart']&&acC['r-arrivee'])calcDist();if(role==='r-depart')setTimeout(()=>calcKmPickupAuto(),300);}if(role==='r-depart-retour'||role==='r-arrivee-retour'){if(acC['r-depart-retour']&&acC['r-arrivee-retour'])calcDistRetour();}setTimeout(()=>calcKmVideAuto(),500);}
+  const map={'r-depart':['r-depart','r-dep-lat','r-dep-lon','ac-r-dep'],'r-arrivee':['r-arrivee','r-arr-lat','r-arr-lon','ac-r-arr'],'r-stop-adresse':['r-stop-adresse','r-stop-lat','r-stop-lon','ac-r-stop'],'r-depart-retour':['r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','ac-r-dep-ret'],'r-arrivee-retour':['r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','ac-r-arr-ret'],'c-adresse':['c-adresse','c-lat','c-lon','ac-c-adr'],'home':['home-adr','home-lat','home-lon','ac-home'],'fav-addr':['fav-adresse','fav-lat','fav-lon','ac-fav']};const m=map[role];if(m){const e0=g(m[0]);if(e0)e0.value=display;const e1=g(m[1]);if(e1)e1.value=lat;const e2=g(m[2]);if(e2)e2.value=lon;const e3=g(m[3]);if(e3)e3.style.display='none';}if(role==='r-depart'||role==='r-arrivee'||role==='r-stop-adresse'){assurerDistanceAller();if(role==='r-depart')setTimeout(()=>calcKmPickupAuto(),300);}if(role==='r-depart-retour'||role==='r-arrivee-retour'){assurerDistanceRetour();}setTimeout(()=>calcKmVideAuto(),500);}
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')&&!e.target.closest('#ac-client-drop')){document.querySelectorAll('.ac-drop').forEach(d=>d.style.display='none');const acd=g('ac-client-drop');if(acd)acd.style.display='none';}});
 async function calcDist(){clearTimeout(calcTimers['dist']);calcTimers['dist']=setTimeout(async function(){await _calcDist();},300);}
 async function _calcDist(){
@@ -4372,6 +4383,110 @@ function messageConflits(conflits){
   });
   if(conflits.length>4) m+='\n• … et '+(conflits.length-4)+' autre(s)';
   return m;
+}
+</script>
+
+<script>
+/* ============================================================
+   FIABILISATION DU CALCUL DE DISTANCE
+   Probleme corrige : le calcul ne partait que si les DEUX adresses
+   avaient deja des coordonnees en memoire (acC). Une adresse saisie
+   a la main, ou une fiche client sans coordonnees, laissait la
+   distance a 0 — et le prix retombait silencieusement sur le
+   plancher de 60 EUR.
+   ============================================================ */
+
+/* Geocode une adresse a la volee (meme service que l'autocompletion) */
+async function geocoderAdresse(txt){
+  if(!txt || txt.trim().length<3) return null;
+  try{
+    var homeLat=(db.settings.homeAddress&&db.settings.homeAddress.lat)||HOME_DEFAULT.lat;
+    var homeLon=(db.settings.homeAddress&&db.settings.homeAddress.lon)||HOME_DEFAULT.lon;
+    var url='https://photon.komoot.io/api/?q='+encodeURIComponent(txt.trim())
+      +'&limit=1&lang=fr&lat='+homeLat+'&lon='+homeLon
+      +'&location_bias_scale=0.2&bbox=-2.0,46.5,9.5,53.7';
+    var resp=await fetch(url);
+    var data=await resp.json();
+    var f=(data.features||[])[0];
+    if(!f) return null;
+    return {lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]};
+  }catch(e){ console.error('geocodage:',e); return null; }
+}
+
+/* Recupere les coordonnees d'un champ, dans l'ordre :
+   1) acC (autocompletion/favori)  2) champs caches lat/lon
+   3) fiche client correspondante  4) geocodage a la volee */
+async function coordsDuChamp(role){
+  var map={
+    'r-depart':['r-dep-lat','r-dep-lon'],
+    'r-arrivee':['r-arr-lat','r-arr-lon'],
+    'r-depart-retour':['r-dep-ret-lat','r-dep-ret-lon'],
+    'r-arrivee-retour':['r-arr-ret-lat','r-arr-ret-lon']
+  };
+  if(acC[role] && acC[role].lat) return acC[role];
+  var ids=map[role];
+  if(ids){
+    var la=parseFloat(g(ids[0])&&g(ids[0]).value), lo=parseFloat(g(ids[1])&&g(ids[1]).value);
+    if(la && lo){ acC[role]={lat:la,lon:lo}; return acC[role]; }
+  }
+  var txt=(g(role)&&g(role).value||'').trim();
+  if(!txt) return null;
+  /* fiche client : l'adresse correspond-elle ? */
+  var cl=(db.clients||[]).find(function(x){
+    return x.adresse && x.lat && x.lon && x.adresse.trim().toLowerCase()===txt.toLowerCase();
+  });
+  if(cl){
+    acC[role]={lat:cl.lat,lon:cl.lon};
+    if(ids){ if(g(ids[0]))g(ids[0]).value=cl.lat; if(g(ids[1]))g(ids[1]).value=cl.lon; }
+    return acC[role];
+  }
+  /* dernier recours : geocodage */
+  var geo=await geocoderAdresse(txt);
+  if(geo){
+    acC[role]=geo;
+    if(ids){ if(g(ids[0]))g(ids[0]).value=geo.lat; if(g(ids[1]))g(ids[1]).value=geo.lon; }
+    return geo;
+  }
+  return null;
+}
+
+/* Force le calcul aller : resout les coordonnees manquantes puis calcule */
+async function assurerDistanceAller(){
+  var dep=(g('r-depart')&&g('r-depart').value||'').trim();
+  var arr=(g('r-arrivee')&&g('r-arrivee').value||'').trim();
+  if(!dep||!arr) return;
+  var a=await coordsDuChamp('r-depart');
+  var b=await coordsDuChamp('r-arrivee');
+  if(a&&b){ calcDist(); }
+  setTimeout(avertirDistanceNulle,1800);
+}
+
+async function assurerDistanceRetour(){
+  var dep=(g('r-depart-retour')&&g('r-depart-retour').value||'').trim();
+  var arr=(g('r-arrivee-retour')&&g('r-arrivee-retour').value||'').trim();
+  if(!dep||!arr) return;
+  var a=await coordsDuChamp('r-depart-retour');
+  var b=await coordsDuChamp('r-arrivee-retour');
+  if(a&&b){ calcDistRetour(); }
+}
+
+/* Avertissement visible si la distance reste a 0 alors que
+   les deux adresses sont remplies */
+function avertirDistanceNulle(){
+  var w=document.getElementById('warn-dist-nulle');
+  if(w) w.remove();
+  var dep=(g('r-depart')&&g('r-depart').value||'').trim();
+  var arr=(g('r-arrivee')&&g('r-arrivee').value||'').trim();
+  var d=parseFloat(g('r-distance')&&g('r-distance').value||0);
+  if(!dep||!arr||d>0) return;
+  var champ=g('r-distance');
+  if(!champ||!champ.parentNode) return;
+  var el=document.createElement('div');
+  el.id='warn-dist-nulle';
+  el.style.cssText='margin-top:6px;padding:9px 11px;border-radius:10px;background:#7f1d1d;color:#fff;font-size:0.76rem;line-height:1.45';
+  el.innerHTML='&#9888;&#65039; <b>Distance introuvable.</b> Le prix calcul&eacute; ne serait pas fiable.<br>'
+    +'S&eacute;lectionnez les adresses dans la liste d&eacute;roulante, ou saisissez la distance &agrave; la main.';
+  champ.parentNode.appendChild(el);
 }
 </script>
 </body>
