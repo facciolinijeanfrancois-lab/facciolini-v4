@@ -341,6 +341,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="sec"><span class="sec-title">Frais exceptionnels</span><button class="btn btn-gold btn-sm" onclick="openFraisModal(null)">+ Ajouter</button></div>
   <div class="alert alert-blue" style="font-size:0.78rem">Pneus, contr&#xf4;le technique, entretien, lavage... Tous d&#xe9;ductibles et inclus dans le co&#xfb;t de revient.</div>
   <div id="frais-list"></div>
+  <div id="bloc-paiements"></div>
 </div>
 <div class="page" id="page-clients">
   <div class="sec" style="padding-top:8px"><span class="sec-title">Clients</span><button class="btn btn-gold btn-sm" onclick="openClientModal(null)">+ Nouveau</button></div>
@@ -794,6 +795,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="fr"><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="carb-date"></div><div class="fg"><label class="fl">Km compteur</label><input type="number" class="fi" id="carb-km" placeholder="Ex: 54219"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Litres</label><input type="number" class="fi" id="carb-litres" placeholder="Ex: 47.73" step="0.01"></div><div class="fg"><label class="fl">Prix total (&#x20ac;)</label><input type="number" class="fi" id="carb-prix" placeholder="Ex: 102.24" step="0.01"></div></div>
 <div class="fg"><label class="fl">Station</label><input type="text" class="fi" id="carb-station" placeholder="Q8, Total..."></div>
+<div class="fg"><label class="fl">Mode de paiement</label><div class="chips" id="carb-paiement-chips"><div class="chip" data-v="q8" onclick="setChips('carb-paiement-chips','carb-paiement','q8')">&#128179; Carte Q8</div><div class="chip" data-v="bancontact" onclick="setChips('carb-paiement-chips','carb-paiement','bancontact')">&#128179; Bancontact</div><div class="chip" data-v="cash" onclick="setChips('carb-paiement-chips','carb-paiement','cash')">&#128176; Cash</div><div class="chip" data-v="virement" onclick="setChips('carb-paiement-chips','carb-paiement','virement')">&#127974; Virement</div></div><input type="hidden" id="carb-paiement" value="q8"></div>
 <div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-carburant')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveCarb()">Enregistrer</button></div>
 </div></div>
 
@@ -831,6 +833,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="fg"><label class="fl">Description</label><input type="text" class="fi" id="frais-desc" placeholder="Ex: Changement 2 pneus avant"></div>
 <div class="fr"><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="frais-date"></div><div class="fg"><label class="fl">Montant (&#x20ac;)</label><input type="number" class="fi" id="frais-montant" placeholder="Ex: 280" step="0.01"></div></div>
 <div class="fg"><label class="fl">Fournisseur</label><input type="text" class="fi" id="frais-fournisseur" placeholder="Ex: Garage Dupont"></div>
+<div class="fg"><label class="fl">Mode de paiement</label><div class="chips" id="frais-paiement-chips"><div class="chip" data-v="q8" onclick="setChips('frais-paiement-chips','frais-paiement','q8')">&#128179; Carte Q8</div><div class="chip" data-v="bancontact" onclick="setChips('frais-paiement-chips','frais-paiement','bancontact')">&#128179; Bancontact</div><div class="chip" data-v="cash" onclick="setChips('frais-paiement-chips','frais-paiement','cash')">&#128176; Cash</div><div class="chip" data-v="virement" onclick="setChips('frais-paiement-chips','frais-paiement','virement')">&#127974; Virement</div></div><input type="hidden" id="frais-paiement" value="q8"></div>
 <div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-frais')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveFrais()">Enregistrer</button></div>
 </div></div>
 
@@ -1443,6 +1446,7 @@ function renderClients(){
   el.innerHTML=html;
 }
 function renderFin(){
+  try{if(typeof renderPaiements==='function')setTimeout(function(){renderPaiements('bloc-paiements',curYear,curMonth);},0);}catch(e){}
   sv('fin-month',MOIS[curMonth]+' '+curYear);
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
   const recettes=getCAMois(curMonth,curYear); // CA net proportionnel
@@ -3139,7 +3143,7 @@ function exportVCF(){
 function acClient(input){const q=input.value.toLowerCase(),drop=g('ac-client-drop');if(q.length<2){drop.style.display='none';return;}const m=db.clients.filter(c=>!c.blacklist&&(c.nom.toLowerCase().includes(q)||(c.tel||'').includes(q))).slice(0,6);if(!m.length){drop.style.display='none';return;}drop.innerHTML=m.map(c=>'<div class="ac-item" onclick="fillClient(\''+c.id+'\')"><div class="ac-main">'+escH(c.nom)+(isVip(c.nom)?' ⭐':'')+'</div><div class="ac-sub">'+(c.tel||'')+(c.adresse?' · '+escH(c.adresse).substring(0,30):'')+'</div></div>').join('');drop.style.display='block';}
 function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';const svc=g('r-service')?.value||'depose';const isRec=(svc==='recuperation');const addrField=isRec?'r-arrivee':'r-depart';const latField=isRec?'r-arr-lat':'r-dep-lat';const lonField=isRec?'r-arr-lon':'r-dep-lon';const acKey=isRec?'r-arrivee':'r-depart';const otherKey=isRec?'r-depart':'r-arrivee';if(c.adresse&&!g(addrField).value){g(addrField).value=c.adresse;if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(g(latField))g(latField).value=c.lat;if(g(lonField))g(lonField).value=c.lon;}assurerDistanceAller();}updCalc();setTimeout(showClientAddrBtns,100);}
 function openFraisModal(editId){sv('frais-modal-title',editId?'Modifier frais':'Nouveau frais');g('frais-edit-id').value=editId||'';const f=editId?db.frais.find(x=>x.id===editId):null;g('frais-desc').value=f?.desc||'';g('frais-date').value=f?.date||dateLocale();g('frais-montant').value=f?.montant||'';g('frais-fournisseur').value=f?.fournisseur||'';setChips('frais-type-chips','frais-type',f?.type||'entretien');openModal('m-frais');}
-function saveFrais(){const editId=g('frais-edit-id').value;const f={id:editId||genId(),type:g('frais-type').value,desc:g('frais-desc').value.trim(),date:g('frais-date').value,montant:parseFloat(g('frais-montant').value)||0,fournisseur:g('frais-fournisseur').value.trim()};if(!f.montant||!f.date){alert('Date et montant requis');return;}if(editId){const i=db.frais.findIndex(x=>x.id===editId);if(i!==-1)db.frais[i]=f;}else db.frais.push(f);save();closeModal('m-frais');renderFin();}
+function saveFrais(){const editId=g('frais-edit-id').value;const f={id:editId||genId(),type:g('frais-type').value,desc:g('frais-desc').value.trim(),date:g('frais-date').value,montant:parseFloat(g('frais-montant').value)||0,fournisseur:g('frais-fournisseur').value.trim(),paiement:(g('frais-paiement')&&g('frais-paiement').value)||'bancontact'};if(!f.montant||!f.date){alert('Date et montant requis');return;}if(editId){const i=db.frais.findIndex(x=>x.id===editId);if(i!==-1)db.frais[i]=f;}else db.frais.push(f);save();closeModal('m-frais');renderFin();}
 function openPartnerModal(editId){sv('partner-modal-title',editId?'Modifier partenaire':'Nouveau partenaire');g('partner-edit-id').value=editId||'';const p=editId?db.partners.find(x=>x.id===editId):null;g('p-nom').value=p?.nom||'';g('p-email').value=p?.email||'';g('p-tel').value=p?.tel||'';g('p-adresse').value=p?.adresse||'';g('p-tva').value=p?.tva||'';openModal('m-partner');}
 function savePartner(){
   const editId=g('partner-edit-id').value;
@@ -3172,12 +3176,12 @@ function saveEntretien(){const e={id:genId(),type:g('ent-type').value.trim(),kmL
 function savePinCfg(){const np=g('new-pin').value,cp=g('confirm-pin').value;if(np.length!==4||!/^\d{4}$/.test(np)){g('pin-modal-err').textContent='PIN doit être 4 chiffres';return;}if(np!==cp){g('pin-modal-err').textContent='PIN ne correspond pas';return;}db.settings.pin=np;save();closeModal('m-pin');alert('PIN mis à jour !');}
 function openCarbModal(){
   g('carb-date').value=dateLocale();
-  ['carb-km','carb-litres','carb-prix','carb-station'].forEach(id=>g(id).value='');
+  ['carb-km','carb-litres','carb-prix','carb-station'].forEach(id=>g(id).value='');if(g('carb-paiement')){g('carb-paiement').value='q8';setChips('carb-paiement-chips','carb-paiement','q8');}
   setChips('carb-vehicule-chips','carb-vehicule','0');
   openModal('m-carburant');
 }
 function saveCarb(){
-  const c={id:genId(),date:g('carb-date').value,km:g('carb-km').value,litres:g('carb-litres').value,prix:g('carb-prix').value,station:g('carb-station').value,vehicule:parseInt(g('carb-vehicule').value||0)};
+  const c={id:genId(),date:g('carb-date').value,km:g('carb-km').value,litres:g('carb-litres').value,prix:g('carb-prix').value,station:g('carb-station').value,paiement:(g('carb-paiement')&&g('carb-paiement').value)||'q8',vehicule:parseInt(g('carb-vehicule').value||0)};
   if(!c.date||!c.prix){alert('Date et prix requis');return;}
   db.carburant.push(c);save();closeModal('m-carburant');renderFin();
 }
@@ -4530,6 +4534,66 @@ function avertirDistanceNulle(){
   el.innerHTML='&#9888;&#65039; <b>Distance introuvable.</b> Le prix calcul&eacute; ne serait pas fiable.<br>'
     +'S&eacute;lectionnez les adresses dans la liste d&eacute;roulante, ou saisissez la distance &agrave; la main.';
   champ.parentNode.appendChild(el);
+}
+</script>
+
+<script>
+/* ===== SUIVI DES MODES DE PAIEMENT (carburant + frais) ===== */
+function statsPaiement(annee,mois){
+  var lib={q8:'Carte Q8',bancontact:'Bancontact',cash:'Cash',virement:'Virement'};
+  var tot={},global=0;
+  function ajoute(liste,defaut){
+    (liste||[]).forEach(function(x){
+      var d=x.date||'';
+      if(!d)return;
+      if(annee!==undefined){
+        var y=parseInt(d.slice(0,4),10),m=parseInt(d.slice(5,7),10)-1;
+        if(y!==annee||m!==mois)return;
+      }
+      var p=x.paiement||defaut;
+      var v=parseFloat(x.prix||x.montant||0);
+      if(!v)return;
+      tot[p]=(tot[p]||0)+v; global+=v;
+    });
+  }
+  ajoute(db.carburant,'q8');
+  ajoute(db.frais,'bancontact');
+  return {total:global,detail:tot,libelles:lib};
+}
+
+function renderPaiements(cible,annee,mois){
+  var el=document.getElementById(cible||'bloc-paiements');
+  if(!el)return;
+  var s=statsPaiement(annee,mois);
+  if(!s.total){ el.innerHTML=''; return; }
+  var PLAFOND_Q8=500;
+  var q8=s.detail.q8||0, cash=s.detail.cash||0;
+  var h='<div class="card" style="padding:14px;margin-top:10px">'
+   +'<div style="font-weight:700;font-size:0.9rem;margin-bottom:10px">&#128181; R&eacute;partition des paiements</div>';
+  Object.keys(s.libelles).forEach(function(k){
+    var v=s.detail[k]||0;
+    if(!v)return;
+    var pct=Math.round(v/s.total*100);
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:0.83rem">'
+      +'<span style="color:var(--text2)">'+s.libelles[k]+'</span>'
+      +'<span><b>'+v.toFixed(2)+'&nbsp;&euro;</b> <span style="color:var(--text3);font-size:0.75rem">('+pct+'%)</span></span></div>';
+  });
+  if(q8>0){
+    var reste=PLAFOND_Q8-q8;
+    var couleur=reste<0?'#ef4444':(reste<100?'#f59e0b':'var(--text3)');
+    h+='<div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border);font-size:0.78rem;color:'+couleur+'">'
+      +(reste>=0
+        ? 'Plafond Q8&nbsp;: il reste <b>'+reste.toFixed(0)+'&nbsp;&euro;</b> sur '+PLAFOND_Q8+'&nbsp;&euro;'
+        : '&#9888;&#65039; Plafond Q8 d&eacute;pass&eacute; de <b>'+Math.abs(reste).toFixed(0)+'&nbsp;&euro;</b>')
+      +'</div>';
+  }
+  if(cash>0){
+    h+='<div style="margin-top:7px;font-size:0.75rem;color:#f59e0b;line-height:1.4">'
+      +'&#128176; <b>'+cash.toFixed(2)+'&nbsp;&euro; pay&eacute;s en cash</b> &mdash; pensez &agrave; conserver les tickets, '
+      +'sans justificatif ces montants ne sont pas d&eacute;ductibles.</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
 }
 </script>
 </body>
