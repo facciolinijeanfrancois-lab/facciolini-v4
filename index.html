@@ -1838,6 +1838,11 @@ function openNewRes(){
 }
 function resetResForm(){
   acC={};calcTimers={};
+  /* capture des libelles d'origine (une seule fois) */
+  ['r-date-aller','r-heure-aller','r-date-retour','r-heure-retour','r-heure-retour-jour'].forEach(function(id){
+    var e=document.getElementById(id+'-disp');
+    if(e && e.dataset.placeholder===undefined) e.dataset.placeholder=(e.textContent||'').trim()||'Choisir…';
+  });
   const niElR=g('r-notes-interne');if(niElR)niElR.value='';
   ['r-client-nom','r-client-tel','r-depart','r-dep-lat','r-dep-lon','r-arrivee','r-arr-lat','r-arr-lon','r-distance','r-vol','r-notes','r-date-retour','r-heure-retour','r-commission','r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','r-distance-retour','r-km-pickup','r-km-pickup-retour','r-km-vide-aller','r-km-vide-retour','r-distance-retour-jour','r-heure-retour-jour','r-stop-nom','r-stop-tel','r-stop-adresse','r-stop-lat','r-stop-lon'].forEach(id=>{const el=g(id);if(el)el.value='';});
   const stopBox=g('r-stop-box');if(stopBox)stopBox.style.display='none';const addStopBtn=g('btn-add-stop');if(addStopBtn){addStopBtn.textContent='➕ Arrêt intermédiaire';}
@@ -1853,6 +1858,9 @@ function resetResForm(){
   const bDep2=g('btn-client-addr-dep');if(bDep2)bDep2.style.display='none';
   const bArr2=g('btn-client-addr-arr');if(bArr2)bArr2.style.display='none';
   setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
+  ['r-date-retour','r-heure-retour','r-heure-retour-jour','r-date-aller','r-heure-aller'].forEach(function(id){
+    try{updDtDisplay(id,'');}catch(e){}
+  });
   const rda=g('r-date-aller');const todayStr=dateLocale();if(rda)rda.value=todayStr;updDtDisplay('r-date-aller',todayStr);
   const rha=g('r-heure-aller');const nowTime=new Date().toTimeString().slice(0,5);if(rha)rha.value=nowTime;updDtDisplay('r-heure-aller',nowTime);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/\'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value='direct';}
@@ -3898,7 +3906,16 @@ function confirmDtPicker(fieldId, type){
 
 function updDtDisplay(fieldId, value){
   const dispEl = document.getElementById(fieldId+'-disp');
-  if(!dispEl || !value) return;
+  if(!dispEl) return;
+  /* memorise le libelle d'origine la premiere fois, pour pouvoir le restaurer */
+  if(dispEl.dataset.placeholder===undefined){
+    dispEl.dataset.placeholder = (dispEl.textContent||'').trim() || 'Choisir…';
+  }
+  if(!value){                     /* valeur vide : on remet le libelle par defaut */
+    dispEl.textContent = dispEl.dataset.placeholder;
+    dispEl.classList.add('empty');
+    return;
+  }
   if(fieldId.includes('date')){
     const d = new Date(value);
     const months = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
