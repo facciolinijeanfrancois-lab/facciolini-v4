@@ -626,8 +626,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div id="r-capacite-hint" style="display:none;font-size:0.78rem;margin:-6px 0 12px;padding:8px 10px;border-radius:8px"></div>
     </div>
     <div class="fr">
-      <div class="fg"><label class="fl">🧳 Bagages</label><input type="number" class="fi" id="r-bagages" value="0" min="0" max="20" oninput="updVehiculeAuto()"></div>
-      <div class="fg"><label class="fl">👶 Sièges bébé</label><input type="number" class="fi" id="r-sieges-bebe" value="0" min="0" max="3" oninput="updVehiculeAuto()"></div>
+      <div class="fg"><label class="fl">🧳 Grandes valises</label><input type="number" class="fi" id="r-grandes-valises" value="0" min="0" max="12" oninput="checkCapaciteApp()"></div>
+      <div class="fg"><label class="fl">🎒 Petites / trolleys</label><input type="number" class="fi" id="r-petites-valises" value="0" min="0" max="12" oninput="checkCapaciteApp()"></div>
+      <div class="fg"><label class="fl">👶 Sièges bébé</label><input type="number" class="fi" id="r-sieges-bebe" value="0" min="0" max="3" oninput="checkCapaciteApp()"></div>
     </div>
     <div id="r-vehicule-hint" style="display:none;margin-top:6px" class="alert alert-orange">🚐 Talento recommandé pour les bagages importants</div>
   </div>
@@ -1847,7 +1848,7 @@ function resetResForm(){
   ['r-client-nom','r-client-tel','r-depart','r-dep-lat','r-dep-lon','r-arrivee','r-arr-lat','r-arr-lon','r-distance','r-vol','r-notes','r-date-retour','r-heure-retour','r-commission','r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','r-distance-retour','r-km-pickup','r-km-pickup-retour','r-km-vide-aller','r-km-vide-retour','r-distance-retour-jour','r-heure-retour-jour','r-stop-nom','r-stop-tel','r-stop-adresse','r-stop-lat','r-stop-lon'].forEach(id=>{const el=g(id);if(el)el.value='';});
   const stopBox=g('r-stop-box');if(stopBox)stopBox.style.display='none';const addStopBtn=g('btn-add-stop');if(addStopBtn){addStopBtn.textContent='➕ Arrêt intermédiaire';}
   ['r-peages','r-parking','r-acompte'].forEach(id=>{const el=g(id);if(el)el.value='0';});
-  const rp=g('r-passagers');if(rp)rp.value=1;const rv=g('r-vehicule');if(rv)rv.value='0';const rm=g('r-vmt-recu');if(rm)rm.checked=false;
+  const rp=g('r-passagers');if(rp)rp.value=1;['r-grandes-valises','r-petites-valises','r-sieges-bebe'].forEach(function(id){var e=g(id);if(e)e.value='0';});var hc=g('r-capacite-hint');if(hc)hc.style.display='none';const rv=g('r-vehicule');if(rv)rv.value='0';const rm=g('r-vmt-recu');if(rm)rm.checked=false;
   ['r-solde-hint','dist-ok','dist-loading','dist-ret-ok','dist-ret-loading','r-vmt-section','r-partner-opts','r-devis-box'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   const rcb=g('r-commission-box');if(rcb)rcb.style.display='block';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display='none';
   const rph=g('r-prix-hint');if(rph)rph.textContent='';
@@ -2016,11 +2017,52 @@ function computeDevisPour(type){
   if(isAR&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
   return ps;
 }
+/* Capacite reelle de la Seat Leon, mesuree sur le terrain :
+   - 3 passagers maximum
+   - 2 grandes valises + 1 trolley (2 trolleys a la limite)
+   - a 3 passagers, une valise sur le siege avant n'est plus possible */
+function evaluerCapaciteSeat(pax,grandes,petites,bebes){
+  var msg=null;
+  if(pax>3) return {ok:false,raison:pax+' passagers'};
+  if(bebes>=2) return {ok:false,raison:bebes+' sieges bebe'};
+  /* place disponible pour les bagages : coffre + siege avant si moins de 3 passagers */
+  var siegeAvantLibre = pax<3;
+  var maxGrandes = siegeAvantLibre ? 3 : 2;
+  var maxPetites = siegeAvantLibre ? 3 : 2;
+  if(grandes>maxGrandes) return {ok:false,raison:grandes+' grandes valises'};
+  if(grandes===maxGrandes && petites>1 && !siegeAvantLibre) return {ok:false,raison:'2 grandes + '+petites+' trolleys a 3 passagers'};
+  if(petites>maxPetites) return {ok:false,raison:petites+' trolleys'};
+  if(grandes+petites > (siegeAvantLibre?5:3)) return {ok:false,raison:(grandes+petites)+' bagages au total'};
+  /* cas limite a signaler sans bloquer */
+  if(pax===3 && grandes===2 && petites>=1) msg='Coffre plein : 2 grandes + 1 trolley a 3 passagers, ca passe mais tout juste.';
+  return {ok:true,note:msg};
+}
+
 function checkCapaciteApp(){
   const passagers=parseInt(g('r-passagers')?.value||1)||1;
+  const grandes=parseInt(g('r-grandes-valises')?.value||0)||0;
+  const petites=parseInt(g('r-petites-valises')?.value||0)||0;
+  const bebes=parseInt(g('r-sieges-bebe')?.value||0)||0;
   const vehEl=g('r-vehicule');
   const hint=g('r-capacite-hint');
   if(!vehEl||!hint)return;
+
+  const cap=evaluerCapaciteSeat(passagers,grandes,petites,bebes);
+  if(!cap.ok){
+    if(vehEl.value==='0'){ vehEl.value='1'; updCalc(); }
+    hint.style.display='block';
+    hint.style.background='rgba(240,165,0,0.12)';
+    hint.style.color='var(--gold2)';
+    hint.textContent='🚐 Minivan requis : '+cap.raison+' — la Seat ne suffit pas.';
+    return;
+  }
+  if(cap.note){
+    hint.style.display='block';
+    hint.style.background='rgba(240,165,0,0.10)';
+    hint.style.color='var(--gold2)';
+    hint.textContent='⚠️ '+cap.note;
+    return;
+  }
   if(passagers>=4&&vehEl.value==='0'){
     vehEl.value='1';
     hint.style.display='block';
@@ -2111,7 +2153,7 @@ function saveReservationCore(){
   const editId=g('res-edit-id').value;
   const existingR=editId?(db.reservations.find(x=>x.id===editId)||{}):{}
   const r={
-    id:editId||genId(),clientNom:nom,clientTel:tel,langue,vehicule:vidx,passagers:parseInt(g('r-passagers')?.value||1),
+    id:editId||genId(),clientNom:nom,clientTel:tel,langue,vehicule:vidx,passagers:parseInt(g('r-passagers')?.value||1),grandesValises:parseInt(g('r-grandes-valises')?.value||0)||0,petitesValises:parseInt(g('r-petites-valises')?.value||0)||0,siegesBebe:parseInt(g('r-sieges-bebe')?.value||0)||0,
     source,partnerType:source!=='direct'?partnerType:'direct',
     commission:source!=='direct'&&partnerType==='commission'?parseFloat(g('r-commission')?.value||0):0,
     facturePaye:existingR.facturePaye||false,
@@ -2436,7 +2478,7 @@ function editRes(id){
   const hasAdv=r.notes||r.notesInternes||r.langue!=='fr';
   if(hasAdv){const adv=g('res-advanced');if(adv)adv.style.display='block';const btn=g('btn-adv-toggle');if(btn)btn.textContent='⚙️ Masquer les options';}
   // Bagages et sièges
-  if(g('r-passagers'))g('r-passagers').value=r.passagers||1;
+  if(g('r-passagers'))g('r-passagers').value=r.passagers||1;if(g('r-grandes-valises'))g('r-grandes-valises').value=r.grandesValises||0;if(g('r-petites-valises'))g('r-petites-valises').value=r.petitesValises||0;if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;try{checkCapaciteApp();}catch(e){}
   if(g('r-bagages'))g('r-bagages').value=r.bagages||0;
   if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;
   if(g('r-vol'))g('r-vol').value=r.vol||'';
