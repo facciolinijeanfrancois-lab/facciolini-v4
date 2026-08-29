@@ -344,7 +344,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div id="bloc-paiements"></div>
 </div>
 <div class="page" id="page-clients">
-  <div class="sec" style="padding-top:8px"><span class="sec-title">Clients</span><button class="btn btn-gold btn-sm" onclick="openClientModal(null)">+ Nouveau</button></div>
+  <div class="sec" style="padding-top:8px"><span class="sec-title">Clients</span><div style="display:flex;gap:6px"><button class="btn btn-sm" style="background:var(--border);color:var(--text)" onclick="openCampagne()">&#128227; Campagne</button><button class="btn btn-gold btn-sm" onclick="openClientModal(null)">+ Nouveau</button></div></div>
   <div style="margin-bottom:8px"><div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap"><div class="chip active chip-csort" onclick="setClientSort('alpha',this)">A&#x2192;Z</div><div class="chip chip-csort" onclick="setClientSort('courses',this)">+ Courses</div><div class="chip chip-csort" onclick="setClientSort('ca',this)">+ CA</div><div class="chip chip-csort" onclick="setClientSort('recent',this)">R&#xe9;cents</div></div><input type="text" class="fi" id="client-search" placeholder="&#x1f50d; Rechercher..." oninput="renderClients()" style="padding:11px 14px"></div>
   <div id="clients-list"></div>
 </div>
@@ -4653,6 +4653,186 @@ function renderPaiements(cible,annee,mois){
   }
   h+='</div>';
   el.innerHTML=h;
+}
+</script>
+
+<script>
+/* ============================================================
+   CAMPAGNES DE RELANCE CLIENTS
+   Semi-automatique : l'app prepare la liste et les messages,
+   un appui par client ouvre WhatsApp pre-rempli.
+   Envoi 100% automatique impossible (WhatsApp l'interdit hors API
+   Business) et RISQUE DE BLOCAGE en cas d'envoi en masse.
+   ============================================================ */
+
+var CAMPAGNE_MODELES = {
+  toussaint: {
+    nom:'Congés de Toussaint',
+    quand:'À envoyer début octobre',
+    txt:"Bonjour {prenom}, Jean-François de Facciolini Mobility 👋\n\nVous aviez voyagé avec nous en {mois}. Si vous partez pendant les congés de Toussaint, pensez à réserver tôt : les créneaux du matin partent vite.\n\nAu plaisir de vous reconduire !\n📞 0471 69 26 50"
+  },
+  fetes: {
+    nom:'Fêtes de fin d\'année',
+    quand:'À envoyer début décembre',
+    txt:"Bonjour {prenom}, Jean-François de Facciolini Mobility 👋\n\nLes fêtes approchent et les vols du matin se remplissent vite. Si vous prenez l'avion en décembre ou janvier, je peux bloquer votre créneau dès maintenant.\n\nBelles fêtes à vous !\n📞 0471 69 26 50"
+  },
+  carnaval: {
+    nom:'Congés de Carnaval',
+    quand:'À envoyer début février',
+    txt:"Bonjour {prenom}, Jean-François de Facciolini Mobility 👋\n\nUn départ prévu pendant les congés de Carnaval ? Pensez à réserver votre navette aéroport à l'avance, surtout pour les vols tôt le matin.\n\nÀ bientôt !\n📞 0471 69 26 50"
+  },
+  merci: {
+    nom:'Remerciement clients fidèles',
+    quand:'Pour ceux venus 2 fois ou plus',
+    txt:"Bonjour {prenom}, Jean-François de Facciolini Mobility 👋\n\nMerci de votre confiance renouvelée, c'est un plaisir de vous conduire. N'hésitez pas si vous avez un départ prévu, je vous réserve toujours le meilleur créneau.\n\nÀ très bientôt !\n📞 0471 69 26 50"
+  }
+};
+
+var LIMITE_JOUR = 25;   /* au-dela, risque de blocage WhatsApp */
+
+function _prenom(nom){
+  var p=String(nom||'').trim().split(/\s+/);
+  /* format habituel "Nom Prenom" -> on prend le dernier mot.
+     Si un seul mot, on ne devine pas : le message s'adapte. */
+  return p.length>1 ? p[p.length-1] : '';
+}
+function _moisFr(d){
+  var m=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  try{ return m[new Date(d).getMonth()]; }catch(e){ return ''; }
+}
+
+function ciblesCampagne(filtre){
+  var stats={};
+  (db.reservations||[]).forEach(function(r){
+    if(r.statut==='annule')return;
+    var n=(r.clientNom||'').trim();
+    if(!n)return;
+    if(!stats[n])stats[n]={n:0,last:'',tel:r.clientTel||'',langue:r.langue||'fr'};
+    stats[n].n++;
+    if((r.dateAller||'')>stats[n].last)stats[n].last=r.dateAller||'';
+    if(r.clientTel)stats[n].tel=r.clientTel;
+    if(r.langue)stats[n].langue=r.langue;
+  });
+  var envoyes=JSON.parse(localStorage.getItem('fm_campagnes')||'{}');
+  var out=[];
+  Object.keys(stats).forEach(function(nom){
+    var s=stats[nom];
+    if(!s.tel)return;
+    var cl=(db.clients||[]).find(function(c){return (c.nom||'').trim()===nom;});
+    if(cl&&cl.blacklist)return;
+    if(filtre==='uniques'&&s.n!==1)return;
+    if(filtre==='fideles'&&s.n<2)return;
+    var cle=nom+'|'+(window._campModele||'');
+    out.push({nom:nom,tel:s.tel,courses:s.n,last:s.last,langue:s.langue,
+              deja:envoyes[cle]||null});
+  });
+  out.sort(function(a,b){return (b.last||'').localeCompare(a.last||'');});
+  return out;
+}
+
+function openCampagne(){
+  window._campModele=window._campModele||'toussaint';
+  window._campFiltre=window._campFiltre||'uniques';
+  var ex=document.getElementById('campagne-overlay'); if(ex)ex.remove();
+  var ov=document.createElement('div');
+  ov.id='campagne-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:var(--bg,#111);z-index:9998;overflow-y:auto;-webkit-overflow-scrolling:touch';
+  document.body.appendChild(ov);
+  renderCampagne();
+}
+function closeCampagne(){ var o=document.getElementById('campagne-overlay'); if(o)o.remove(); }
+
+function setCampModele(k){ window._campModele=k; renderCampagne(); }
+function setCampFiltre(k){ window._campFiltre=k; renderCampagne(); }
+
+function renderCampagne(){
+  var ov=document.getElementById('campagne-overlay'); if(!ov)return;
+  var mod=CAMPAGNE_MODELES[window._campModele];
+  var liste=ciblesCampagne(window._campFiltre);
+  var envoyesAuj=parseInt(localStorage.getItem('fm_camp_jour_'+dateLocale())||'0',10);
+  var restants=Math.max(0,LIMITE_JOUR-envoyesAuj);
+
+  var h='<div style="padding:18px 16px 44px;max-width:640px;margin:0 auto">'
+   +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
+   +'<div style="font-size:1.15rem;font-weight:800">&#128227; Campagne de relance</div>'
+   +'<button onclick="closeCampagne()" style="background:var(--border);color:var(--text2);border:none;border-radius:12px;padding:8px 16px;cursor:pointer">Fermer</button></div>'
+   +'<div style="font-size:0.78rem;color:var(--text3);margin-bottom:14px">Un appui par client. Le message s\'ouvre pr&eacute;-rempli dans WhatsApp.</div>';
+
+  /* choix du modele */
+  h+='<div style="font-size:0.8rem;font-weight:700;margin-bottom:6px">Message</div><div class="chips" style="margin-bottom:12px">';
+  Object.keys(CAMPAGNE_MODELES).forEach(function(k){
+    h+='<div class="chip'+(k===window._campModele?' active':'')+'" onclick="setCampModele(\''+k+'\')">'+CAMPAGNE_MODELES[k].nom+'</div>';
+  });
+  h+='</div>';
+
+  /* choix de la cible */
+  h+='<div style="font-size:0.8rem;font-weight:700;margin-bottom:6px">Destinataires</div><div class="chips" style="margin-bottom:12px">'
+   +'<div class="chip'+(window._campFiltre==='uniques'?' active':'')+'" onclick="setCampFiltre(\'uniques\')">Venus 1 seule fois</div>'
+   +'<div class="chip'+(window._campFiltre==='fideles'?' active':'')+'" onclick="setCampFiltre(\'fideles\')">Clients fid&egrave;les</div>'
+   +'<div class="chip'+(window._campFiltre==='tous'?' active':'')+'" onclick="setCampFiltre(\'tous\')">Tous</div>'
+   +'</div>';
+
+  /* apercu du message */
+  h+='<div class="card" style="padding:12px;margin-bottom:12px;background:rgba(37,211,102,0.07);border:1px solid rgba(37,211,102,0.25)">'
+   +'<div style="font-size:0.72rem;color:var(--text3);margin-bottom:5px">'+mod.quand+'</div>'
+   +'<div style="font-size:0.8rem;white-space:pre-wrap;line-height:1.5">'+escH(mod.txt.replace('{prenom}','Marie').replace('{mois}','juillet'))+'</div></div>';
+
+  /* garde-fou anti-blocage */
+  var coul = restants>10 ? 'var(--text3)' : (restants>0 ? '#f59e0b' : '#ef4444');
+  h+='<div style="font-size:0.75rem;color:'+coul+';margin-bottom:12px;line-height:1.45">'
+   +'&#9888;&#65039; <b>'+envoyesAuj+' envoy&eacute;s aujourd\'hui</b> &mdash; il reste '+restants+' sur '+LIMITE_JOUR+'.<br>'
+   +'WhatsApp bloque les comptes qui envoient en masse. &Eacute;talez sur plusieurs jours.</div>';
+
+  var restantsListe=liste.filter(function(x){return !x.deja;});
+  h+='<div style="font-size:0.82rem;font-weight:700;margin-bottom:8px">'+restantsListe.length+' client(s) &agrave; contacter</div>';
+
+  if(!liste.length){
+    h+='<div style="text-align:center;padding:40px 20px;color:var(--text3)">Aucun client ne correspond &agrave; ce filtre.</div>';
+  }
+  liste.forEach(function(x){
+    var dep=x.last?(' &middot; dernier trajet '+new Date(x.last).toLocaleDateString('fr-BE',{month:'short',year:'numeric'})):'';
+    h+='<div class="card" id="camp-'+btoa(unescape(encodeURIComponent(x.nom))).replace(/=/g,'')+'" style="margin-bottom:9px;padding:12px'+(x.deja?';opacity:0.4':'')+'">'
+     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+     +'<div style="flex:1;min-width:0">'
+     +'<div style="font-weight:700;font-size:0.92rem">'+escH(x.nom)+(x.courses>1?' <span style="font-size:0.7rem;color:var(--gold)">&#11088; '+x.courses+' courses</span>':'')+'</div>'
+     +'<div style="font-size:0.72rem;color:var(--text3)">'+escH(x.tel)+dep+'</div></div>';
+    if(x.deja){
+      h+='<div style="font-size:0.72rem;color:var(--green2,#3ecf8e);font-weight:700;white-space:nowrap">&#9989; Envoy&eacute;</div>';
+    } else {
+      h+='<button onclick="envoyerCampagne(\''+escQ(x.nom)+'\')" '+(restants<=0?'disabled ':'')
+       +'style="background:'+(restants>0?'#25D366':'var(--border)')+';color:#fff;border:none;border-radius:11px;padding:10px 16px;font-weight:700;font-size:0.84rem;cursor:pointer;white-space:nowrap">Envoyer</button>';
+    }
+    h+='</div></div>';
+  });
+  h+='</div>';
+  ov.innerHTML=h;
+}
+
+function envoyerCampagne(nom){
+  var mod=CAMPAGNE_MODELES[window._campModele];
+  var liste=ciblesCampagne(window._campFiltre);
+  var cli=liste.find(function(x){return x.nom===nom;});
+  if(!cli)return;
+
+  var envoyesAuj=parseInt(localStorage.getItem('fm_camp_jour_'+dateLocale())||'0',10);
+  if(envoyesAuj>=LIMITE_JOUR){
+    alert('Limite de '+LIMITE_JOUR+' messages atteinte pour aujourd\'hui.\n\nWhatsApp bloque les comptes qui envoient en masse. Reprenez demain.');
+    return;
+  }
+
+  var pr=_prenom(nom);
+  var msg=mod.txt.replace('{prenom}',pr).replace('{mois}',_moisFr(cli.last));
+  if(!pr) msg=msg.replace('Bonjour , ','Bonjour, ');   /* nom sans prenom identifiable */
+  if(!cli.last) msg=msg.replace(/Vous aviez voyag[^.]*\.\s*/,'');
+  var tel=(cli.tel||'').replace(/[^+\d]/g,'');
+  window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank');
+
+  var envoyes=JSON.parse(localStorage.getItem('fm_campagnes')||'{}');
+  envoyes[nom+'|'+window._campModele]=new Date().toISOString();
+  localStorage.setItem('fm_campagnes',JSON.stringify(envoyes));
+  localStorage.setItem('fm_camp_jour_'+dateLocale(),String(envoyesAuj+1));
+  trackUsage('campagne:'+window._campModele);
+  renderCampagne();
 }
 </script>
 </body>
