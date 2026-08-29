@@ -4724,7 +4724,8 @@ function ciblesCampagne(filtre){
     if(filtre==='fideles'&&s.n<2)return;
     var cle=nom+'|'+(window._campModele||'');
     out.push({nom:nom,tel:s.tel,courses:s.n,last:s.last,langue:s.langue,
-              deja:envoyes[cle]||null});
+              deja:envoyes[cle]||null,
+              canal:(envoyes[cle]&&envoyes[cle].canal)||null});
   });
   out.sort(function(a,b){return (b.last||'').localeCompare(a.last||'');});
   return out;
@@ -4797,10 +4798,17 @@ function renderCampagne(){
      +'<div style="font-weight:700;font-size:0.92rem">'+escH(x.nom)+(x.courses>1?' <span style="font-size:0.7rem;color:var(--gold)">&#11088; '+x.courses+' courses</span>':'')+'</div>'
      +'<div style="font-size:0.72rem;color:var(--text3)">'+escH(x.tel)+dep+'</div></div>';
     if(x.deja){
-      h+='<div style="font-size:0.72rem;color:var(--green2,#3ecf8e);font-weight:700;white-space:nowrap">&#9989; Envoy&eacute;</div>';
+      h+='<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+       +'<div style="font-size:0.72rem;color:var(--green2,#3ecf8e);font-weight:700;white-space:nowrap">&#9989; Envoy&eacute;'+(x.canal==='sms'?' (SMS)':'')+'</div>'
+       +'<button onclick="annulerEnvoiCampagne(\''+escQ(x.nom)+'\')" style="background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:9px;padding:6px 10px;font-size:0.72rem;cursor:pointer" title="Remettre dans la liste">&#8634;</button>'
+       +'</div>';
     } else {
-      h+='<button onclick="envoyerCampagne(\''+escQ(x.nom)+'\')" '+(restants<=0?'disabled ':'')
-       +'style="background:'+(restants>0?'#25D366':'var(--border)')+';color:#fff;border:none;border-radius:11px;padding:10px 16px;font-weight:700;font-size:0.84rem;cursor:pointer;white-space:nowrap">Envoyer</button>';
+      h+='<div style="display:flex;gap:6px;flex-shrink:0">'
+       +'<button onclick="envoyerCampagne(\''+escQ(x.nom)+'\',\'wa\')" '+(restants<=0?'disabled ':'')
+       +'style="background:'+(restants>0?'#25D366':'var(--border)')+';color:#fff;border:none;border-radius:11px;padding:10px 13px;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap" title="WhatsApp">&#128241; WA</button>'
+       +'<button onclick="envoyerCampagne(\''+escQ(x.nom)+'\',\'sms\')" '+(restants<=0?'disabled ':'')
+       +'style="background:'+(restants>0?'#3b82f6':'var(--border)')+';color:#fff;border:none;border-radius:11px;padding:10px 13px;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap" title="SMS">&#9993; SMS</button>'
+       +'</div>';
     }
     h+='</div></div>';
   });
@@ -4808,7 +4816,7 @@ function renderCampagne(){
   ov.innerHTML=h;
 }
 
-function envoyerCampagne(nom){
+function envoyerCampagne(nom,canal){
   var mod=CAMPAGNE_MODELES[window._campModele];
   var liste=ciblesCampagne(window._campFiltre);
   var cli=liste.find(function(x){return x.nom===nom;});
@@ -4825,13 +4833,40 @@ function envoyerCampagne(nom){
   if(!pr) msg=msg.replace('Bonjour , ','Bonjour, ');   /* nom sans prenom identifiable */
   if(!cli.last) msg=msg.replace(/Vous aviez voyag[^.]*\.\s*/,'');
   var tel=(cli.tel||'').replace(/[^+\d]/g,'');
-  window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank');
 
+  if(canal==='sms'){
+    window.open('sms:'+tel+'?&body='+encodeURIComponent(msg),'_blank');
+  } else {
+    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank');
+  }
+
+  /* On ne marque QUE si l'envoi a reellement eu lieu.
+     Cas frequent : le client n'a pas WhatsApp, rien n'a pu partir. */
+  window._campEnAttente={nom:nom,canal:canal};
+  setTimeout(function(){
+    var att=window._campEnAttente;
+    if(!att||att.nom!==nom)return;
+    var ok=confirm('Message envoy\u00e9 \u00e0 '+nom+' ?\n\n'
+      +'OK = marquer comme envoy\u00e9\n'
+      +'Annuler = le client reste dans la liste (ex : pas de WhatsApp)');
+    window._campEnAttente=null;
+    if(!ok){ renderCampagne(); return; }
+    var envoyes=JSON.parse(localStorage.getItem('fm_campagnes')||'{}');
+    envoyes[nom+'|'+window._campModele]={date:new Date().toISOString(),canal:canal||'wa'};
+    localStorage.setItem('fm_campagnes',JSON.stringify(envoyes));
+    var n2=parseInt(localStorage.getItem('fm_camp_jour_'+dateLocale())||'0',10);
+    localStorage.setItem('fm_camp_jour_'+dateLocale(),String(n2+1));
+    trackUsage('campagne:'+window._campModele);
+    renderCampagne();
+  },1500);
+}
+
+function annulerEnvoiCampagne(nom){
   var envoyes=JSON.parse(localStorage.getItem('fm_campagnes')||'{}');
-  envoyes[nom+'|'+window._campModele]=new Date().toISOString();
+  delete envoyes[nom+'|'+window._campModele];
   localStorage.setItem('fm_campagnes',JSON.stringify(envoyes));
-  localStorage.setItem('fm_camp_jour_'+dateLocale(),String(envoyesAuj+1));
-  trackUsage('campagne:'+window._campModele);
+  var n2=parseInt(localStorage.getItem('fm_camp_jour_'+dateLocale())||'0',10);
+  if(n2>0) localStorage.setItem('fm_camp_jour_'+dateLocale(),String(n2-1));
   renderCampagne();
 }
 </script>
