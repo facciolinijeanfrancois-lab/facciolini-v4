@@ -282,6 +282,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   </div>
   <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
     <div class="chip" onclick="openRelanceJ7()" style="background:var(--gold);color:#000;font-weight:700">&#x1f4e8; Relances J-7 <span id="chip-relance-count"></span></div>
+    <div class="chip" onclick="openDemandeAvis()" style="background:#4285F4;color:#fff;font-weight:700">&#11088; Demander avis <span id="chip-avis-count"></span></div>
     <div class="chip" onclick="setResFilter('mois',this)">&#x1f5d3;&#xfe0f; Ce mois</div>
     <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
   </div>
@@ -1342,6 +1343,7 @@ function renderDash(){
 }
 function renderRes(){
   try{if(typeof majBadgeRelance==='function')majBadgeRelance();}catch(e){}
+  try{if(typeof majBadgeAvis==='function')majBadgeAvis();}catch(e){}
   var sv2=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
   sv2('res-month',MOIS[curMonth]+' '+curYear);
   var today=new Date();today.setHours(0,0,0,0);
@@ -4938,6 +4940,157 @@ function majServiceDevis(){
   if(h) h.innerHTML = (svc==='prive')
     ? "Restaurant, gare, h&ocirc;pital, rendez-vous &mdash; rayon 40&nbsp;km. Prise en charge 25&nbsp;&euro; (zone proche) ou 40&nbsp;&euro; (au-del&agrave; de 20&nbsp;km) + 1,50&nbsp;&euro;/km. Pas de frais d'attente."
     : "Zaventem, Charleroi &mdash; tarifs fixes Carni&egrave;res ou calcul au kilom&egrave;tre.";
+}
+</script>
+
+<script>
+/* ============================================================
+   DEMANDE D'AVIS GOOGLE
+   Cible : courses terminees, pas encore sollicitees.
+   Meilleur moment = juste apres le retour de vacances.
+   ============================================================ */
+var LIEN_AVIS = 'https://search.google.com/local/writereview?cid=2722671361049482196';
+var LIMITE_AVIS_JOUR = 15;
+
+var MODELE_AVIS = {
+  fr: "Bonjour {prenom} 👋\n\nJ'espère que votre voyage s'est bien passé !\n\nSi vous avez apprécié le trajet, un petit avis Google m'aiderait énormément — c'est ce qui permet à une petite structure comme la mienne de se faire connaître.\n\n👉 {lien}\n\nMerci beaucoup et à bientôt !\nJean-François — Facciolini Mobility",
+  en: "Hello {prenom} 👋\n\nI hope your trip went well!\n\nIf you were happy with the ride, a short Google review would help me a lot — it's how a small business like mine gets known.\n\n👉 {lien}\n\nThank you and see you soon!\nJean-François — Facciolini Mobility",
+  nl: "Hallo {prenom} 👋\n\nIk hoop dat uw reis goed verlopen is!\n\nAls u tevreden was over de rit, zou een korte Google-review mij enorm helpen — zo raakt een klein bedrijf zoals het mijne bekend.\n\n👉 {lien}\n\nHartelijk dank en tot ziens!\nJean-François — Facciolini Mobility"
+};
+
+function ciblesAvis(){
+  var demandes=JSON.parse(localStorage.getItem('fm_avis_demandes')||'{}');
+  var today=new Date(); today.setHours(0,0,0,0);
+  var parClient={};
+  (db.reservations||[]).forEach(function(r){
+    if(r.statut==='annule')return;
+    if(!r.clientTel)return;
+    var nom=(r.clientNom||'').trim();
+    if(!nom)return;
+    /* date de fin reelle : retour si A/R, sinon aller */
+    var fin=(r.type==='ar-diff'&&r.dateRetour)?r.dateRetour:r.dateAller;
+    var d=new Date(fin); d.setHours(0,0,0,0);
+    var jours=Math.round((today-d)/86400000);
+    if(jours<0||jours>60)return;          /* course passee, dans les 60 derniers jours */
+    if(!parClient[nom]||fin>parClient[nom].fin){
+      parClient[nom]={nom:nom,tel:r.clientTel,langue:r.langue||'fr',fin:fin,jours:jours,
+                      dest:(r.arrivee||'').substring(0,32),deja:demandes[nom]||null};
+    }
+  });
+  var out=Object.keys(parClient).map(function(k){return parClient[k];});
+  out.sort(function(a,b){return a.jours-b.jours;});
+  return out;
+}
+
+function majBadgeAvis(){
+  var el=document.getElementById('chip-avis-count');
+  if(!el)return;
+  var n=ciblesAvis().filter(function(x){return !x.deja;}).length;
+  el.textContent=n?'('+n+')':'';
+}
+
+function openDemandeAvis(){
+  var ex=document.getElementById('avis-overlay'); if(ex)ex.remove();
+  var ov=document.createElement('div');
+  ov.id='avis-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:var(--bg,#111);z-index:9998;overflow-y:auto;-webkit-overflow-scrolling:touch';
+  document.body.appendChild(ov);
+  renderDemandeAvis();
+}
+function closeDemandeAvis(){
+  var o=document.getElementById('avis-overlay'); if(o)o.remove();
+  majBadgeAvis();
+}
+
+function renderDemandeAvis(){
+  var ov=document.getElementById('avis-overlay'); if(!ov)return;
+  var liste=ciblesAvis();
+  var reste=liste.filter(function(x){return !x.deja;});
+  var envAuj=parseInt(localStorage.getItem('fm_avis_jour_'+dateLocale())||'0',10);
+  var dispo=Math.max(0,LIMITE_AVIS_JOUR-envAuj);
+
+  var h='<div style="padding:18px 16px 44px;max-width:640px;margin:0 auto">'
+   +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
+   +'<div style="font-size:1.15rem;font-weight:800">&#11088; Demander un avis</div>'
+   +'<button onclick="closeDemandeAvis()" style="background:var(--border);color:var(--text2);border:none;border-radius:12px;padding:8px 16px;cursor:pointer">Fermer</button></div>'
+   +'<div style="font-size:0.78rem;color:var(--text3);margin-bottom:14px;line-height:1.5">'
+   +'Courses termin&eacute;es des 60 derniers jours. Le meilleur moment est <b>1 &agrave; 3 jours apr&egrave;s le retour</b>, quand le client est encore content de ses vacances.</div>';
+
+  h+='<div style="font-size:0.75rem;color:'+(dispo>5?'var(--text3)':'#f59e0b')+';margin-bottom:12px">'
+   +envAuj+' demande(s) envoy&eacute;e(s) aujourd\'hui &mdash; il en reste '+dispo+' sur '+LIMITE_AVIS_JOUR+'.</div>';
+
+  h+='<div style="font-size:0.82rem;font-weight:700;margin-bottom:8px">'+reste.length+' client(s) &agrave; solliciter</div>';
+
+  if(!liste.length){
+    h+='<div style="text-align:center;padding:44px 20px;color:var(--text3)">'
+      +'<div style="font-size:2.2rem;margin-bottom:10px">&#128564;</div>'
+      +'<div style="font-weight:700;margin-bottom:5px">Aucune course r&eacute;cente</div>'
+      +'<div style="font-size:0.82rem">Les courses des 60 derniers jours appara&icirc;tront ici.</div></div>';
+  }
+
+  liste.forEach(function(x){
+    var frais=(x.jours<=5);
+    h+='<div class="card" style="margin-bottom:9px;padding:12px'+(x.deja?';opacity:0.4':'')+'">'
+     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+     +'<div style="flex:1;min-width:0">'
+     +'<div style="font-weight:700;font-size:0.92rem">'+escH(x.nom)
+       +(frais?' <span style="font-size:0.68rem;background:var(--gold);color:#000;border-radius:20px;padding:2px 8px;font-weight:700">id&eacute;al</span>':'')+'</div>'
+     +'<div style="font-size:0.72rem;color:var(--text3)">'
+       +(x.jours===0?"course d'aujourd'hui":'il y a '+x.jours+' jour'+(x.jours>1?'s':''))
+       +(x.dest?' &middot; '+escH(x.dest):'')+'</div></div>';
+    if(x.deja){
+      h+='<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+       +'<div style="font-size:0.72rem;color:var(--green2,#3ecf8e);font-weight:700">&#9989; Demand&eacute;</div>'
+       +'<button onclick="annulerDemandeAvis(\''+escQ(x.nom)+'\')" style="background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:9px;padding:6px 10px;font-size:0.72rem;cursor:pointer">&#8634;</button></div>';
+    } else {
+      h+='<div style="display:flex;gap:6px;flex-shrink:0">'
+       +'<button onclick="envoyerDemandeAvis(\''+escQ(x.nom)+'\',\'wa\')" '+(dispo<=0?'disabled ':'')
+       +'style="background:'+(dispo>0?'#25D366':'var(--border)')+';color:#fff;border:none;border-radius:11px;padding:10px 13px;font-weight:700;font-size:0.8rem;cursor:pointer">&#128241; WA</button>'
+       +'<button onclick="envoyerDemandeAvis(\''+escQ(x.nom)+'\',\'sms\')" '+(dispo<=0?'disabled ':'')
+       +'style="background:'+(dispo>0?'#3b82f6':'var(--border)')+';color:#fff;border:none;border-radius:11px;padding:10px 13px;font-weight:700;font-size:0.8rem;cursor:pointer">&#9993; SMS</button></div>';
+    }
+    h+='</div></div>';
+  });
+  h+='</div>';
+  ov.innerHTML=h;
+}
+
+function envoyerDemandeAvis(nom,canal){
+  var cli=ciblesAvis().find(function(x){return x.nom===nom;});
+  if(!cli)return;
+  var envAuj=parseInt(localStorage.getItem('fm_avis_jour_'+dateLocale())||'0',10);
+  if(envAuj>=LIMITE_AVIS_JOUR){
+    alert('Limite de '+LIMITE_AVIS_JOUR+' demandes par jour atteinte.\n\nReprenez demain : mieux vaut étaler que tout envoyer d\'un coup.');
+    return;
+  }
+  var lg=(MODELE_AVIS[cli.langue])?cli.langue:'fr';
+  var pr=_prenom(nom);
+  var msg=MODELE_AVIS[lg].replace('{prenom}',pr).replace('{lien}',LIEN_AVIS);
+  if(!pr) msg=msg.replace(/^(Bonjour|Hello|Hallo) 👋/m,'$1 👋').replace(' ,',',');
+  var tel=(cli.tel||'').replace(/[^+\d]/g,'');
+  if(canal==='sms') window.open('sms:'+tel+'?&body='+encodeURIComponent(msg),'_blank');
+  else window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank');
+
+  setTimeout(function(){
+    if(!confirm('Demande envoyée à '+nom+' ?\n\nOK = marquer comme demandé\nAnnuler = le client reste dans la liste')){
+      renderDemandeAvis(); return;
+    }
+    var d=JSON.parse(localStorage.getItem('fm_avis_demandes')||'{}');
+    d[nom]={date:new Date().toISOString(),canal:canal||'wa'};
+    localStorage.setItem('fm_avis_demandes',JSON.stringify(d));
+    localStorage.setItem('fm_avis_jour_'+dateLocale(),String(envAuj+1));
+    trackUsage('demande-avis');
+    renderDemandeAvis();
+  },1500);
+}
+
+function annulerDemandeAvis(nom){
+  var d=JSON.parse(localStorage.getItem('fm_avis_demandes')||'{}');
+  delete d[nom];
+  localStorage.setItem('fm_avis_demandes',JSON.stringify(d));
+  var n=parseInt(localStorage.getItem('fm_avis_jour_'+dateLocale())||'0',10);
+  if(n>0) localStorage.setItem('fm_avis_jour_'+dateLocale(),String(n-1));
+  renderDemandeAvis();
 }
 </script>
 </body>
