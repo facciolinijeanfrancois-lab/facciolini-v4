@@ -3680,6 +3680,7 @@ function openDevisRapide(){
   g('dv-depart').value='';g('dv-arrivee').value='';
   g('dv-dist-box').style.display='none';g('dv-result').style.display='none';
   acC['dv-depart']=null;acC['dv-arrivee']=null;
+  setChips('dv-service-chips','dv-service','aeroport');
   setChips('dv-type-chips','dv-type','aller');
   setChips('dv-veh-chips','dv-veh','0');
   renderFavChips();
@@ -3708,10 +3709,25 @@ async function calcDevis(){
       const tarif=km>t.rayon?t.long:t.court;
       const distTotal=type==='ar'?km*2:km;
       const prixFixe=getPrixFixeZone(g('dv-depart')?.value||'',g('dv-arrivee')?.value||'',isTalento);
+      const service=(g('dv-service')?.value)||'aeroport';
       let ps;
       const pr=g('dv-price');
       const dd=g('dv-detail');
-      if(prixFixe!==null){
+      if(service==='prive'){
+        const p=prixTrajetPrive(km,dep,type==='ar',isTalento);
+        if(p.horsZone){
+          if(pr)pr.textContent='—';
+          if(dd)dd.textContent='⚠️ Départ à '+p.dBase+' km de Carnières — hors zone trajet privé (max '+PRIVE.rayonMax+' km). Utilisez le tarif aéroport ou fixez un prix manuel.';
+          acC['dv-prix']=null;
+        }else{
+          ps=p.prix;
+          if(pr)pr.textContent=ps+' €';
+          if(dd)dd.textContent='Trajet privé · prise en charge '+p.pc+'€ ('+(p.loin?'zone éloignée':'zone proche')+') + '+km+'km × '+PRIVE.parKm.toFixed(2)+'€'
+            +(type==='ar'?' × 2 (A/R)':'')+(isTalento?' +'+(PRIVE.camion*(type==='ar'?2:1))+'€ minivan':'')+' · min '+p.min+'€';
+          acC['dv-prix']=ps;
+        }
+        acC['dv-km']=km;
+      } else if(prixFixe!==null){
         ps=type==='ar'?prixFixe*2:prixFixe;
         if(type==='ar'&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
         if(pr)pr.textContent=ps+' €';
@@ -4004,6 +4020,15 @@ setTimeout(checkBackupReminder,3000);
           <div class="dist-time" id="dv-dist-time"></div>
         </div>
       </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Type de service</label>
+      <div class="chips" id="dv-service-chips">
+        <div class="chip active" onclick="selectChip(this,'dv-service','aeroport');majServiceDevis();calcDevis()">&#9992;&#65039; A&eacute;roport</div>
+        <div class="chip" onclick="selectChip(this,'dv-service','prive');majServiceDevis();calcDevis()">&#128663; Trajet priv&eacute;</div>
+      </div>
+      <input type="hidden" id="dv-service" value="aeroport">
+      <div id="dv-service-hint" style="font-size:0.74rem;color:var(--text3);margin-top:5px;line-height:1.4"></div>
     </div>
     <div class="fg">
       <label class="fl">Type de trajet</label>
@@ -4868,6 +4893,51 @@ function annulerEnvoiCampagne(nom){
   var n2=parseInt(localStorage.getItem('fm_camp_jour_'+dateLocale())||'0',10);
   if(n2>0) localStorage.setItem('fm_camp_jour_'+dateLocale(),String(n2-1));
   renderCampagne();
+}
+</script>
+
+<script>
+/* ============================================================
+   TRAJET PRIVE LOCAL — meme grille que le site
+   Prise en charge selon l'eloignement du client depuis Carnieres,
+   puis 1,50 EUR/km sur le trajet du client. Pas de frais d'attente.
+   ============================================================ */
+var PRIVE = {
+  base:{lat:50.4361,lon:4.2436},   // Carnieres
+  pcProche:25, pcLoin:40,
+  rayonProche:20, rayonMax:40,
+  minProche:45, minLoin:60,
+  parKm:1.50, arrondi:5, camion:20
+};
+
+function distDepuisBaseKm(pt){
+  if(!pt||!pt.lat) return null;
+  var R=6371,
+      dLat=(pt.lat-PRIVE.base.lat)*Math.PI/180,
+      dLon=(pt.lon-PRIVE.base.lon)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)
+      +Math.cos(PRIVE.base.lat*Math.PI/180)*Math.cos(pt.lat*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))*1.25); /* x1,25 : correction route */
+}
+
+function prixTrajetPrive(km,ptDepart,isAR,isTalento){
+  var dBase=distDepuisBaseKm(ptDepart);
+  if(dBase!==null && dBase>PRIVE.rayonMax) return {horsZone:true,dBase:dBase};
+  var loin=(dBase!==null && dBase>PRIVE.rayonProche);
+  var pc=loin?PRIVE.pcLoin:PRIVE.pcProche;
+  var min=loin?PRIVE.minLoin:PRIVE.minProche;
+  var prixAller=Math.max(min,roundTo(pc+km*PRIVE.parKm,PRIVE.arrondi));
+  var p=isAR?prixAller*2:prixAller;
+  if(isTalento)p=roundTo(p+PRIVE.camion*(isAR?2:1),PRIVE.arrondi);
+  return {prix:p,pc:pc,min:min,loin:loin,dBase:dBase,horsZone:false};
+}
+
+function majServiceDevis(){
+  var svc=(g('dv-service')||{}).value||'aeroport';
+  var h=g('dv-service-hint');
+  if(h) h.innerHTML = (svc==='prive')
+    ? "Restaurant, gare, h&ocirc;pital, rendez-vous &mdash; rayon 40&nbsp;km. Prise en charge 25&nbsp;&euro; (zone proche) ou 40&nbsp;&euro; (au-del&agrave; de 20&nbsp;km) + 1,50&nbsp;&euro;/km. Pas de frais d'attente."
+    : "Zaventem, Charleroi &mdash; tarifs fixes Carni&egrave;res ou calcul au kilom&egrave;tre.";
 }
 </script>
 </body>
