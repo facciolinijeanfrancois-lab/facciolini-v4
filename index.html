@@ -254,6 +254,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="prog"><div class="prog-fill" id="d-obj-prog" style="width:0%"></div></div>
     <div style="font-size:0.7rem;color:var(--text3);margin-top:6px" id="d-obj-txt"></div>
   </div>
+  <div id="d-aconfirmer"></div>
+  <div id="d-checklist"></div>
   <div id="d-resultat"></div>
   <div class="sg2">
     <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice du mois</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div><div class="stat-sub" id="d-comp-prev" style="margin-top:3px;font-size:0.68rem;font-weight:700"></div></div>
@@ -289,6 +291,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   </div>
   <div id="pay-filter-bar" style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
     <div class="chip chip-pay active" onclick="setPayFilter('tous',this)">&#x1f4b0; Tous</div>
+    <div class="chip chip-pay" onclick="setPayFilter('aconfirmer',this)">&#x23f3; &#xc0; confirmer</div>
     <div class="chip chip-pay" onclick="setPayFilter('cash',this)">&#x1f4b5; Cash</div>
     <div class="chip chip-pay" onclick="setPayFilter('compte',this)">&#x1f3e6; Sur mon compte</div>
     <div class="chip chip-pay" onclick="setPayFilter('prepaye',this)">&#x1f91d; Pr&#xe9;pay&#xe9;</div>
@@ -302,7 +305,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="sec"><span class="sec-title">Finances</span><button class="btn btn-outline btn-sm" onclick="genNoteFrais()">&#x1f4c4; Note frais</button></div>
   <div id="f-resultat"></div>
   <div class="km-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; relev&#xe9; compteur</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openKmModal(0)">&#x1f697; Seat</button><button class="btn btn-ghost btn-xs" onclick="openKmModal(1)">&#x1f690; Talento</button></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; calcul&#xe9;s depuis les pleins</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openKmModal(0)">&#x1f697; <span class="veh-nom-0">Seat Leon</span></button><button class="btn btn-ghost btn-xs" onclick="openKmModal(1)">&#x1f690; <span class="veh-nom-1">Talento</span></button></div></div>
     <div class="fr">
       <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">D&#xe9;but du mois</div><div style="font-weight:700;color:var(--text)" id="km-debut-display">&#x2014;</div></div>
       <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">Fin du mois</div><div style="font-weight:700;color:var(--text)" id="km-fin-display">&#x2014;</div></div>
@@ -330,8 +333,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="sec"><span class="sec-title">Carburant</span><button class="btn btn-outline btn-sm" onclick="openCarbModal()">+ Plein</button></div>
   <div style="display:flex;gap:7px;margin-bottom:10px">
     <div class="chip active" id="carb-f-tous" onclick="setCarbFilter('tous',this)">Tous</div>
-    <div class="chip" id="carb-f-0" onclick="setCarbFilter('0',this)">&#x1f697; Seat</div>
-    <div class="chip" id="carb-f-1" onclick="setCarbFilter('1',this)">&#x1f690; Talento</div>
+    <div class="chip" id="carb-f-0" onclick="setCarbFilter('0',this)">&#x1f697; <span class="veh-nom-0">Seat Leon</span></div>
+    <div class="chip" id="carb-f-1" onclick="setCarbFilter('1',this)">&#x1f690; <span class="veh-nom-1">Talento</span></div>
   </div>
   <div class="sg2" style="margin-bottom:10px">
     <div class="stat"><div class="stat-label">D&#xe9;pens&#xe9;</div><div class="stat-val c-orange" id="f-carb-dep">0 &#x20ac;</div></div>
@@ -395,8 +398,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="stitle">Mon profil</div>
   <div class="sitem"><div class="sitem-left"><div class="sitem-label">Adresse maison</div><div class="sitem-sub" id="p-home">Rue Saint-Eloi 173, Carni&#xe8;res</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-home')">Modifier</button></div>
   <div class="stitle">V&#xe9;hicules</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v1-name">&#x1f697; Seat Leon</div><div class="sitem-sub" id="p-v1-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(0)">Modifier</button></div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v2-name">&#x1f690; Talento</div><div class="sitem-sub" id="p-v2-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(1)">Modifier</button></div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v1-name">&#x1f697; <span class="veh-nom-0">Seat Leon</span></div><div class="sitem-sub" id="p-v1-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(0)">Modifier</button></div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v2-name">&#x1f690; <span class="veh-nom-1">Talento</span></div><div class="sitem-sub" id="p-v2-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(1)">Modifier</button></div>
   <div class="stitle">Entretien v&#xe9;hicule</div>
   <div id="entretien-list"></div>
   <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-entretien')">+ Ajouter entretien</button>
@@ -426,9 +429,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="stitle">Application</div>
   <button class="btn btn-outline btn-full" id="btn-check-update" onclick="checkForUpdateNow()" style="margin-bottom:8px">&#x1f504; V&#xe9;rifier les mises &#xe0; jour</button>
 
+  <div class="stitle">TVA</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Assujetti &#xe0; la TVA</div><div class="sitem-sub">&#xc0; activer seulement quand Adam te le dit. Les prix encaiss&#xe9;s sont alors TVAC : l'app compte le HT comme recette et affiche la TVA &#xe0; reverser.</div></div><label class="toggle"><input type="checkbox" id="p-tva-on" onchange="majTvaReglages()"><span class="tslider"></span></label></div>
+  <div class="fr" id="p-tva-details" style="display:none"><div class="fg"><label class="fl">Depuis le</label><input type="date" class="fi" id="p-tva-depuis" onchange="majTvaReglages()"></div><div class="fg"><label class="fl">Taux (%)</label><input type="number" class="fi" id="p-tva-taux" value="6" step="0.5" onchange="majTvaReglages()"></div></div>
   <div class="stitle">Donn&#xe9;es</div>
   <button class="btn btn-outline btn-full" onclick="exportCSV()" style="margin-bottom:8px">&#x1f4ca; Exporter CSV comptable</button>
-  <button class="btn btn-outline btn-full" onclick="exportBackup()" style="margin-bottom:8px">&#x1f4be; Sauvegarder donn&#xe9;es</button>
+  <button class="btn btn-gold btn-full" onclick="partagerSauvegarde()" style="margin-bottom:8px">&#x1f4e4; Envoyer la sauvegarde (Drive, e-mail…)</button>
+  <button class="btn btn-outline btn-full" onclick="exportBackup()" style="margin-bottom:8px">&#x1f4be; T&#xe9;l&#xe9;charger la sauvegarde</button>
+  <button class="btn btn-outline btn-full" onclick="ouvrirCorbeille()" style="margin-bottom:8px">&#x1f5d1; Corbeille (30 jours)</button>
   <button class="btn btn-outline btn-full" onclick="document.getElementById('import-file').click()">&#x1f4c2; Restaurer donn&#xe9;es</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
   <button class="btn btn-red btn-full" style="margin-top:8px" onclick="resetApp()">&#x1f5d1; R&#xe9;initialiser l'application</button>
@@ -632,7 +640,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div class="fg"><label class="fl">🎒 Petites / trolleys</label><input type="number" class="fi" id="r-petites-valises" value="0" min="0" max="12" oninput="checkCapaciteApp()"></div>
       <div class="fg"><label class="fl">👶 Sièges bébé</label><input type="number" class="fi" id="r-sieges-bebe" value="0" min="0" max="3" oninput="checkCapaciteApp()"></div>
     </div>
-    <div id="r-vehicule-hint" style="display:none;margin-top:6px" class="alert alert-orange">🚐 Talento recommandé pour les bagages importants</div>
+    <div id="r-vehicule-hint" style="display:none;margin-top:6px" class="alert alert-orange">🚐 <span class="veh-nom-1">Talento</span> recommandé pour les bagages importants</div>
   </div>
 
   <!-- SECTION 4: PRIX & PAIEMENT -->
@@ -647,13 +655,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="fg"><label class="fl">Prix total (€)</label><input type="number" class="fi" id="r-prix" placeholder="Ex: 95" step="0.01" oninput="acC['prixManual']=true;updCalc();updAcompte()"><div class="ferr" id="r-prix-hint"></div></div>
     <div class="fg"><label class="fl">Mode de paiement</label>
       <div class="chips" id="r-paiement-chips">
-        <div class="chip active" onclick="selectChip(this,'r-paiement','cash');toggleVmt()">💵 Cash</div>
+        <div class="chip active" onclick="selectChip(this,'r-paiement','aconfirmer');toggleVmt()">⏳ À confirmer</div>
+        <div class="chip" onclick="selectChip(this,'r-paiement','cash');toggleVmt()">💵 Cash</div>
         <div class="chip" onclick="selectChip(this,'r-paiement','carte');toggleVmt()">💳 Carte</div>
         <div class="chip" onclick="selectChip(this,'r-paiement','virement');toggleVmt()">🏦 Virement / QR</div>
         <div class="chip" onclick="selectChip(this,'r-paiement','prepaye');toggleVmt()">🤝 Prépayé</div>
         <div class="chip" onclick="selectChip(this,'r-paiement','mixte');toggleVmt();initMixte()">🔀 Mixte</div>
       </div>
-      <input type="hidden" id="r-paiement" value="cash">
+      <input type="hidden" id="r-paiement" value="aconfirmer">
       <div id="r-mixte-box" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
         <div style="font-size:0.75rem;color:var(--text3);margin-bottom:6px">Paiement en plusieurs fois (ex. aller en cash, retour par QR code) : indiquez combien a été payé de chaque façon.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
@@ -666,7 +675,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     </div>
     <div id="r-vmt-section" style="display:none"><div class="toggle-row"><span style="font-size:0.88rem;font-weight:500">Virement reçu ✅</span><label class="toggle"><input type="checkbox" id="r-vmt-recu"><span class="tslider"></span></label></div></div>
     <div class="fr">
-      <div class="fg"><label class="fl">Péages (€)</label><input type="number" class="fi" id="r-peages" value="0" step="0.01" oninput="updCalc()"></div>
+      <div class="fg"><label class="fl">Péages (€)</label><input type="number" class="fi" id="r-peages" value="0" step="0.01" oninput="updCalc()">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"><button type="button" class="chip" onclick="setPeage(16.30)">🛣️ Paris aller 16,30</button><button type="button" class="chip" onclick="setPeage(32.60)">🛣️ Paris A/R 32,60</button><button type="button" class="chip" onclick="setPeage(0)">0</button></div></div>
       <div class="fg"><label class="fl">Parking (€)</label><input type="number" class="fi" id="r-parking" value="0" step="0.01" oninput="updCalc()"></div>
     </div>
     <div class="fg" id="r-acompte-fg" style="display:none"><label class="fl">Acompte à l'aller (€)</label><input type="number" class="fi" id="r-acompte" value="0" step="0.01" oninput="updAcompte()"><div id="r-solde-hint" style="display:none;margin-top:8px"></div></div>
@@ -676,8 +686,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div class="dr"><span class="dr-label">Km facturés</span><span class="dr-val c-blue" id="prev-km-client">—</span></div>
       <div class="dr"><span class="dr-label">Km réels</span><span class="dr-val c-purple" id="prev-km-reels">—</span></div>
       <div class="dr"><span class="dr-label">Coût km</span><span class="dr-val" id="prev-cout">—</span></div>
-      <div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val" id="prev-benef" style="font-size:1rem;font-family:Playfair Display,serif">—</span></div>
-      <div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val" id="prev-benef-reel">—</span></div>
+      <div class="dr" style="display:none"><span class="dr-label">Bénéfice comptable</span><span class="dr-val" id="prev-benef">—</span></div>
+      <div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice estimé (km réels)</span><span class="dr-val" id="prev-benef-reel" style="font-size:1rem;font-family:Playfair Display,serif">—</span></div>
     </div>
   </div>
 
@@ -694,7 +704,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
         <input type="hidden" id="r-langue" value="fr">
       </div>
       <!-- Km pickup -->
-      <div class="fg"><label class="fl" id="lbl-km-pickup">Km pickup (Carnières → client)</label><input type="number" class="fi" id="r-km-pickup" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-hint">Calculé automatiquement depuis votre adresse</div></div>
+      <div class="fg"><label class="fl" id="lbl-km-pickup">Km pickup (maison → client) — vide = calcul automatique</label><input type="number" class="fi" id="r-km-pickup" placeholder="Calculé auto" step="0.1" oninput="updKmRecap();updCalc()"><div class="fhint" id="r-km-pickup-hint">Calculé automatiquement depuis votre adresse</div></div>
       <!-- Retour vide aller -->
       <div class="fg"><label class="fl" id="lbl-vide-aller">Retour après dépose (J1)</label>
         <div class="chips" id="r-vide-aller-chips">
@@ -800,12 +810,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="modal-handle"></div><div class="modal-title">Nouveau plein</div>
 <div class="fg"><label class="fl">V&#xe9;hicule</label>
   <div class="chips" id="carb-vehicule-chips">
-    <div class="chip active" onclick="selectChip(this,'carb-vehicule','0')">&#x1f697; Seat Leon</div>
-    <div class="chip" onclick="selectChip(this,'carb-vehicule','1')">&#x1f690; Talento</div>
+    <div class="chip active" onclick="selectChip(this,'carb-vehicule','0');updCarbKmHint()">&#x1f697; <span class="veh-nom-0">Seat Leon</span></div>
+    <div class="chip" onclick="selectChip(this,'carb-vehicule','1');updCarbKmHint()">&#x1f690; <span class="veh-nom-1">Talento</span></div>
   </div>
   <input type="hidden" id="carb-vehicule" value="0">
 </div>
-<div class="fr"><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="carb-date"></div><div class="fg"><label class="fl">Km compteur</label><input type="number" class="fi" id="carb-km" placeholder="Ex: 54219"></div></div>
+<div class="fr"><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="carb-date"></div><div class="fg"><label class="fl">Km compteur</label><input type="number" class="fi" id="carb-km" placeholder="Ex: 54219" oninput="updCarbKmHint()"><div id="carb-km-hint" style="font-size:0.72rem;color:var(--text3);margin-top:4px"></div></div></div>
 <div class="fr"><div class="fg"><label class="fl">Litres</label><input type="number" class="fi" id="carb-litres" placeholder="Ex: 47.73" step="0.01"></div><div class="fg"><label class="fl">Prix total (&#x20ac;)</label><input type="number" class="fi" id="carb-prix" placeholder="Ex: 102.24" step="0.01"></div></div>
 <div class="fg"><label class="fl">Station</label><input type="text" class="fi" id="carb-station" placeholder="Q8, Total..."></div>
 <div class="fg"><label class="fl">Mode de paiement</label><div class="chips" id="carb-paiement-chips"><div class="chip" data-v="q8" onclick="setChips('carb-paiement-chips','carb-paiement','q8')">&#128179; Carte Q8</div><div class="chip" data-v="bancontact" onclick="setChips('carb-paiement-chips','carb-paiement','bancontact')">&#128179; Bancontact</div><div class="chip" data-v="cash" onclick="setChips('carb-paiement-chips','carb-paiement','cash')">&#128176; Cash</div><div class="chip" data-v="virement" onclick="setChips('carb-paiement-chips','carb-paiement','virement')">&#127974; Virement</div></div><input type="hidden" id="carb-paiement" value="q8"></div>
@@ -817,8 +827,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="modal-handle"></div><div class="modal-title">&#x1f4cd; Relev&#xe9; compteur</div>
 <div class="fg"><label class="fl">V&#xe9;hicule</label>
   <div class="chips" id="km-vehicule-chips">
-    <div class="chip active" onclick="selectChip(this,'km-vehicule','0')">&#x1f697; Seat Leon</div>
-    <div class="chip" onclick="selectChip(this,'km-vehicule','1')">&#x1f690; Talento</div>
+    <div class="chip active" onclick="selectChip(this,'km-vehicule','0')">&#x1f697; <span class="veh-nom-0">Seat Leon</span></div>
+    <div class="chip" onclick="selectChip(this,'km-vehicule','1')">&#x1f690; <span class="veh-nom-1">Talento</span></div>
   </div>
   <input type="hidden" id="km-vehicule" value="0">
 </div>
@@ -863,7 +873,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 </div></div>
 
 <!-- MODALS SIMPLES -->
-<div class="overlay" id="m-objectif"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Objectif mensuel</div><div class="fg"><label class="fl">Objectif (&#x20ac;)</label><input type="number" class="fi" id="obj-val" placeholder="Ex: 2000"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-objectif')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveObj()">Enregistrer</button></div></div></div>
+<div class="overlay" id="m-objectif"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Objectif mensuel</div><div class="toggle-row" style="margin-bottom:10px"><span style="font-size:0.85rem">Automatique (moyenne des 3 derniers mois)</span><label class="toggle"><input type="checkbox" id="obj-auto" onchange="g('obj-val').disabled=this.checked;if(this.checked)g('obj-val').value=getObjectif();"><span class="tslider"></span></label></div><div class="fg"><label class="fl">Objectif (&#x20ac;)</label><input type="number" class="fi" id="obj-val" placeholder="Ex: 5000"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-objectif')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveObj()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-home"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Adresse maison</div><div class="fg"><label class="fl">Domicile</label><div class="ac-wrap"><input type="text" class="fi" id="home-adr" placeholder="Tapez votre adresse..." autocomplete="off" oninput="acSearch(this,'ac-home','home')"><input type="hidden" id="home-lat"><input type="hidden" id="home-lon"><div class="ac-drop" id="ac-home"></div></div></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-home')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveHome()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-vehicle"><div class="modal"><div class="modal-handle"></div><div class="modal-title" id="vehicle-title">V&#xe9;hicule</div><input type="hidden" id="vehicle-idx"><div class="fg"><label class="fl">Nom</label><input type="text" class="fi" id="v-nom"></div><div class="fg"><label class="fl">Co&#xfb;t au km (&#x20ac;)</label><input type="number" class="fi" id="v-cout" step="0.01"></div><div class="fg"><label class="fl">Consommation (L/100km)</label><input type="number" class="fi" id="v-conso" step="0.1"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-vehicle')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveVehicle()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-tarifs"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Tarification</div><div class="fg"><label class="fl">Rayon local (km)</label><input type="number" class="fi" id="t-rayon" placeholder="Ex: 30"></div><div class="fg"><label class="fl">Tarif court (&#x20ac;/km)</label><input type="number" class="fi" id="t-court" step="0.01" placeholder="1.40"></div><div class="fg"><label class="fl">Tarif long (&#x20ac;/km)</label><input type="number" class="fi" id="t-long" step="0.01" placeholder="1.50"></div><div class="fg"><label class="fl">Prix minimum (&#x20ac;)</label><input type="number" class="fi" id="t-min" step="0.5" placeholder="50"></div><div class="fg"><label class="fl">Arrondi au (&#x20ac;)</label><input type="number" class="fi" id="t-round" step="1" placeholder="5"></div><div class="fg"><label class="fl">Suppl&#xe9;ment camionnette (&#x20ac;)</label><input type="number" class="fi" id="t-camion" step="0.5" placeholder="20"></div><div class="fg"><label class="fl">R&#xe9;duction automatique A/R (&#x20ac;)</label><input type="number" class="fi" id="t-remise-ar" step="0.5" placeholder="10"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-tarifs')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveTarifs()">Enregistrer</button></div></div></div>
@@ -891,10 +901,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div style="margin-top:12px">
   <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Changer le statut</div>
   <div style="display:flex;flex-wrap:wrap;gap:7px">
-    <button class="btn btn-ghost btn-xs" id="dr-s-confirme" onclick="setStatut(currentDetailId,'confirme')">✓ Confirmer</button>
-    <button class="btn btn-ghost btn-xs" id="dr-s-enroute" onclick="setStatut(currentDetailId,'enroute')">🚗 En route</button>
-    <button class="btn btn-ghost btn-xs" id="dr-s-termine" onclick="setStatut(currentDetailId,'termine')">✅ Terminer</button>
-    <button class="btn btn-ghost btn-xs" id="dr-s-annule" onclick="setStatut(currentDetailId,'annule')" style="color:var(--red2)">❌ Annuler</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-confirme" style="display:none" onclick="setStatut(currentDetailId,'confirme')">✓ Confirmer</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-enroute" style="display:none" onclick="setStatut(currentDetailId,'enroute')">🚗 En route</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-termine" style="display:none" onclick="setStatut(currentDetailId,'termine')">✅ Terminer</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-annule" onclick="setStatut(currentDetailId,'annule')" style="color:var(--red2)">❌ Annuler la course</button>
+    <button class="btn btn-ghost btn-xs" id="dr-s-retablir" onclick="setStatut(currentDetailId,'')">↺ Rétablir la course</button>
   </div>
 </div>
 </div></div>
@@ -1015,6 +1026,10 @@ function fixDb(){
     db.settings.migOct26=true;
   }
   if(!db.settings.provisionPct)db.settings.provisionPct=40;
+  if(!Array.isArray(db.corbeille))db.corbeille=[];
+  try{const lim=Date.now()-30*86400000;db.corbeille=db.corbeille.filter(c=>c&&c.del&&new Date(c.del).getTime()>lim);}catch(e){db.corbeille=[];}
+  if(!db.provisions||typeof db.provisions!=='object')db.provisions={};
+  if(!db.settings.migKmOct26){try{db.reservations.forEach(completerKmAuto);}catch(e){console.error('migration km',e);}db.settings.migKmOct26=true;}
   // migrateR pour les réservations
   db.reservations=(db.reservations||[]).map(function(r){return migrateR(r);});
 }
@@ -1085,8 +1100,53 @@ function getMonthFrais(m,y){return db.frais.filter(f=>{const d=new Date(f.date);
    Bénéfice = ce que j'encaisse − ce que je dépense VRAIMENT (pleins, frais, charges fixes, péages/parking).
    Le coût/km n'intervient PAS ici (sinon le carburant serait compté deux fois) : il sert seulement d'indicateur par course. */
 const SEUIL_TVA=25000,ALERTE_TVA=20000;
+/* ===== KM D'APPROCHE ET DE RETOUR À VIDE AUTOMATIQUES =====
+   Distance à vol d'oiseau × 1,3 (facteur calibré sur 202 courses réelles : médiane 1,28).
+   Ne remplit QUE les champs restés à 0 : une valeur saisie ou calculée par l'itinéraire n'est jamais écrasée. */
+const KM_ROUTE=1.3;
+function kmVolOiseau(a,b){const R=6371,t=Math.PI/180,dLa=(b.lat-a.lat)*t,dLo=(b.lon-a.lon)*t;const x=Math.sin(dLa/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+function kmRoute(a,b){if(!a||!b||!isFinite(a.lat)||!isFinite(b.lat))return 0;return Math.round(kmVolOiseau(a,b)*KM_ROUTE*10)/10;}
+function normTxt(t){return (t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
+function coordsAeroport(txt){
+  const t=normTxt(txt);const fav=n=>(db.favAddresses||[]).find(f=>normTxt(f.nom).includes(n)&&f.lat);
+  if(/zaventem|bruxelles national|brussels airport|luchthaven/.test(t)){const f=fav('zaventem');return f?{lat:f.lat,lon:f.lon}:{lat:50.8983361,lon:4.4832587};}
+  if(/(charleroi|gosselies).*(aeroport|airport)|(aeroport|airport).*(charleroi|gosselies)|freres wright|\bcrl\b/.test(t)){const f=fav('charleroi');return f?{lat:f.lat,lon:f.lon}:{lat:50.4636373,lon:4.4661733};}
+  return null;
+}
+function coordsLieu(txt,r,lat,lon){
+  if(!(txt||'').trim())return null;
+  if(lat&&lon&&isFinite(lat)&&isFinite(lon))return {lat:+lat,lon:+lon};
+  const ap=coordsAeroport(txt);if(ap)return ap;
+  const home=db.settings.homeAddress;
+  const t=normTxt(txt);
+  if(home&&home.lat&&home.adresse&&t.includes(normTxt(home.adresse).split(' ').slice(0,3).join(' ')))return {lat:home.lat,lon:home.lon};
+  const c=(db.clients||[]).find(x=>(x.nom||'').trim().toLowerCase()===(r.clientNom||'').trim().toLowerCase());
+  if(c&&c.lat&&c.lon&&c.adresse){const rue=normTxt(c.adresse.split(',')[0]);if(rue.length>=4&&t.includes(rue))return {lat:c.lat,lon:c.lon};}
+  const fav=(db.favAddresses||[]).find(f=>f.lat&&normTxt(f.adresse)&&t.includes(normTxt(f.adresse.split(',')[0])));
+  if(fav)return {lat:fav.lat,lon:fav.lon};
+  return null;
+}
+function completerKmAuto(r){
+  if(!r||r.statut==='annule')return r;
+  const home=db.settings.homeAddress;if(!home||!home.lat)return r;
+  const H={lat:home.lat,lon:home.lon},n=v=>parseFloat(v||0)||0;
+  const dep=coordsLieu(r.depart,r,r.depLat,r.depLon),arr=coordsLieu(r.arrivee,r,r.arrLat,r.arrLon);
+  const auto=Array.isArray(r.kmAuto)?r.kmAuto.slice():[];
+  const set=(k,v)=>{if(v>0){r[k]=v;if(!auto.includes(k))auto.push(k);}};
+  if(n(r.kmPickup)===0&&dep)set('kmPickup',kmRoute(H,dep));
+  if(n(r.kmVideAller)===0&&(r.kmVideAllerType||'maison')==='maison'&&arr&&r.type!=='ar-jour')set('kmVideAller',kmRoute(arr,H));
+  if(r.type==='ar-diff'){
+    const dR=coordsLieu(r.departRetour||r.arrivee,r,r.depRetLat,r.depRetLon),aR=coordsLieu(r.arriveeRetour||r.depart,r,r.arrRetLat,r.arrRetLon);
+    if(n(r.kmPickupRetour)===0&&dR)set('kmPickupRetour',kmRoute(H,dR));
+    if(n(r.kmVideRetour)===0&&(r.kmVideRetourType||'maison')==='maison'&&aR)set('kmVideRetour',kmRoute(aR,H));
+  }else if(r.type==='ar-jour'){
+    if(n(r.kmVideRetour)===0&&(r.kmVideRetourType||'maison')==='maison'&&dep)set('kmVideRetour',kmRoute(dep,H));
+  }
+  if(auto.length)r.kmAuto=auto;
+  return r;
+}
 function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
-function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+parseFloat(r.prix||0)*k:s;},0);}
+function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+prixHT(r)*k:s;},0);}
 function moisActif(m,y){
   // Un mois compte dans l'année dès que l'activité a commencé (1re course, plein ou frais)
   const t=new Date(y,m+1,0,23,59).getTime();
@@ -1107,6 +1167,33 @@ function getResultatAnnee(y,mMax){
   for(let m=0;m<=mMax;m++){const r=getResultatMois(m,y);t.recettes+=r.recettes;t.depenses+=r.depenses;t.benef+=r.benef;t.caBrut+=r.caBrut;}
   t.provision=Math.max(0,t.benef)*t.pct;return t;
 }
+function renderChecklist(cible){
+  const el=g(cible);if(!el)return;
+  const now=new Date(),m=curMonth,y=curYear,cle=y+'-'+String(m+1).padStart(2,'0');
+  const estMoisCourant=(m===now.getMonth()&&y===now.getFullYear());
+  const finMois=new Date(y,m+1,0);const jRest=Math.ceil((finMois-now)/86400000);
+  // visible : les 7 derniers jours du mois courant, ou pour un mois passé non clôturé
+  const clos=!!(db.provisions[cle]&&db.provisions[cle].fait);
+  const passe=new Date(y,m+1,1)<=now;
+  if(!(estMoisCourant&&jRest<=7)&&!(passe&&!clos&&new Date(y,m+1,1)>new Date(now.getFullYear(),now.getMonth()-2,1))){el.innerHTML='';return;}
+  const inMois=d=>{const x=new Date(d);return x.getMonth()===m&&x.getFullYear()===y;};
+  const aConf=getPaiementsAConfirmer().filter(r=>inMois(r.dateAller)).length;
+  const vir=db.reservations.filter(r=>aVirementEnAttente(r)&&courseCommencee(r)&&inMois(r.dateAller)).length;
+  const sansKm=getMonthCarb(m,y).filter(c=>!(parseFloat(c.km)>0)).length;
+  const nbFrais=getMonthFrais(m,y).length;
+  const jb=(typeof joursDepuisBackup==='function')?joursDepuisBackup():null;
+  const res=getResultatMois(m,y);
+  const it=(okk,txt,act)=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:0.8rem"><span>'+(okk?'✅':'⬜')+' '+txt+'</span>'+(act&&!okk?act:'')+'</div>';
+  let h='<div class="card"><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">📋 Fin de mois — '+MOIS[m]+'</div>';
+  h+=it(aConf===0,aConf?aConf+' paiement(s) à confirmer':'Tous les paiements sont confirmés');
+  h+=it(vir===0,vir?vir+' virement(s) pas encore reçu(s)':'Virements reçus');
+  h+=it(sansKm===0,sansKm?sansKm+' plein(s) sans compteur':'Compteur noté à chaque plein');
+  h+=it(nbFrais>0,nbFrais?nbFrais+' frais noté(s)':'Aucun frais ce mois ? (lavage, parking, entretien…)','<button class="btn btn-ghost btn-xs" onclick="openFraisModal(null)">+ Frais</button>');
+  h+=it(jb!==null&&jb<7,jb===null?'Aucune sauvegarde':'Sauvegarde il y a '+jb+' j','<button class="btn btn-ghost btn-xs" onclick="partagerSauvegarde()">📤 Envoyer</button>');
+  h+=it(clos,'Mettre '+fmt(res.provision)+' de côté sur l\'épargne','<button class="btn btn-gold btn-xs" onclick="marquerProvision(\''+cle+'\','+res.provision.toFixed(2)+')">✓ Fait</button>');
+  el.innerHTML=h+'</div>';
+}
+function marquerProvision(cle,montant){db.provisions[cle]={fait:true,montant:montant,date:new Date().toISOString()};save();renderAll();}
 function renderResultat(cible,detail){
   const el=g(cible);if(!el)return;
   const r=getResultatMois(curMonth,curYear),a=getResultatAnnee(curYear,curMonth),pc=Math.round(r.pct*100);
@@ -1129,6 +1216,8 @@ function renderResultat(cible,detail){
   h+='<div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Depuis janvier '+curYear+'</div>';
   h+=ligne('Bénéfice cumulé','<span style="color:'+col(a.benef)+'">'+fmt(a.benef)+'</span>');
   h+=ligne('Total à avoir mis de côté','<span style="color:var(--gold)">'+fmt(a.provision)+'</span>');
+  const _tva=db.settings.tva||{};
+  if(_tva.assujetti){const tv=getTvaMois(curMonth,curYear);h+=ligne('Assujetti TVA depuis le',(_tva.depuis?new Date(_tva.depuis+'T12:00').toLocaleDateString('fr-BE'):'—'));h+=ligne('TVA encaissée ce mois (à reverser)','<span style="color:var(--red2)">'+fmt(tv)+'</span>');h+=ligne('Chiffre d\'affaires HT depuis janvier',fmt(a.caBrut));h+='</div></div>';el.innerHTML=h;return;}
   const pctT=Math.min(100,Math.round(a.caBrut/SEUIL_TVA*100));
   const cT=a.caBrut>=SEUIL_TVA?'var(--red2)':a.caBrut>=ALERTE_TVA?'var(--orange2)':'var(--green2)';
   h+='<div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-top:6px"><span style="color:var(--text2)">Seuil TVA (chiffre d\'affaires)</span><b style="color:'+cT+'">'+fmt(a.caBrut)+' / 25 000 €</b></div>';
@@ -1139,7 +1228,14 @@ function renderResultat(cible,detail){
   el.innerHTML=h;
 }
 function getYearKm(y){return db.reservations.filter(r=>new Date(r.dateAller).getFullYear()===y).reduce((s,r)=>s+getKmClient(r),0);}
-function getKmReelsMois(m,y,veh){const ms=y+'-'+String(m+1).padStart(2,'0');const vIdx=parseInt(veh||0);const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===vIdx);if(!e||!e.debut||!e.fin)return null;return parseFloat(e.fin)-parseFloat(e.debut);}
+function getKmReelsMois(m,y,veh){const ms=y+'-'+String(m+1).padStart(2,'0');const vIdx=parseInt(veh||0);const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===vIdx);if(!e||!e.debut||!e.fin){const est=getKmPleinsMois(m,y,vIdx);return est?est.km:null;}return parseFloat(e.fin)-parseFloat(e.debut);}
+/* Km réels déduits des compteurs notés aux pleins (interpolation entre deux pleins) */
+function pleinsAvecKm(vIdx){return (db.carburant||[]).filter(c=>parseInt(c.vehicule||0)===vIdx&&parseFloat(c.km)>0&&c.date).map(c=>({t:new Date(c.date+'T12:00').getTime(),km:parseFloat(c.km)})).filter(p=>isFinite(p.t)).sort((a,b)=>a.t-b.t);}
+function compteurA(vIdx,t){const P=pleinsAvecKm(vIdx);const TOL=3*86400000;
+  if(P.length&&t<P[0].t&&P[0].t-t<=TOL)return P[0].km;if(P.length&&t>P[P.length-1].t&&t-P[P.length-1].t<=TOL)return P[P.length-1].km;
+  for(let i=0;i<P.length-1;i++){if(P[i].t<=t&&P[i+1].t>=t){const a=P[i],b=P[i+1];if(b.km<a.km)return null;return b.t===a.t?a.km:a.km+(b.km-a.km)*(t-a.t)/(b.t-a.t);}}return null;}
+function getKmPleinsMois(m,y,vIdx){const d=compteurA(vIdx,new Date(y,m,1,0,0).getTime()),f=compteurA(vIdx,new Date(y,m+1,1,0,0).getTime());if(d==null||f==null||f<d)return null;return {debut:Math.round(d),fin:Math.round(f),km:Math.round(f-d)};}
+function dernierPlein(vIdx,avantDate){const P=(db.carburant||[]).filter(c=>parseInt(c.vehicule||0)===vIdx&&parseFloat(c.km)>0&&c.date&&(!avantDate||c.date<=avantDate)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));return P.length?P[P.length-1]:null;}
 function getEncaisseAller(r){
   const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
@@ -1192,13 +1288,17 @@ function getRatioMois(r,m,y){
   if(allerDansMois)return getEncaisseAller(r)/net;
   return getEncaisseRetour(r)/net;
 }
+/* TVA : une fois assujetti (date réglée dans Réglages), le prix encaissé est TVAC → la recette réelle est le HT */
+function tvaActive(r){const t=db.settings&&db.settings.tva;return !!(t&&t.assujetti&&t.depuis&&(r.dateAller||'')>=t.depuis);}
+function prixHT(r){const p=parseFloat(r.prix||0)||0;if(!tvaActive(r))return p;const tx=(parseFloat(db.settings.tva.taux)||6)/100;return Math.round(p/(1+tx)*100)/100;}
+function getTvaMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&tvaActive(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+((parseFloat(r.prix)||0)-prixHT(r))*k:s;},0);}
 function getCAMois(m,y){
-  // CA net du mois = somme des prix nets pondérés par le ratio du mois
+  // CA net du mois = somme des prix nets (HT si assujetti TVA) pondérés par le ratio du mois
   return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{
     const ratio=getRatioMois(r,m,y);
     if(!ratio)return s;
     const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
-    const net=Math.max(0,parseFloat(r.prix||0)-comm);
+    const net=Math.max(0,prixHT(r)-comm);
     return s+Math.round(net*ratio*100)/100;
   },0);
 }
@@ -1284,7 +1384,12 @@ function changeMonth(d){
   sv('tb-month',MOIS_S[curMonth]+' '+curYear);
   renderDash();renderRes();renderFin();
 }
-function renderAll(){
+function nomVeh(i){const v=db.settings&&db.settings.vehicles&&db.settings.vehicles[i];return (v&&v.nom)||(i===0?'Berline':'Van');}
+function majNomsVehicules(){
+  [0,1].forEach(i=>{document.querySelectorAll('.veh-nom-'+i).forEach(el=>{el.textContent=nomVeh(i);});});
+  const sel=g('r-vehicule');if(sel&&sel.options.length>=2){sel.options[0].textContent='🚗 '+nomVeh(0);sel.options[1].textContent='🚐 '+nomVeh(1)+' (+'+((db.settings.tarifs&&db.settings.tarifs.camion)||20)+'€)';}
+}
+function renderAll(){try{majNomsVehicules();}catch(e){}
   const now=new Date();
   sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
   sv('tb-month',MOIS_S[curMonth]+' '+curYear);
@@ -1322,14 +1427,14 @@ function renderDash(){
   const _res=getResultatMois(curMonth,curYear);
   const benef=_res.benef;
   const marge=recettes>0?Math.round(benef/recettes*100):0;
-  const enc=getEncaisseMois(curMonth,curYear),obj=db.settings.objectif;
+  const enc=getEncaisseMois(curMonth,curYear),obj=getObjectif();
   const pct=Math.min(100,Math.round(enc/obj*100));
   const kmReel=getKmReelsMois(curMonth,curYear);
   sv('d-gains',fmt(enc));sv('d-obj-target',obj);
   if(g('d-obj-prog'))g('d-obj-prog').style.width=pct+'%';
   sv('d-obj-txt',enc>=obj?'🎉 Objectif atteint !':'Il reste '+fmt(obj-enc)+' — '+pct+'%');
   sv('d-benef',fmt(benef),'stat-val '+(benef>=0?'c-green':'c-red'));
-  sv('d-marge','Marge '+marge+'%');renderResultat('d-resultat',false);
+  sv('d-marge','Marge '+marge+'%');renderResultat('d-resultat',false);try{renderAConfirmer('d-aconfirmer');}catch(e){console.error(e);}try{renderChecklist('d-checklist');}catch(e){console.error(e);}
   // Comparaison mois précédent
   let prevM=curMonth-1,prevY=curYear;if(prevM<0){prevM=11;prevY--;}
   const prevNbC=getNbCoursesMois(prevM,prevY);
@@ -1440,6 +1545,8 @@ function renderRes(){
     if(r.vol)html+='<span class="badge badge-gold">✈ '+escH(r.vol)+'</span>';
     if(r.volRetour)html+='<span class="badge badge-blue">✈ '+escH(r.volRetour)+' (ret.)</span>';
     if(aVirementEnAttente(r))html+='<span class="badge badge-red">💸 ⏳</span>';
+    if(r.paiement==='aconfirmer'&&courseCommencee(r))html+='<span class="badge badge-orange">⏳ paiement ?</span>';
+    {var _rk=rentaKm(r);if(_rk!==null&&_rk<SEUIL_RENTA&&r.statut!=='annule')html+='<span class="badge badge-red" title="Gain par km roulé (approche et retour à vide compris)">⚠️ '+_rk.toFixed(2).replace('.',',')+' €/km</span>';}
     if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
@@ -1514,8 +1621,9 @@ function renderFin(){
   const kmReel=getKmReelsMois(curMonth,curYear);
   const moisStr=curYear+'-'+String(curMonth+1).padStart(2,'0');
   const kmEntry=db.kmReels.find(k=>k.mois===moisStr);
-  sv('km-debut-display',kmEntry?.debut?kmEntry.debut+' km':'—');
-  sv('km-fin-display',kmEntry?.fin?kmEntry.fin+' km':'—');
+  const _estKm=(!kmEntry||!kmEntry.debut||!kmEntry.fin)?getKmPleinsMois(curMonth,curYear,0):null;
+  sv('km-debut-display',kmEntry?.debut?kmEntry.debut+' km':(_estKm?'≈ '+_estKm.debut+' km (pleins)':'—'));
+  sv('km-fin-display',kmEntry?.fin?kmEntry.fin+' km':(_estKm?'≈ '+_estKm.fin+' km (pleins)':'—'));
   sv('km-reel-display',kmReel!==null?Math.round(kmReel)+' km':'—');
   const kmRef=kmReel||totalKmR;
   sv('km-taux-display',kmRef>0?Math.round(totalKmC/kmRef*100)+'%'+(kmReel?'':' (est.')+'':'—');
@@ -1579,6 +1687,27 @@ function renderFin(){
   }
 }
 
+/* Relevé mensuel d'un partenaire : page imprimable (Imprimer → Enregistrer en PDF) */
+function imprimerRelevePartenaire(nom,mois){
+  const L=db.reservations.filter(r=>r.source===nom&&r.statut!=='annule'&&(r.dateAller||'').slice(0,7)===mois).sort((a,b)=>(a.dateAller+(a.heure||'')).localeCompare(b.dateAller+(b.heure||'')));
+  if(!L.length){alert('Aucune course pour ce mois.');return;}
+  const e=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const eur=n=>(parseFloat(n)||0).toFixed(2).replace('.',',')+' €';
+  const d0=new Date(mois+'-01T12:00');let ml=d0.toLocaleDateString('fr-BE',{month:'long',year:'numeric'});ml=ml.charAt(0).toUpperCase()+ml.slice(1);
+  let tF=0,tC=0;const typ={aller:'Simple','ar-jour':'A/R jour','ar-diff':'A/R'};
+  const rows=L.map(r=>{const pre=r.partnerType==='prepaye',c=r.partnerType==='commission'?parseFloat(r.commission||0):0;if(pre)tF+=parseFloat(r.prix||0);else tC+=c;
+    return '<tr><td>'+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE')+' '+e(r.heure||'')+'</td><td>'+e(r.clientNom)+'</td><td>'+e((r.depart||'').split(',')[0])+' → '+e((r.arrivee||'').split(',')[0])+'</td><td>'+(typ[r.type]||e(r.type))+'</td><td class="n">'+eur(r.prix)+'</td><td class="n">'+(pre?eur(r.prix):'—')+'</td><td class="n">'+(c?eur(c):'—')+'</td></tr>';}).join('');
+  const net=tF-tC;
+  const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Relevé '+e(nom)+' '+ml+'</title><style>body{font-family:Arial,sans-serif;color:#111;margin:24px;font-size:12px}h1{font-size:18px;margin:0 0 4px}.m{color:#555;margin-bottom:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:5px 6px;text-align:left}th{background:#f1f1f1}.n{text-align:right;white-space:nowrap}.t td{font-weight:bold;background:#fafafa}.net{margin-top:14px;font-size:14px;font-weight:bold}.f{margin-top:24px;color:#666;font-size:10px}@media print{body{margin:10mm}}</style></head><body>'
+   +'<h1>Relevé des courses — '+e(nom)+'</h1><div class="m">'+ml+' · '+L.length+' course(s)<br>'+e(MOI.nom)+' · Facciolini Mobility · BCE '+e(MOI.bce)+'<br>'+e(MOI.adresse)+' · '+e(MOI.tel)+' · '+e(MOI.email)+'</div>'
+   +'<table><thead><tr><th>Date</th><th>Client</th><th>Trajet</th><th>Type</th><th class="n">Prix</th><th class="n">À facturer</th><th class="n">Commission</th></tr></thead><tbody>'+rows
+   +'<tr class="t"><td colspan="5">Totaux</td><td class="n">'+eur(tF)+'</td><td class="n">'+eur(tC)+'</td></tr></tbody></table>'
+   +'<div class="net">'+(net>=0?'Solde en faveur de Facciolini Mobility : '+eur(net):'Solde en faveur de '+e(nom)+' : '+eur(-net))+'</div>'
+   +'<div class="f">Document récapitulatif — la facture officielle est émise via Billtobox (Peppol).</div><script>setTimeout(function(){window.print()},300)<\/script></body></html>';
+  const w=window.open('','_blank');
+  if(w){w.document.open();w.document.write(html);w.document.close();return;}
+  const blob=new Blob([html],{type:'text/html'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='releve_'+nom.replace(/[^a-z0-9]+/gi,'_')+'_'+mois+'.html';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},500);
+}
 function renderPartners(){
   var soldes=calcPartnerSoldes();
   var pl=document.getElementById('partners-list');
@@ -1679,6 +1808,7 @@ function renderPartners(){
           if(netMois>0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--green2)">→ Tu factures '+fmt(netMois)+'</span>';}
           else if(netMois<0){html+='<span style="font-size:0.68rem;font-weight:700;color:var(--red2)">→ Tu verses '+fmt(Math.abs(netMois))+'</span>';}
           else{html+='<span style="font-size:0.68rem;color:var(--green2)">Soldé ✓</span>';}
+          html+='<span style="cursor:pointer;font-size:0.9rem" title="Relevé du mois (PDF)" onclick="imprimerRelevePartenaire(this.dataset.nom,this.dataset.mois)" data-nom="'+escH(p.nom)+'" data-mois="'+key+'">🖨️</span>';
           if(key!==moisCourantKey){
             html+='<span style="cursor:pointer;font-size:0.9rem" title="Ne plus afficher ce mois ici" onclick="masquerMoisPartenaire(\''+escH(p.nom).replace(/'/g,"\\'")+'\',\''+key+'\')">🗑️</span>';
           }
@@ -1807,7 +1937,7 @@ function reafficherMoisPartenaire(p){
   db.partnerMoisMasques[p]=[];
   save();renderAll();
 }
-function renderParams(){
+function renderParams(){try{afficherTvaReglages();}catch(e){}
   var s=db.settings;
   renderUsageStats();
   loadNotifSettings();
@@ -1823,7 +1953,7 @@ function renderParams(){
   s.vehicles.forEach(function(v,i){sv2('p-v'+(i+1)+'-name',(i===0?'🚗 ':'🚐 ')+v.nom);sv2('p-v'+(i+1)+'-sub',v.cout.toFixed(2).replace('.',',')+' €/km · '+v.conso+'L/100km');});
   sv2('p-tarif1',s.tarifs.court.toFixed(2).replace('.',',')+' €/km · min '+s.tarifs.min+' € (≤'+s.tarifs.rayon+'km)');
   sv2('p-tarif2',s.tarifs.long.toFixed(2).replace('.',',')+' €/km (>'+s.tarifs.rayon+'km)');
-  sv2('p-tarif3','+'+s.tarifs.camion+'€ Talento · Arrondi '+s.tarifs.round+'€');
+  sv2('p-tarif3','+'+s.tarifs.camion+'€ '+nomVeh(1)+' · Arrondi '+s.tarifs.round+'€');
   sv2('p-vip','Dès le '+s.vip.seuil+'ème trajet → -'+s.vip.reduc+'%');
   var cl=document.getElementById('charges-list');
   if(cl){
@@ -1866,7 +1996,7 @@ function updResType(){
   const spArJour=g('sp2-ar-jour');if(spArJour)spArJour.style.display=type==='ar-jour'?'block':'none';
   const sp3=g('sp3');if(sp3)sp3.style.display=type==='ar-diff'?'block':'none';
   const spRet=g('sp4-retour-section');if(spRet)spRet.style.display=(type==='ar-diff'||type==='ar-jour')?'block':'none';
-  const acFg=g('r-acompte-fg');if(acFg)acFg.style.display=type==='ar-diff'?'block':'none';
+  const acFg=g('r-acompte-fg');if(acFg)acFg.style.display='none';
   const lbl=g('sp4-j2-label');if(lbl)lbl.textContent=type==='ar-jour'?'Retour même jour':'Jour 2 — Retour';
   ['kr-j2-1','kr-j2-2','kr-j2-3'].forEach(id=>{const el=g(id);if(el)el.style.display=type==='ar-diff'?'flex':'none';});
   const pkrFg=g('r-km-pickup-retour-fg');if(pkrFg)pkrFg.style.display=type==='ar-diff'?'block':'none';
@@ -1911,7 +2041,7 @@ function resetResForm(){
   const acd=g('ac-client-drop');if(acd)acd.style.display='none';
   const bDep2=g('btn-client-addr-dep');if(bDep2)bDep2.style.display='none';
   const bArr2=g('btn-client-addr-arr');if(bArr2)bArr2.style.display='none';
-  setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');['r-mixte-cash','r-mixte-virement','r-mixte-carte'].forEach(id=>{const el=g(id);if(el)el.value='';});{const _mb=g('r-mixte-box');if(_mb)_mb.style.display='none';}setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
+  setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','aconfirmer');['r-mixte-cash','r-mixte-virement','r-mixte-carte'].forEach(id=>{const el=g(id);if(el)el.value='';});{const _mb=g('r-mixte-box');if(_mb)_mb.style.display='none';}setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
   ['r-date-retour','r-heure-retour','r-heure-retour-jour','r-date-aller','r-heure-aller'].forEach(function(id){
     try{updDtDisplay(id,'');}catch(e){}
   });
@@ -1961,7 +2091,7 @@ function applyFavChip(favId,btn){
   setTimeout(()=>calcKmVideAuto(),300);
 }
 function updSourceUI(){const s=g('r-source').value;const ro=g('r-partner-opts');if(ro)ro.style.display=s!=='direct'?'block':'none';updCalc();}
-function updPartnerType(){const t=g('r-partner-type').value;const rcb=g('r-commission-box');if(rcb)rcb.style.display=t==='commission'?'block':'none';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display=t==='prepaye'?'block':'none';if(t==='prepaye')setChips('r-paiement-chips','r-paiement','prepaye');else setChips('r-paiement-chips','r-paiement','cash');updCalc();}
+function updPartnerType(){const t=g('r-partner-type').value;const rcb=g('r-commission-box');if(rcb)rcb.style.display=t==='commission'?'block':'none';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display=t==='prepaye'?'block':'none';if(t==='prepaye')setChips('r-paiement-chips','r-paiement','prepaye');else if(g('r-paiement').value==='prepaye')setChips('r-paiement-chips','r-paiement','aconfirmer');updCalc();}
 function toggleVmt(){const p=g('r-paiement').value;const vs=g('r-vmt-section');if(vs)vs.style.display=(p==='virement'||p==='mixte')?'block':'none';const mb=g('r-mixte-box');if(mb)mb.style.display=p==='mixte'?'block':'none';}
 /* ===== PAIEMENT MIXTE (ex. aller en cash, retour par QR) ===== */
 // Montants bruts par mode de paiement pour une course
@@ -1979,6 +2109,31 @@ function grpPay(k){return (k==='carte'||k==='virement')?'compte':k;}
 function payMatch(r,f){var p=r.paiement||'cash';if(f==='compte')return p==='mixte'?((payParts(r).carte||0)+(payParts(r).virement||0))>0:(p==='carte'||p==='virement'||p==='prepaye'||r.partnerType==='prepaye');return p===f||(p==='mixte'&&(payParts(r)[f]||0)>0);}
 function payStrict(r,f){var p=r.paiement||'cash';return f==='compte'?(p==='carte'||p==='virement'):p===f;}
 function aVirementEnAttente(r){if(r.vmtRecu||r.statut==='annule')return false;if(r.paiement==='virement')return true;return r.paiement==='mixte'&&(payParts(r).virement||0)>0;}
+/* ===== PAIEMENTS À CONFIRMER =====
+   Une nouvelle course est « à confirmer » : une fois la course passée, on choisit en un geste comment le client a payé. */
+function debutCourse(r){const d=new Date((r.dateAller||'')+'T'+(r.heure||'00:00'));return isNaN(d)?null:d;}
+function courseCommencee(r){const d=debutCourse(r);return !!d&&d.getTime()<=Date.now();}
+const SEUIL_RENTA=0.50;
+function rentaKm(r){const km=getKmReels(r);if(!(km>0))return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return (prixHT(r)-comm-(parseFloat(r.peages)||0)-(parseFloat(r.parking)||0))/km;}
+function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
+function confirmerPaiement(id,mode){
+  const r=db.reservations.find(x=>x.id===id);if(!r)return;
+  if(mode==='mixte'){editRes(id);setTimeout(()=>{const c=[...(g('r-paiement-chips')?.children||[])].find(x=>(x.getAttribute('onclick')||'').includes("'mixte'"));if(c)c.click();},150);return;}
+  r.paiement=mode;r.paiementDetail=null;if(mode==='virement')r.vmtRecu=true;
+  save();renderAll();if(typeof showToast==='function')showToast('✓ Paiement enregistré');
+}
+function renderAConfirmer(cible){
+  const el=g(cible);if(!el)return;const L=getPaiementsAConfirmer();
+  if(!L.length){el.innerHTML='';return;}
+  let h='<div class="card" style="border:1.5px solid var(--orange2)"><div style="font-size:0.65rem;color:var(--orange2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">⏳ Comment ont-ils payé ? ('+L.length+')</div>';
+  L.slice(0,8).forEach(r=>{
+    const d=new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'});
+    h+='<div style="padding:7px 0;border-top:1px solid var(--border)"><div style="display:flex;justify-content:space-between;font-size:0.82rem"><span><b>'+escH(r.clientNom||'Client')+'</b> · '+d+'</span><b style="color:var(--gold)">'+fmt(r.prix)+'</b></div>';
+    h+='<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'+[['cash','💵 Cash'],['virement','🏦 QR / virement'],['carte','💳 Carte'],['mixte','🔀 Mixte']].map(([k,l])=>'<button class="btn btn-ghost btn-xs" data-id="'+r.id+'" onclick="confirmerPaiement(this.dataset.id,\''+k+'\')">'+l+'</button>').join('')+'</div></div>';
+  });
+  if(L.length>8)h+='<div style="font-size:0.72rem;color:var(--text3);margin-top:6px">… et '+(L.length-8)+' autre(s) — filtre « À confirmer » dans Courses.</div>';
+  el.innerHTML=h+'</div>';
+}
 function initMixte(){
   const c=g('r-mixte-cash'),v=g('r-mixte-virement'),k=g('r-mixte-carte');if(!c||!v||!k)return;
   if(c.value||v.value||k.value){updMixteHint();return;}
@@ -2163,6 +2318,7 @@ function checkCapaciteApp(){
     hint.textContent='';
   }
 }
+function setPeage(v){const el=g('r-peages');if(el){el.value=v;updCalc();}}
 function updCalc(){
   const dist=parseFloat(g('r-distance')?.value||0);
   const type=g('r-type')?.value||'aller';
@@ -2175,11 +2331,11 @@ function updCalc(){
   const kmC=acC['kmC']||0,kmR=acC['kmR']||0;
   const coutC=kmC*v.cout,coutR=kmR*v.cout;
   const benef=prix-coutC-peages-park-comm,benefR=prix-coutR-peages-park-comm;
-  sv('prev-km-client',fmtKm(kmC));sv('prev-km-reels',fmtKm(kmR));sv('prev-cout',fmt(coutC));
+  sv('prev-km-client',fmtKm(kmC));sv('prev-km-reels',fmtKm(kmR)+(kmR>0&&prix>0?' · '+(prix/kmR).toFixed(2).replace('.',',')+' €/km':''));sv('prev-cout',fmt(coutR));
   sv('prev-benef',fmt(benef),'dr-val '+(benef>=0?'c-green':'c-red'));
-  const brEl=g('prev-benef-reel');if(brEl){brEl.textContent='Bénéf. réel: '+fmt(benefR);brEl.style.color=benefR>=0?'var(--green2)':'var(--red2)';}
+  const brEl=g('prev-benef-reel');if(brEl){brEl.textContent=fmt(benefR);brEl.style.color=benefR>=0?'var(--green2)':'var(--red2)';}
   const cr=g('prev-comm-row');if(cr){if(comm>0){cr.style.display='flex';sv('prev-comm','-'+fmt(comm));}else cr.style.display='none';}
-  const ph=g('r-prix-hint');if(ph)ph.textContent=(prix>0&&benef<0)?'⚠️ Prix sous le coût — vous perdez '+fmt(Math.abs(benef)):'';
+  const ph=g('r-prix-hint');if(ph)ph.textContent=(prix>0&&benefR<0)?'⚠️ Prix sous le coût — vous perdez '+fmt(Math.abs(benefR)):'';
   const type2=g('r-type')?.value||'aller';
   const isTalento=vidx===1;
   const prixFixe2=getPrixFixeZone(g('r-depart')?.value||'',g('r-arrivee')?.value||'',isTalento);
@@ -2266,6 +2422,23 @@ function saveReservationCore(){
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
     duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90)
   };
+  // Coordonnées des adresses (servent aux km automatiques)
+  (function(){const ll=(k,a,b)=>{const c=acC[k];const la=c?c.lat:parseFloat(g(a)?.value),lo=c?c.lon:parseFloat(g(b)?.value);return (isFinite(la)&&isFinite(lo)&&la&&lo)?[+la,+lo]:[null,null];};
+    const d=ll('r-depart','r-dep-lat','r-dep-lon'),a=ll('r-arrivee','r-arr-lat','r-arr-lon');
+    const same=(txtNew,txtOld)=>(txtNew||'')===(txtOld||'');
+    r.depLat=d[0]!=null?d[0]:(same(r.depart,existingR.depart)?existingR.depLat||null:null);r.depLon=d[1]!=null?d[1]:(same(r.depart,existingR.depart)?existingR.depLon||null:null);
+    r.arrLat=a[0]!=null?a[0]:(same(r.arrivee,existingR.arrivee)?existingR.arrLat||null:null);r.arrLon=a[1]!=null?a[1]:(same(r.arrivee,existingR.arrivee)?existingR.arrLon||null:null);
+  })();
+  // Garder les informations non présentes dans le formulaire (rappels envoyés, avis demandé, statut…)
+  Object.keys(existingR).forEach(k=>{if(!(k in r))r[k]=existingR[k];});
+  // Date ou heure changée → les rappels devront être renvoyés pour la nouvelle date
+  if(editId&&(r.dateAller!==existingR.dateAller||r.heure!==existingR.heure)){delete r.rappelEnvoye;delete r.rappelJ7Envoye;}
+  if(editId&&(r.dateRetour!==existingR.dateRetour||r.heureRetour!==existingR.heureRetour)){delete r.rappelJ7RetourEnvoye;}
+  // Les km automatiques sont recalculés si les adresses ont changé
+  if(editId&&Array.isArray(existingR.kmAuto)&&(r.depart!==existingR.depart||r.arrivee!==existingR.arrivee||r.departRetour!==existingR.departRetour||r.arriveeRetour!==existingR.arriveeRetour||r.type!==existingR.type)){
+    existingR.kmAuto.forEach(k=>{if(parseFloat(r[k]||0)===parseFloat(existingR[k]||0))r[k]=0;});r.kmAuto=[];
+  }
+  try{completerKmAuto(r);}catch(e){console.error('km auto',e);}
   try{
     if(!(r.clientTel||'').trim()){
       if(!confirm('📱 AUCUN NUMÉRO DE TÉLÉPHONE\n\nSans numéro, vous ne pourrez envoyer ni rappel J-7, ni rappel J-1, ni confirmation à ce client.\n\nEnregistrer quand même ?')){
@@ -2408,8 +2581,9 @@ function showDetailRes(id){
     if(r.type!=='aller'&&parseFloat(r.kmVideRetour||0)>0)h+='<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Retour vide J2</span><span class="dr-val c-text2">'+fmtKm(r.kmVideRetour)+'</span></div>';
     h+='<div class="divider"></div>';
     h+='<div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-size:1.05rem;font-weight:800">'+fmt(r.prix)+'</span></div>';
-    var payLabel=r.paiement==='mixte'?payPartsLabel(r):({cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement / QR',prepaye:'🤝 Prépayé'}[r.paiement]||r.paiement);
+    var payLabel=r.paiement==='mixte'?payPartsLabel(r):({aconfirmer:'⏳ À confirmer',cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement / QR',prepaye:'🤝 Prépayé'}[r.paiement||'cash']||r.paiement);
     var _aVmt=r.paiement==='virement'||(r.paiement==='mixte'&&(payParts(r).virement||0)>0);
+    var _rk2=rentaKm(r);if(_rk2!==null)h+='<div class="dr"><span class="dr-label">Gain par km roulé</span><span class="dr-val" style="color:'+(_rk2<SEUIL_RENTA?'var(--red2)':'var(--green2)')+'">'+_rk2.toFixed(2).replace('.',',')+' €/km · '+Math.round(getKmReels(r))+' km'+(Array.isArray(r.kmAuto)&&r.kmAuto.length?' (estimés)':'')+'</span></div>';
     h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(_aVmt?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(_aVmt&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
     if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
     if(parseFloat(r.commission||0)>0){
@@ -2429,12 +2603,13 @@ function showDetailRes(id){
     dc.innerHTML=h;
   }
   var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
-  var ddb=g('dr-del-btn');if(ddb)ddb.onclick=function(){if(confirm("Supprimer cette course ?")){db.reservations=db.reservations.filter(function(x){return x.id!==id;});save();closeModal('m-detail-res');renderAll();}};
+  var ddb=g('dr-del-btn');if(ddb)ddb.onclick=function(){if(confirm("Supprimer cette course ?\n(Elle reste 30 jours dans la corbeille.)")){supprimerCourses([id]);save();closeModal('m-detail-res');renderAll();}};
   // Highlight statut actuel
   ['confirme','enroute','termine','annule'].forEach(function(s){
     var btn=g('dr-s-'+s);
     if(btn)btn.style.borderColor=r.statut===s?'var(--gold)':'';
   });
+  try{majBoutonsStatut(r);}catch(e){}
   // Bouton rappel
   var drb=g('dr-rappel-btn');
   var drb7=g('dr-rappel-j7-btn');
@@ -2535,7 +2710,9 @@ function editRes(id){
   if(r.source!=='direct'){setChips('r-partner-type-chips','r-partner-type',r.partnerType||'commission');updPartnerType();const ce=g('r-commission');if(ce)ce.value=r.commission||'';}
   setChips('r-type-chips','r-type',r.type||'aller');acC['_lastType']=r.type||'aller';setChips('r-service-chips','r-service',r.service||'depose');
   g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';updDtDisplay('r-date-aller',r.dateAller||'');g('r-heure-aller').value=r.heure||'';updDtDisplay('r-heure-aller',r.heure||'');
-  g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';g('r-distance').value=r.distance||'';g('r-vol').value=r.vol||'';
+  g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';
+  if(r.depLat&&r.depLon){acC['r-depart']={lat:r.depLat,lon:r.depLon};if(g('r-dep-lat'))g('r-dep-lat').value=r.depLat;if(g('r-dep-lon'))g('r-dep-lon').value=r.depLon;}
+  if(r.arrLat&&r.arrLon){acC['r-arrivee']={lat:r.arrLat,lon:r.arrLon};if(g('r-arr-lat'))g('r-arr-lat').value=r.arrLat;if(g('r-arr-lon'))g('r-arr-lon').value=r.arrLon;}g('r-distance').value=r.distance||'';g('r-vol').value=r.vol||'';
   if(r.type==='ar-diff'){updDtDisplay('r-date-retour',r.dateRetour||'');updDtDisplay('r-heure-retour',r.heureRetour||'');[['r-date-retour',r.dateRetour||''],['r-heure-retour',r.heureRetour||''],['r-depart-retour',r.departRetour||''],['r-arrivee-retour',r.arriveeRetour||''],['r-distance-retour',r.distanceRetour||'']].forEach(([id,val])=>{const el=g(id);if(el)el.value=val;});if(r.depRetLat)acC['r-depart-retour']={lat:r.depRetLat,lon:r.depRetLon};if(r.arrRetLat)acC['r-arrivee-retour']={lat:r.arrRetLat,lon:r.arrRetLon};}else if(r.type==='ar-jour'){const hj=g('r-heure-retour-jour');if(hj)hj.value=r.heureRetour||'';const dj=g('r-distance-retour-jour');if(dj)dj.value=r.distanceRetour||'';const vrj=g('r-vol-retour-jour');if(vrj)vrj.value=r.volRetour||'';}
   const kp=g('r-km-pickup');if(kp)kp.value=r.kmPickup||'';const kpr=g('r-km-pickup-retour');if(kpr)kpr.value=r.kmPickupRetour||'';
   setChips('r-vide-aller-chips','r-vide-aller-type',r.kmVideAllerType||'maison');const isAucunR=r.kmVideRetourType==='aucun';const togFill=g('r-vide-retour-toggle');if(togFill)togFill.checked=!isAucunR;const destFill=g('r-vide-retour-dest');if(destFill)destFill.style.display=isAucunR?'none':'flex';const subFill=g('r-vide-retour-toggle-sub');if(subFill)subFill.textContent=isAucunR?'Pas de retour à vide (client au retour 👍)':'Retour vers la maison calculé auto';if(!isAucunR)setChips('r-vide-retour-dest','r-vide-retour-type',r.kmVideRetourType||'maison');
@@ -2586,13 +2763,15 @@ function showToast(msg){
   clearTimeout(window._toastTimer);
   window._toastTimer=setTimeout(function(){t.classList.remove('show');},2200);
 }
+function majBoutonsStatut(r){const a=g('dr-s-annule'),b=g('dr-s-retablir');const an=r&&r.statut==='annule';if(a)a.style.display=an?'none':'';if(b)b.style.display=an?'':'none';}
 function setStatut(id,statut){
   var r=db.reservations.find(function(x){return x.id===id;});
   if(!r)return;
   r.statut=statut;
   save();
   // Mettre à jour le badge dans le modal sans le fermer
-  var labels={confirme:'✓ Confirmée',enroute:'🚗 En route',termine:'✅ Terminée',annule:'❌ Annulée'};
+  var labels={confirme:'✓ Confirmée',enroute:'🚗 En route',termine:'✅ Terminée',annule:'❌ Annulée','':'↺ Course rétablie'};
+  try{majBoutonsStatut(r);}catch(e){}
   var classes={confirme:'status-confirme',enroute:'status-enroute',termine:'status-done',annule:'status-annule'};
   // Highlight le bouton actif (fond + bordure, pas juste la bordure)
   var activeBg={confirme:'rgba(13,184,107,0.18)',enroute:'rgba(232,160,32,0.22)',termine:'rgba(13,184,107,0.18)',annule:'rgba(224,48,64,0.22)'};
@@ -3085,8 +3264,8 @@ function wrapItemsWithSwipe(){
     del.innerHTML='<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>Suppr.';
     del.onclick=(e)=>{
       e.stopPropagation();
-      if(confirm('Supprimer cette course ?')){
-        db.reservations=db.reservations.filter(r=>r.id!==id);
+      if(confirm('Supprimer cette course ?\n(Elle reste 30 jours dans la corbeille.)')){
+        supprimerCourses([id]);
         save();wrap.remove();renderDash();
       }else{
         item.style.transform='translateX(0)';
@@ -3113,12 +3292,33 @@ function exportCoursesSupprimees(res,cle){
   csv+=';;;;;;TOTAL;'+tot.toFixed(2).replace('.',',')+';;;\n';
   try{var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='courses_supprimees_'+(cle||'')+'_'+dateLocale(new Date())+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},500);}catch(e){}
 }
-function delPayFiltered(){if(payFilter==='tous')return;var label={cash:'💵 Cash',compte:'🏦 Sur mon compte',carte:'💳 Carte',virement:'🏦 Virement / QR',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return payStrict(r,payFilter);});if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=res.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='mois')res=res.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;var totSup=res.reduce(function(t,r){return t+(parseFloat(r.prix)||0);},0);if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') pour un total de '+fmt(totSup)+' ?\n\nUne copie (fichier CSV) sera d\'abord téléchargée pour ton comptable.\nLe bénéfice, le montant à mettre de côté et la jauge TVA seront recalculés.'))return;exportCoursesSupprimees(res,payFilter);var ids=res.map(function(r){return r.id;});db.reservations=db.reservations.filter(function(r){return!ids.includes(r.id);});save();renderAll();}
+/* ===== CORBEILLE (30 jours) ===== */
+function versCorbeille(kind,items){if(!Array.isArray(db.corbeille))db.corbeille=[];const now=new Date().toISOString();(items||[]).forEach(it=>{if(it)db.corbeille.push({kind,item:JSON.parse(JSON.stringify(it)),del:now});});}
+function supprimerCourses(ids){const S=new Set(ids);versCorbeille('reservation',db.reservations.filter(r=>S.has(r.id)));db.reservations=db.reservations.filter(r=>!S.has(r.id));}
+function ouvrirCorbeille(){
+  const ex=g('m-corbeille-dyn');if(ex)ex.remove();
+  const L=(db.corbeille||[]).slice().sort((a,b)=>b.del.localeCompare(a.del));
+  const lib={reservation:'🚗',carburant:'⛽',frais:'🧾'};
+  const desc=c=>{const i=c.item||{};if(c.kind==='reservation')return '<b>'+escH(i.clientNom||'Course')+'</b> · '+(i.dateAller?new Date(i.dateAller).toLocaleDateString('fr-BE'):'')+' · '+fmt(i.prix);if(c.kind==='carburant')return 'Plein '+(i.date||'')+' · '+fmt(i.prix);return escH(i.desc||i.type||'Frais')+' · '+(i.date||'')+' · '+fmt(i.montant);};
+  const o=document.createElement('div');o.className='overlay open';o.id='m-corbeille-dyn';
+  let h='<div class="modal"><div class="modal-handle"></div><div class="modal-title">🗑 Corbeille</div><div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px">Les éléments supprimés restent ici 30 jours, puis sont effacés.</div>';
+  if(!L.length)h+='<div class="empty"><div class="empty-text">La corbeille est vide.</div></div>';
+  L.forEach((c,i)=>{const j=Math.max(0,30-Math.floor((Date.now()-new Date(c.del).getTime())/86400000));h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem"><span>'+(lib[c.kind]||'•')+' '+desc(c)+'<br><span style="color:var(--text3);font-size:0.7rem">effacé définitivement dans '+j+' j</span></span><button class="btn btn-green btn-xs" onclick="restaurerCorbeille(\''+c.del+'\',\''+(c.item&&c.item.id||'')+'\')">↺ Restaurer</button></div>';});
+  h+='<div class="modal-actions"><button class="btn btn-outline btn-full" onclick="document.getElementById(\'m-corbeille-dyn\').remove()">Fermer</button></div></div>';
+  o.innerHTML=h;o.addEventListener('click',e=>{if(e.target===o)o.remove();});document.body.appendChild(o);
+}
+function restaurerCorbeille(del,id){
+  const i=(db.corbeille||[]).findIndex(c=>c.del===del&&((c.item&&c.item.id)||'')===id);if(i<0)return;
+  const c=db.corbeille[i];const tab={reservation:'reservations',carburant:'carburant',frais:'frais'}[c.kind];
+  if(tab&&Array.isArray(db[tab])){if(!db[tab].some(x=>x.id&&x.id===c.item.id))db[tab].push(c.item);}
+  db.corbeille.splice(i,1);save();renderAll();ouvrirCorbeille();if(typeof showToast==='function')showToast('↺ Restauré');
+}
+function delPayFiltered(){if(payFilter==='tous')return;var label={aconfirmer:'⏳ À confirmer',cash:'💵 Cash',compte:'🏦 Sur mon compte',carte:'💳 Carte',virement:'🏦 Virement / QR',prepaye:'🤝 Prépayé'}[payFilter]||payFilter;var today=new Date();today.setHours(0,0,0,0);var res=db.reservations.filter(function(r){return payStrict(r,payFilter);});if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=res.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}else if(resFilter==='today')res=res.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});else if(resFilter==='mois')res=res.filter(function(r){var d=new Date(r.dateAller);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&r.statut!=='annule';});else if(resFilter==='annule')res=res.filter(function(r){return r.statut==='annule';});if(!res.length)return;var totSup=res.reduce(function(t,r){return t+(parseFloat(r.prix)||0);},0);if(!confirm('Supprimer '+res.length+' course'+(res.length>1?'s':'')+' ('+label+') pour un total de '+fmt(totSup)+' ?\n\nUne copie (fichier CSV) sera d\'abord téléchargée pour ton comptable.\nLe bénéfice, le montant à mettre de côté et la jauge TVA seront recalculés.'))return;exportCoursesSupprimees(res,payFilter);var ids=res.map(function(r){return r.id;});supprimerCourses(ids);save();renderAll();}
 function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .chip').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
 function renderPayRepartition(){
   const res=getMonthResAller(curMonth,curYear); // aller uniquement → pas de double comptage
   if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
-  const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},compte:{label:'Sur mon compte (carte + QR + partenaires)',icon:'🏦',color:'var(--gold)',res:[]}};let partAmt=0;
+  const groups={aconfirmer:{label:'À confirmer',icon:'⏳',color:'var(--orange2)',res:[]},cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},compte:{label:'Sur mon compte (carte + QR + partenaires)',icon:'🏦',color:'var(--gold)',res:[]}};let partAmt=0;
   Object.values(groups).forEach(g2=>{g2.amt=0;g2.part={};});
   const netDe=r=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return Math.max(0,parseFloat(r.prix||0)-c);};
   res.forEach(r=>{const p=r.paiement||'cash';const net=netDe(r);
@@ -3130,6 +3330,7 @@ function renderPayRepartition(){
   const total=res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);
   let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
   Object.entries(groups).forEach(([key,g2])=>{
+    if(key==='aconfirmer'&&!g2.res.length)return;
     const amt=g2.amt;
     const pct=total>0?Math.round(amt/total*100):0;
     const active=window._payFilter===key;
@@ -3171,17 +3372,17 @@ function deletePayGroup(payKey){
   if(!res.length)return;
   if(!confirm('Supprimer les '+res.length+' courses '+payKey+' de ce mois ? Cette action est irréversible.'))return;
   const ids=new Set(res.map(r=>r.id));
-  db.reservations=db.reservations.filter(r=>!ids.has(r.id));
+  supprimerCourses([...ids]);
   window._payFilter=null;
   save();renderAll();
 }
 function deleteOneResFromPay(id){
   if(!confirm('Supprimer cette course définitivement ?'))return;
-  db.reservations=db.reservations.filter(r=>r.id!==id);
+  supprimerCourses([id]);
   save();renderAll();
 }
-function delCarb(id){if(confirm("Supprimer ce plein ?")){db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
-function delFrais2(id){if(confirm("Supprimer ce frais ?")){db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
+function delCarb(id){if(confirm("Supprimer ce plein ?")){versCorbeille('carburant',db.carburant.filter(function(x){return x.id===id;}));db.carburant=db.carburant.filter(function(x){return x.id!==id;});save();renderFin();}}
+function delFrais2(id){if(confirm("Supprimer ce frais ?")){versCorbeille('frais',db.frais.filter(function(x){return x.id===id;}));db.frais=db.frais.filter(function(x){return x.id!==id;});save();renderFin();}}
 function markVmt(id){const r=db.reservations.find(r=>r.id===id);if(r){r.vmtRecu=true;save();renderDash();renderRes();}}
 
 
@@ -3312,10 +3513,24 @@ function savePartner(){
   } else db.partners.push(p);
   save();closeModal('m-partner');renderPartners();
 }
-function openObjModal(){g('obj-val').value=db.settings.objectif;openModal('m-objectif');}
-function saveObj(){db.settings.objectif=parseFloat(g('obj-val').value)||2000;save();closeModal('m-objectif');renderDash();}
+function getObjectif(){
+  if(db.settings.objectifAuto===false)return parseFloat(db.settings.objectif)||2000;
+  const now=new Date();let t=0,n=0;
+  for(let i=1;i<=3;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const e=getEncaisseMois(d.getMonth(),d.getFullYear());if(e>0){t+=e;n++;}}
+  if(!n)return parseFloat(db.settings.objectif)||2000;
+  return Math.max(1000,Math.ceil(t/n/500)*500);
+}
+function majTvaReglages(){
+  const on=!!g('p-tva-on')?.checked;const t=db.settings.tva||(db.settings.tva={assujetti:false,depuis:'',taux:6});
+  if(on&&!t.assujetti&&!(g('p-tva-depuis')?.value)){g('p-tva-depuis').value=dateLocale();}
+  t.assujetti=on;t.depuis=g('p-tva-depuis')?.value||'';t.taux=parseFloat(g('p-tva-taux')?.value)||6;
+  const d=g('p-tva-details');if(d)d.style.display=on?'flex':'none';save();renderAll();
+}
+function afficherTvaReglages(){const t=db.settings.tva||{};const c=g('p-tva-on');if(!c)return;c.checked=!!t.assujetti;g('p-tva-depuis').value=t.depuis||'';g('p-tva-taux').value=t.taux||6;const d=g('p-tva-details');if(d)d.style.display=t.assujetti?'flex':'none';}
+function openObjModal(){const a=db.settings.objectifAuto!==false;g('obj-val').value=a?getObjectif():db.settings.objectif;const c=g('obj-auto');if(c)c.checked=a;g('obj-val').disabled=a;openModal('m-objectif');}
+function saveObj(){const a=!!(g('obj-auto')&&g('obj-auto').checked);db.settings.objectifAuto=a;if(!a)db.settings.objectif=parseFloat(g('obj-val').value)||2000;save();closeModal('m-objectif');renderDash();}
 function saveHome(){const a=g('home-adr').value.trim();if(!a){alert('Adresse requise');return;}db.settings.homeAddress={adresse:a,lat:parseFloat(g('home-lat').value)||null,lon:parseFloat(g('home-lon').value)||null};save();closeModal('m-home');renderParams();}
-function openVehicleModal(idx){const v=db.settings.vehicles[idx];g('vehicle-idx').value=idx;sv('vehicle-title',idx===0?'🚗 Seat Leon':'🚐 Talento');g('v-nom').value=v.nom||'';g('v-cout').value=v.cout||'';g('v-conso').value=v.conso||'';openModal('m-vehicle');}
+function openVehicleModal(idx){const v=db.settings.vehicles[idx];g('vehicle-idx').value=idx;sv('vehicle-title',(idx===0?'🚗 ':'🚐 ')+nomVeh(idx));g('v-nom').value=v.nom||'';g('v-cout').value=v.cout||'';g('v-conso').value=v.conso||'';openModal('m-vehicle');}
 function saveVehicle(){const idx=parseInt(g('vehicle-idx').value);db.settings.vehicles[idx]={nom:g('v-nom').value,cout:parseFloat(g('v-cout').value)||0.30,conso:parseFloat(g('v-conso').value)||5};save();closeModal('m-vehicle');renderParams();}
 function openTarifModal(){const t=db.settings.tarifs;g('t-rayon').value=t.rayon;g('t-court').value=t.court;g('t-long').value=t.long;g('t-min').value=t.min;g('t-round').value=t.round||5;g('t-camion').value=t.camion||20;g('t-remise-ar').value=t.remiseAR||0;openModal('m-tarifs');}
 function saveTarifs(){db.settings.tarifs={rayon:parseInt(g('t-rayon').value)||30,court:parseFloat(g('t-court').value)||1.50,long:parseFloat(g('t-long').value)||1.50,min:parseFloat(g('t-min').value)||60,round:parseInt(g('t-round').value)||5,camion:parseFloat(g('t-camion').value)||20,remiseAR:parseFloat(g('t-remise-ar').value)||0};save();closeModal('m-tarifs');renderParams();}
@@ -3328,11 +3543,20 @@ function openCarbModal(){
   g('carb-date').value=dateLocale();
   ['carb-km','carb-litres','carb-prix','carb-station'].forEach(id=>g(id).value='');if(g('carb-paiement')){g('carb-paiement').value='q8';setChips('carb-paiement-chips','carb-paiement','q8');}
   setChips('carb-vehicule-chips','carb-vehicule','0');
+  updCarbKmHint();
   openModal('m-carburant');
 }
+function updCarbKmHint(){const h=g('carb-km-hint');if(!h)return;const v=parseInt(g('carb-vehicule')?.value||0);const p=dernierPlein(v);const km=parseFloat(g('carb-km')?.value||0);
+  if(!p){h.textContent='Obligatoire : sert à calculer tes km réels';return;}
+  h.textContent='Dernier plein noté : '+Math.round(p.km).toLocaleString('fr-BE')+' km le '+new Date(p.date+'T12:00').toLocaleDateString('fr-BE')+(km>p.km?' → +'+Math.round(km-p.km)+' km':'');}
 function saveCarb(){
   const c={id:genId(),date:g('carb-date').value,km:g('carb-km').value,litres:g('carb-litres').value,prix:g('carb-prix').value,station:g('carb-station').value,paiement:(g('carb-paiement')&&g('carb-paiement').value)||'q8',vehicule:parseInt(g('carb-vehicule').value||0)};
   if(!c.date||!c.prix){alert('Date et prix requis');return;}
+  const _km=parseFloat(c.km);
+  if(!(_km>0)){if(!confirm('📍 KM COMPTEUR MANQUANT\n\nSans le compteur, l\'app ne peut pas calculer tes km réels ni ton coût au km.\n\nEnregistrer quand même ?'))return;}
+  else{const _p=dernierPlein(c.vehicule,c.date);
+    if(_p&&_km<parseFloat(_p.km)){if(!confirm('⚠️ Le compteur ('+_km+' km) est plus bas que celui du plein du '+new Date(_p.date+'T12:00').toLocaleDateString('fr-BE')+' ('+_p.km+' km).\n\nFaute de frappe ? Enregistrer quand même ?'))return;}
+    else if(_p&&_km-parseFloat(_p.km)>2500){if(!confirm('ℹ️ '+Math.round(_km-parseFloat(_p.km))+' km depuis le dernier plein noté.\nUn plein a peut-être été oublié.\n\nEnregistrer quand même ?'))return;}}
   db.carburant.push(c);save();closeModal('m-carburant');renderFin();
 }
 function openKmModal(vIdx){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0');g('km-mois').value=ms;const veh=parseInt(vIdx)||0;if(g('km-vehicule'))g('km-vehicule').value=veh;setChips('km-vehicule-chips','km-vehicule',String(veh));const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===parseInt(veh));g('km-debut').value=e?.debut||'';g('km-fin').value=e?.fin||'';g('km-calc-preview').textContent='';openModal('m-km');}
@@ -3545,6 +3769,18 @@ function genNoteFrais(){
 function exportNoteCSV(){const res=getMonthResAller(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
 function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());try{if(typeof majBanniereSauvegarde==='function')setTimeout(majBanniereSauvegarde,300);}catch(e){}const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+dateLocale()+'.json';a.click();}
+/* Envoie la sauvegarde vers Drive / e-mail / WhatsApp (menu Partager du téléphone). Sinon : téléchargement. */
+async function partagerSauvegarde(){
+  const nom='facciolini_backup_v52_'+dateLocale()+'.json';
+  try{
+    const file=new File([JSON.stringify(db,null,2)],nom,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:'Sauvegarde Facciolini Mobility',text:'Sauvegarde du '+new Date().toLocaleDateString('fr-BE')});
+      localStorage.setItem('fm_last_backup',Date.now().toString());try{majBanniereSauvegarde();}catch(e){}renderAll();return;
+    }
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  exportBackup();setTimeout(renderAll,400);
+}
 function resetApp(){
   if(!confirm("Effacer TOUTES les données (ancienne et nouvelle app) ?\n\nCette action est irréversible."))return;
   if(!confirm("Dernière confirmation — tout sera supprimé."))return;
@@ -3837,7 +4073,7 @@ async function calcDevis(){
         ps=roundTo(pb,t.round);
         if(type==='ar'&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
         if(pr)pr.textContent=ps+' €';
-        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+(t.camion*(type==='ar'?2:1))+'€ Talento'+(type==='ar'?' (×2)':''):'')+((type==='ar'&&t.remiseAR)?' · Remise A/R -'+t.remiseAR+'€':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
+        if(dd)dd.textContent=km+'km'+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+(t.camion*(type==='ar'?2:1))+'€ '+nomVeh(1)+(type==='ar'?' (×2)':''):'')+((type==='ar'&&t.remiseAR)?' · Remise A/R -'+t.remiseAR+'€':'')+' · min '+t.min+'€ · arrondi '+t.round+'€';
       }
       acC['dv-km']=km;acC['dv-prix']=ps;acC['dv-tarif']=tarif;
     }else{
@@ -4141,8 +4377,8 @@ setTimeout(checkBackupReminder,3000);
     <div class="fg">
       <label class="fl">Véhicule</label>
       <div class="chips" id="dv-veh-chips">
-        <div class="chip active" onclick="selectChip(this,'dv-veh','0');calcDevis()">🚗 Seat Leon</div>
-        <div class="chip" onclick="selectChip(this,'dv-veh','1');calcDevis()">🚐 Talento +20€</div>
+        <div class="chip active" onclick="selectChip(this,'dv-veh','0');calcDevis()">🚗 <span class="veh-nom-0">Seat Leon</span></div>
+        <div class="chip" onclick="selectChip(this,'dv-veh','1');calcDevis()">🚐 <span class="veh-nom-1">Talento</span> +20€</div>
       </div>
       <input type="hidden" id="dv-veh" value="0">
     </div>
@@ -4539,7 +4775,7 @@ function majBanniereSauvegarde(){
 
   b.innerHTML='<div style="display:flex;gap:12px;align-items:center">'
     +'<div style="flex:1">'+txt+'</div>'
-    +'<button onclick="exportBackup();majBanniereSauvegarde();" style="background:#fff;color:#111;border:none;border-radius:10px;padding:9px 14px;font-weight:800;font-size:0.78rem;white-space:nowrap;cursor:pointer">Sauvegarder</button>'
+    +'<button onclick="partagerSauvegarde();majBanniereSauvegarde();" style="background:#fff;color:#111;border:none;border-radius:10px;padding:9px 14px;font-weight:800;font-size:0.78rem;white-space:nowrap;cursor:pointer">Sauvegarder</button>'
     +'<button onclick="document.getElementById(\'backup-warn-banner\').remove()" style="background:transparent;color:#fff;border:none;font-size:1.1rem;cursor:pointer;padding:0 2px" aria-label="Fermer">&times;</button>'
     +'</div>';
   document.body.appendChild(b);
