@@ -254,8 +254,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="prog"><div class="prog-fill" id="d-obj-prog" style="width:0%"></div></div>
     <div style="font-size:0.7rem;color:var(--text3);margin-top:6px" id="d-obj-txt"></div>
   </div>
+  <div id="d-resultat"></div>
   <div class="sg2">
-    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice comptable</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div><div class="stat-sub" id="d-comp-prev" style="margin-top:3px;font-size:0.68rem;font-weight:700"></div></div>
+    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice du mois</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div><div class="stat-sub" id="d-comp-prev" style="margin-top:3px;font-size:0.68rem;font-weight:700"></div></div>
     <div class="stat"><div class="stat-label">Courses</div><div class="stat-val c-blue" id="d-nb-res">0</div><div class="stat-sub" id="d-nb-sub">ce mois</div></div>
     <div class="stat"><div class="stat-label">Km clients</div><div class="stat-val c-blue" id="d-km">0</div><div class="stat-sub">facturables</div></div>
     <div class="stat"><div class="stat-label">Km r&#xe9;els</div><div class="stat-val c-purple" id="d-km-reel">&#x2014;</div><div class="stat-sub">compteur</div></div>
@@ -299,6 +300,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="page" id="page-fin">
   <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="fin-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div class="sec"><span class="sec-title">Finances</span><button class="btn btn-outline btn-sm" onclick="genNoteFrais()">&#x1f4c4; Note frais</button></div>
+  <div id="f-resultat"></div>
   <div class="km-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; relev&#xe9; compteur</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openKmModal(0)">&#x1f697; Seat</button><button class="btn btn-ghost btn-xs" onclick="openKmModal(1)">&#x1f690; Talento</button></div></div>
     <div class="fr">
@@ -921,7 +923,7 @@ const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','
 const MOIS_S=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MOI={nom:'Jean-François Facciolini',adresse:'Rue Saint-Eloi 173, 7141 Carnières',bce:'1033.793.336',email:'facciolini.mobility@outlook.com',tel:'0471692650'};
 const HOME_DEFAULT={adresse:'Rue Saint-Eloi 173, 7141 Carnières',lat:50.4089,lon:4.1756};
-const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:'ch2',nom:'Proximus Pro',montant:62.83},{id:'ch3',nom:'Assurance TL Seat Leon',montant:340.30},{id:'ch4',nom:'Crédit Seat Leon',montant:339.00},{id:'ch5',nom:'Lois sociales INASTI',montant:38.33}];
+const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:'ch2',nom:'Proximus Pro',montant:65.37},{id:'ch3',nom:'Assurance P&V Seat Leon',montant:336.10},{id:'ch4',nom:'Crédit (remboursement mensuel)',montant:340.00},{id:'ch5',nom:'Lois sociales INASTI',montant:38.33},{id:'ch6',nom:'PLCI Vivium (épargne pension)',montant:83.95},{id:'ch7',nom:'Taxe de circulation Seat (528,40 €/an)',montant:44.03}];
 const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zaventem',lat:50.9010,lon:4.4844},{id:'f2',nom:'Charleroi CRL',adresse:'Brussels South Charleroi Airport',lat:50.4592,lon:4.4538},{id:'f3',nom:'Gare de Mons',adresse:'Place Leopold, Mons',lat:50.4542,lon:3.9563},{id:'f4',nom:'Gare Charleroi',adresse:'Boulevard Tirou, Charleroi',lat:50.4108,lon:4.4446},{id:'f5',nom:'Gare du Midi',adresse:'Rue de France 2, Bruxelles',lat:50.8354,lon:4.3360}];
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
@@ -1005,32 +1007,14 @@ function fixDb(){
   if(!db.settings.tarifs.camion)db.settings.tarifs.camion=20;
   if(!db.settings.tarifs.min)db.settings.tarifs.min=50;
   if(!db.charges||!db.charges.length)db.charges=JSON.parse(JSON.stringify(CHARGES_DEFAULT));
-  // Corriger coût/km Seat Leon si encore à l'ancienne valeur 0.30
-  if(db.settings.vehicles&&db.settings.vehicles[0]&&db.settings.vehicles[0].cout===0.30){
-    db.settings.vehicles[0].cout=0.24;
-    db.settings.vehicles[0].conso=4.3;
+  // Migration UNIQUE (oct. 2026) : charges réelles + coût de revient Seat mesuré.
+  // (Avant, les charges étaient remises de force à 5 valeurs fixes à CHAQUE ouverture : les corrections ne tenaient jamais.)
+  if(!db.settings.migOct26){
+    db.charges=JSON.parse(JSON.stringify(CHARGES_DEFAULT));
+    if(db.settings.vehicles&&db.settings.vehicles[0]){db.settings.vehicles[0].cout=0.28;db.settings.vehicles[0].conso=4.12;}
+    db.settings.migOct26=true;
   }
-  // Forcer réinitialisation complète des charges avec les bons montants
-  const CHARGES_CORRECT = [
-    {id:'ch1', nom:'AG Compta Fisc (Adam)', montant:50.00},
-    {id:'ch2', nom:'Proximus Pro', montant:62.83},
-    {id:'ch3', nom:'Assurance TL Seat Leon', montant:340.30},
-    {id:'ch4', nom:'Crédit Seat Leon', montant:339.00},
-    {id:'ch5', nom:'Lois sociales INASTI', montant:38.33}
-  ];
-  // Vérifier et corriger chaque charge par ID
-  CHARGES_CORRECT.forEach(function(correct){
-    var idx=db.charges.findIndex(function(c){return c.id===correct.id||c.nom===correct.nom;});
-    if(idx>=0){
-      db.charges[idx].montant=correct.montant;
-      db.charges[idx].nom=correct.nom;
-      db.charges[idx].id=correct.id;
-    } else {
-      db.charges.push(JSON.parse(JSON.stringify(correct)));
-    }
-  });
-  // Supprimer les doublons (garder seulement les 5 charges officielles)
-  db.charges=db.charges.filter(function(c){return CHARGES_CORRECT.some(function(cc){return cc.id===c.id;});});
+  if(!db.settings.provisionPct)db.settings.provisionPct=40;
   // migrateR pour les réservations
   db.reservations=(db.reservations||[]).map(function(r){return migrateR(r);});
 }
@@ -1097,6 +1081,63 @@ function getMonthRes(m,y){return db.reservations.filter(r=>{if(r.statut==='annul
 function getMonthResAller(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);return da.getMonth()===m&&da.getFullYear()===y;});}
 function getMonthCarb(m,y){return db.carburant.filter(c=>{const d=new Date(c.date);return d.getMonth()===m&&d.getFullYear()===y;});}
 function getMonthFrais(m,y){return db.frais.filter(f=>{const d=new Date(f.date);return d.getMonth()===m&&d.getFullYear()===y;});}
+/* ===== MON VRAI RÉSULTAT =====
+   Bénéfice = ce que j'encaisse − ce que je dépense VRAIMENT (pleins, frais, charges fixes, péages/parking).
+   Le coût/km n'intervient PAS ici (sinon le carburant serait compté deux fois) : il sert seulement d'indicateur par course. */
+const SEUIL_TVA=25000,ALERTE_TVA=20000;
+function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
+function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+parseFloat(r.prix||0)*k:s;},0);}
+function moisActif(m,y){
+  // Un mois compte dans l'année dès que l'activité a commencé (1re course, plein ou frais)
+  const t=new Date(y,m+1,0,23,59).getTime();
+  return db.reservations.some(r=>r.dateAller&&new Date(r.dateAller).getTime()<=t)||db.carburant.some(c=>c.date&&new Date(c.date).getTime()<=t)||db.frais.some(f=>f.date&&new Date(f.date).getTime()<=t);
+}
+function getResultatMois(m,y){
+  const recettes=getCAMois(m,y);
+  const carbu=getMonthCarb(m,y).reduce((s,c)=>s+(parseFloat(c.prix)||0),0);
+  const frais=getMonthFrais(m,y).reduce((s,f)=>s+(parseFloat(f.montant)||0),0);
+  const charges=moisActif(m,y)?db.charges.reduce((s,c)=>s+(parseFloat(c.montant)||0),0):0;
+  const pp=getPeagesParkingMois(m,y);
+  const depenses=carbu+frais+charges+pp,benef=recettes-depenses;
+  const pct=(db.settings.provisionPct||40)/100;
+  return {recettes,carbu,frais,charges,pp,depenses,benef,pct,provision:Math.max(0,benef)*pct,caBrut:getCABrutMois(m,y)};
+}
+function getResultatAnnee(y,mMax){
+  const t={recettes:0,depenses:0,benef:0,caBrut:0,pct:(db.settings.provisionPct||40)/100};
+  for(let m=0;m<=mMax;m++){const r=getResultatMois(m,y);t.recettes+=r.recettes;t.depenses+=r.depenses;t.benef+=r.benef;t.caBrut+=r.caBrut;}
+  t.provision=Math.max(0,t.benef)*t.pct;return t;
+}
+function renderResultat(cible,detail){
+  const el=g(cible);if(!el)return;
+  const r=getResultatMois(curMonth,curYear),a=getResultatAnnee(curYear,curMonth),pc=Math.round(r.pct*100);
+  const col=v=>v>=0?'var(--green2)':'var(--red2)';
+  const ligne=(l,v,st)=>'<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.83rem'+(st||'')+'"><span style="color:var(--text2)">'+l+'</span><b>'+v+'</b></div>';
+  let h='<div class="card" style="border:1.5px solid var(--gold)">';
+  h+='<div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">💰 Mon vrai résultat — '+MOIS[curMonth]+'</div>';
+  h+=ligne('Encaissé (courses + partenaires)',fmt(r.recettes));
+  if(detail){
+    h+=ligne('− Carburant (pleins)',fmt(r.carbu),';padding-left:8px;font-size:0.76rem');
+    h+=ligne('− Frais (entretien, pneus…)',fmt(r.frais),';padding-left:8px;font-size:0.76rem');
+    h+=ligne('− Charges fixes',fmt(r.charges),';padding-left:8px;font-size:0.76rem');
+    h+=ligne('− Péages + parking',fmt(r.pp),';padding-left:8px;font-size:0.76rem');
+  }
+  h+=ligne('− Dépenses réelles',fmt(r.depenses));
+  h+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);margin-top:4px;font-size:0.95rem"><span style="font-weight:700">= Bénéfice du mois</span><b style="color:'+col(r.benef)+'">'+fmt(r.benef)+'</b></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-top:6px"><span style="font-size:0.85rem;font-weight:700">🏦 À mettre de côté ('+pc+' %)</span><span style="font-size:1.15rem;font-weight:900;color:var(--gold)">'+fmt(r.provision)+'</span></div>';
+  h+='<div style="font-size:0.7rem;color:var(--text3);margin-top:4px">Pour l\'impôt et le rattrapage INASTI — sur un compte épargne séparé.</div>';
+  h+='<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px">';
+  h+='<div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Depuis janvier '+curYear+'</div>';
+  h+=ligne('Bénéfice cumulé','<span style="color:'+col(a.benef)+'">'+fmt(a.benef)+'</span>');
+  h+=ligne('Total à avoir mis de côté','<span style="color:var(--gold)">'+fmt(a.provision)+'</span>');
+  const pctT=Math.min(100,Math.round(a.caBrut/SEUIL_TVA*100));
+  const cT=a.caBrut>=SEUIL_TVA?'var(--red2)':a.caBrut>=ALERTE_TVA?'var(--orange2)':'var(--green2)';
+  h+='<div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-top:6px"><span style="color:var(--text2)">Seuil TVA (chiffre d\'affaires)</span><b style="color:'+cT+'">'+fmt(a.caBrut)+' / 25 000 €</b></div>';
+  h+='<div class="prog" style="margin-top:4px"><div class="prog-fill" style="width:'+pctT+'%;background:'+cT+'"></div></div>';
+  if(a.caBrut>=SEUIL_TVA)h+='<div class="alert alert-red" style="margin-top:8px">⚠️ Seuil de 25 000 € dépassé — appelle Adam pour passer à la TVA.</div>';
+  else if(a.caBrut>=ALERTE_TVA)h+='<div class="alert alert-orange" style="margin-top:8px">📞 Plus que '+fmt(SEUIL_TVA-a.caBrut)+' avant le seuil TVA — appelle Adam.</div>';
+  h+='</div></div>';
+  el.innerHTML=h;
+}
 function getYearKm(y){return db.reservations.filter(r=>new Date(r.dateAller).getFullYear()===y).reduce((s,r)=>s+getKmClient(r),0);}
 function getKmReelsMois(m,y,veh){const ms=y+'-'+String(m+1).padStart(2,'0');const vIdx=parseInt(veh||0);const e=db.kmReels.find(k=>k.mois===ms&&parseInt(k.vehicule||0)===vIdx);if(!e||!e.debut||!e.fin)return null;return parseFloat(e.fin)-parseFloat(e.debut);}
 function getEncaisseAller(r){
@@ -1278,8 +1319,8 @@ function renderDash(){
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0);
   const fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
-  const benef=getBenefMois(curMonth,curYear)-charges-diesel-fraisT;
-  const benefReel=getBenefReelMois(curMonth,curYear)-charges-diesel-fraisT;
+  const _res=getResultatMois(curMonth,curYear);
+  const benef=_res.benef;
   const marge=recettes>0?Math.round(benef/recettes*100):0;
   const enc=getEncaisseMois(curMonth,curYear),obj=db.settings.objectif;
   const pct=Math.min(100,Math.round(enc/obj*100));
@@ -1288,7 +1329,7 @@ function renderDash(){
   if(g('d-obj-prog'))g('d-obj-prog').style.width=pct+'%';
   sv('d-obj-txt',enc>=obj?'🎉 Objectif atteint !':'Il reste '+fmt(obj-enc)+' — '+pct+'%');
   sv('d-benef',fmt(benef),'stat-val '+(benef>=0?'c-green':'c-red'));
-  sv('d-marge','Marge '+marge+'% · Adam');
+  sv('d-marge','Marge '+marge+'%');renderResultat('d-resultat',false);
   // Comparaison mois précédent
   let prevM=curMonth-1,prevY=curYear;if(prevM<0){prevM=11;prevY--;}
   const prevNbC=getNbCoursesMois(prevM,prevY);
@@ -1302,7 +1343,7 @@ function renderDash(){
     compEl.style.color=diffEnc>=0?'var(--green2)':'var(--red2)';
   }
   const brEl=g('d-benef-reel');
-  if(brEl){brEl.textContent='Réel: '+fmt(benefReel);brEl.style.color=benefReel>=0?'var(--green2)':'var(--red2)';}
+  if(brEl){brEl.textContent='À mettre de côté : '+fmt(_res.provision);brEl.style.color='var(--gold)';}
   const nbCM=Math.round(getNbCoursesMois(curMonth,curYear)*10)/10;
   sv('d-nb-res',Number.isInteger(nbCM)?nbCM:nbCM.toFixed(1));sv('d-nb-sub',(Number.isInteger(nbCM)?nbCM:nbCM.toFixed(1))+' course'+(nbCM>1?'s':''));
   sv('d-km',fmtKm(totalKmC));sv('d-km-reel',kmReel!==null?Math.round(kmReel)+' km':(totalKmR>0?'~'+Math.round(totalKmR)+' km':'—'));
@@ -1467,8 +1508,9 @@ function renderFin(){
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
   const commissions=getCommissionsMois(curMonth,curYear);
-  const benef=getBenefMois(curMonth,curYear)-charges-diesel-fraisT;
-  const benefReel=getBenefReelMois(curMonth,curYear)-charges-diesel-fraisT;
+  const _res=getResultatMois(curMonth,curYear);
+  const benef=_res.benef;
+  renderResultat('f-resultat',true);
   const kmReel=getKmReelsMois(curMonth,curYear);
   const moisStr=curYear+'-'+String(curMonth+1).padStart(2,'0');
   const kmEntry=db.kmReels.find(k=>k.mois===moisStr);
@@ -1479,7 +1521,7 @@ function renderFin(){
   sv('km-taux-display',kmRef>0?Math.round(totalKmC/kmRef*100)+'%'+(kmReel?'':' (est.')+'':'—');
   sv('f-recettes',fmt(recettes));sv('f-encaisse-sub','Encaissé: '+fmt(enc));
   sv('f-benef',fmt(benef),'stat-val '+(benef>=0?'c-green':'c-red'));
-  sv('f-benef-reel-sub','Réel: '+fmt(benefReel));
+  sv('f-benef-reel-sub','À mettre de côté : '+fmt(_res.provision));
   sv('f-diesel',fmt(diesel));sv('f-commissions',fmt(commissions));sv('f-frais-stat',fmt(fraisT));
   let coutReelKm='—',coutReelSub='—';
   if(kmRef>0){const cr=(diesel+charges+fraisT)/kmRef;coutReelKm=cr.toFixed(3).replace('.',',')+' €/km';coutReelSub=kmReel?'sur '+Math.round(kmRef)+' km réels':'estimé';}
@@ -1934,7 +1976,7 @@ function payPartsLabel(r){
 }
 // "Sur mon compte" = carte + virement / QR (tout ce qui arrive sur le compte bancaire)
 function grpPay(k){return (k==='carte'||k==='virement')?'compte':k;}
-function payMatch(r,f){var p=r.paiement||'cash';if(f==='compte')return p==='mixte'?((payParts(r).carte||0)+(payParts(r).virement||0))>0:(p==='carte'||p==='virement');return p===f||(p==='mixte'&&(payParts(r)[f]||0)>0);}
+function payMatch(r,f){var p=r.paiement||'cash';if(f==='compte')return p==='mixte'?((payParts(r).carte||0)+(payParts(r).virement||0))>0:(p==='carte'||p==='virement'||p==='prepaye'||r.partnerType==='prepaye');return p===f||(p==='mixte'&&(payParts(r)[f]||0)>0);}
 function payStrict(r,f){var p=r.paiement||'cash';return f==='compte'?(p==='carte'||p==='virement'):p===f;}
 function aVirementEnAttente(r){if(r.vmtRecu||r.statut==='annule')return false;if(r.paiement==='virement')return true;return r.paiement==='mixte'&&(payParts(r).virement||0)>0;}
 function initMixte(){
@@ -3064,12 +3106,12 @@ function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .
 function renderPayRepartition(){
   const res=getMonthResAller(curMonth,curYear); // aller uniquement → pas de double comptage
   if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
-  const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},compte:{label:'Sur mon compte (carte + QR)',icon:'🏦',color:'var(--gold)',res:[]},prepaye:{label:'Partenaires',icon:'🤝',color:'var(--orange2)',res:[]}};
+  const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},compte:{label:'Sur mon compte (carte + QR + partenaires)',icon:'🏦',color:'var(--gold)',res:[]}};let partAmt=0;
   Object.values(groups).forEach(g2=>{g2.amt=0;g2.part={};});
   const netDe=r=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return Math.max(0,parseFloat(r.prix||0)-c);};
   res.forEach(r=>{const p=r.paiement||'cash';const net=netDe(r);
     // Courses partenaires prépayées → groupe partenaires
-    if(p==='prepaye'||r.partnerType==='prepaye'){groups.prepaye.res.push(r);groups.prepaye.amt+=net;groups.prepaye.part[r.id]=net;return;}
+    if(p==='prepaye'||r.partnerType==='prepaye'){groups.compte.res.push(r);groups.compte.amt+=net;groups.compte.part[r.id]=net;partAmt+=net;return;}
     // Paiement mixte → réparti entre les modes, au prorata du net
     if(p==='mixte'){const pp=payParts(r);const brut=Object.values(pp).reduce((a,b)=>a+b,0);const f=brut>0?net/brut:0;Object.keys(pp).forEach(k0=>{const k=grpPay(k0);const v=pp[k0]*f;if(!(r.id in groups[k].part))groups[k].res.push(r);groups[k].amt+=v;groups[k].part[r.id]=(groups[k].part[r.id]||0)+v;});return;}
     const k=groups[grpPay(p)]?grpPay(p):'cash';groups[k].res.push(r);groups[k].amt+=net;groups[k].part[r.id]=net;});
@@ -3083,7 +3125,7 @@ function renderPayRepartition(){
     html+='<div style="font-size:1rem;margin-bottom:5px">'+g2.icon+'</div>';
     html+='<div style="font-size:0.68rem;color:'+(active?'#aaa':'var(--text3)')+';margin-bottom:3px">'+g2.label+'</div>';
     html+='<div style="font-size:1.05rem;font-weight:700;color:'+(active?g2.color:'var(--text)')+'">'+fmt(amt)+'</div>';
-    html+='<div style="font-size:0.68rem;color:'+(active?'#888':'var(--text3)')+';margin-top:2px">'+g2.res.length+' course'+(g2.res.length>1?'s':'')+' · '+pct+'%</div>';
+    html+='<div style="font-size:0.68rem;color:'+(active?'#888':'var(--text3)')+';margin-top:2px">'+g2.res.length+' course'+(g2.res.length>1?'s':'')+' · '+pct+'%'+(key==='compte'&&partAmt>0?' · dont partenaires '+fmt(partAmt):'')+'</div>';
     html+='<div style="height:3px;border-radius:2px;margin-top:8px;background:'+g2.color+';width:'+pct+'%"></div>';
     html+='</div>';
   });
@@ -3095,7 +3137,6 @@ function renderPayRepartition(){
     html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
     html+='<div style="font-size:0.72rem;font-weight:700;color:'+gf.color+';text-transform:uppercase;letter-spacing:0.08em">'+gf.icon+' '+gf.label+' — '+rs.length+' course'+(rs.length>1?'s':'')+'</div>';
-    if(rs.length>1)html+='<button class="btn btn-red btn-xs" onclick="deletePayGroup(&quot;'+window._payFilter+'&quot;)">🗑 Tout supprimer</button>';
     html+='</div>';
     rs.forEach(r=>{
       html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">';
@@ -3480,8 +3521,8 @@ function genNoteFrais(){
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
   const resA2=getMonthResAller(curMonth,curYear);
   const peages=resA2.reduce((s,r)=>s+parseFloat(r.peages||0),0),parkings=resA2.reduce((s,r)=>s+parseFloat(r.parking||0),0);
-  const benef=getBenefMois(curMonth,curYear)-charges-diesel-fraisT;
-  const benefR=getBenefReelMois(curMonth,curYear)-charges-diesel-fraisT;
+  const benef=getResultatMois(curMonth,curYear).benef;
+  const benefR=benef;
   const kmReel=getKmReelsMois(curMonth,curYear);
   const fi={entretien:'🔧',pneus:'🛞',controle:'📋',assurance:'🛡',lavage:'🚿',accessoires:'🧴',autre:'📦'};
   sv('nf-title','Note de frais — '+MOIS[curMonth]+' '+curYear);
