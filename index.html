@@ -290,7 +290,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="chip chip-pay active" onclick="setPayFilter('tous',this)">&#x1f4b0; Tous</div>
     <div class="chip chip-pay" onclick="setPayFilter('cash',this)">&#x1f4b5; Cash</div>
     <div class="chip chip-pay" onclick="setPayFilter('carte',this)">&#x1f4b3; Carte</div>
-    <div class="chip chip-pay" onclick="setPayFilter('virement',this)">&#x1f3e6; Virement</div>
+    <div class="chip chip-pay" onclick="setPayFilter('virement',this)">&#x1f3e6; Virement / QR</div>
     <div class="chip chip-pay" onclick="setPayFilter('prepaye',this)">&#x1f91d; Pr&#xe9;pay&#xe9;</div>
     <button id="btn-del-pay-filter" onclick="delPayFiltered()" style="display:none;margin-left:4px;background:var(--red2);color:#fff;border:none;border-radius:20px;padding:5px 12px;font-size:0.78rem;font-weight:700;cursor:pointer">&#x1f5d1; Supprimer</button>
   </div>
@@ -648,10 +648,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div class="chips" id="r-paiement-chips">
         <div class="chip active" onclick="selectChip(this,'r-paiement','cash');toggleVmt()">💵 Cash</div>
         <div class="chip" onclick="selectChip(this,'r-paiement','carte');toggleVmt()">💳 Carte</div>
-        <div class="chip" onclick="selectChip(this,'r-paiement','virement');toggleVmt()">🏦 Virement</div>
+        <div class="chip" onclick="selectChip(this,'r-paiement','virement');toggleVmt()">🏦 Virement / QR</div>
         <div class="chip" onclick="selectChip(this,'r-paiement','prepaye');toggleVmt()">🤝 Prépayé</div>
+        <div class="chip" onclick="selectChip(this,'r-paiement','mixte');toggleVmt();initMixte()">🔀 Mixte</div>
       </div>
       <input type="hidden" id="r-paiement" value="cash">
+      <div id="r-mixte-box" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <div style="font-size:0.75rem;color:var(--text3);margin-bottom:6px">Paiement en plusieurs fois (ex. aller en cash, retour par QR code) : indiquez combien a été payé de chaque façon.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div><label class="fl">💵 Cash</label><input type="number" class="fi" id="r-mixte-cash" step="0.01" min="0" placeholder="0" oninput="updMixteHint()"></div>
+          <div><label class="fl">🏦 Virement / QR</label><input type="number" class="fi" id="r-mixte-virement" step="0.01" min="0" placeholder="0" oninput="updMixteHint()"></div>
+          <div><label class="fl">💳 Carte</label><input type="number" class="fi" id="r-mixte-carte" step="0.01" min="0" placeholder="0" oninput="updMixteHint()"></div>
+        </div>
+        <div id="r-mixte-hint" style="font-size:0.75rem;margin-top:6px"></div>
+      </div>
     </div>
     <div id="r-vmt-section" style="display:none"><div class="toggle-row"><span style="font-size:0.88rem;font-weight:500">Virement reçu ✅</span><label class="toggle"><input type="checkbox" id="r-vmt-recu"><span class="tslider"></span></label></div></div>
     <div class="fr">
@@ -1302,7 +1312,7 @@ function renderDash(){
   const alerts=[];const today2=new Date();
   const todayRes=db.reservations.filter(r=>r.statut!=='annule'&&new Date(r.dateAller).toDateString()===today2.toDateString());
   if(todayRes.length>0){const tg=todayRes.reduce((s,r)=>s+parseFloat(r.prix||0),0);alerts.push(`<div class="alert alert-green" style="flex-direction:column;align-items:stretch"><div style="font-weight:700;margin-bottom:4px">📅 Aujourd&#x27;hui : ${todayRes.length} course${todayRes.length>1?'s':''} · ${fmt(tg)}</div>${todayRes.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).map(r=>`<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:0.8rem">→ <b>${r.heure||'?'}</b> · ${r.clientNom||'Client'} · <span style="color:var(--green2)">${fmt(r.prix)}</span>${r.clientTel?' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">📞</a>':''}</div>`).join('')}</div>`);}
-  const vmts=db.reservations.filter(r=>r.paiement==='virement'&&!r.vmtRecu&&r.statut!=='annule');
+  const vmts=db.reservations.filter(aVirementEnAttente);
   if(vmts.length)alerts.push('<div class="alert alert-red">🏦 '+vmts.length+' virement'+(vmts.length>1?'s':'')+' en attente !</div>');
   if(kmReel===null)alerts.push('<div class="alert alert-blue" style="cursor:pointer" onclick="openKmModal()">📍 Relevé compteur non saisi pour '+MOIS[curMonth]+' — Cliquez ici</div>');
   const inasti=getInastiAlerte();
@@ -1360,7 +1370,7 @@ function renderRes(){
   var search=searchEl?searchEl.value.toLowerCase().trim():'';
   if(search){res=res.filter(function(r){return (r.clientNom||'').toLowerCase().includes(search)||(r.depart||'').toLowerCase().includes(search)||(r.arrivee||'').toLowerCase().includes(search)||(r.vol||'').toLowerCase().includes(search)||(r.notes||'').toLowerCase().includes(search);});}
   // Filtre paiement
-  if(payFilter!=='tous'){res=res.filter(function(r){return (r.paiement||'cash')===payFilter;});}
+  if(payFilter!=='tous'){res=res.filter(function(r){var p=r.paiement||'cash';return p===payFilter||(p==='mixte'&&(payParts(r)[payFilter]||0)>0);});}
   var delBtn=document.getElementById('btn-del-pay-filter');if(delBtn)delBtn.style.display=payFilter!=='tous'&&res.length?'inline-block':'none';
   res=res.sort(function(a,b){return new Date(b.dateAller)-new Date(a.dateAller);});
   var el=document.getElementById('res-list');if(!el)return;
@@ -1389,7 +1399,7 @@ function renderRes(){
     if(isP)html+='<span class="badge badge-orange">🤝 '+r.source+'</span>';
     if(r.vol)html+='<span class="badge badge-gold">✈ '+escH(r.vol)+'</span>';
     if(r.volRetour)html+='<span class="badge badge-blue">✈ '+escH(r.volRetour)+' (ret.)</span>';
-    if(r.paiement==='virement'&&!r.vmtRecu)html+='<span class="badge badge-red">💸 ⏳</span>';
+    if(aVirementEnAttente(r))html+='<span class="badge badge-red">💸 ⏳</span>';
     if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
@@ -1860,7 +1870,7 @@ function resetResForm(){
   const acd=g('ac-client-drop');if(acd)acd.style.display='none';
   const bDep2=g('btn-client-addr-dep');if(bDep2)bDep2.style.display='none';
   const bArr2=g('btn-client-addr-arr');if(bArr2)bArr2.style.display='none';
-  setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
+  setChips('r-type-chips','r-type','aller');setChips('r-service-chips','r-service','depose');setChips('r-paiement-chips','r-paiement','cash');['r-mixte-cash','r-mixte-virement','r-mixte-carte'].forEach(id=>{const el=g(id);if(el)el.value='';});{const _mb=g('r-mixte-box');if(_mb)_mb.style.display='none';}setChips('r-partner-type-chips','r-partner-type','commission');setChips('r-langue-chips','r-langue','fr');setChips('r-vide-aller-chips','r-vide-aller-type','maison');setChips('r-vide-retour-dest','r-vide-retour-type','maison');const togR=g('r-vide-retour-toggle');if(togR)togR.checked=true;const destR=g('r-vide-retour-dest');if(destR)destR.style.display='flex';const subR=g('r-vide-retour-toggle-sub');if(subR)subR.textContent='Retour vers la maison calculé auto';
   ['r-date-retour','r-heure-retour','r-heure-retour-jour','r-date-aller','r-heure-aller'].forEach(function(id){
     try{updDtDisplay(id,'');}catch(e){}
   });
@@ -1911,7 +1921,33 @@ function applyFavChip(favId,btn){
 }
 function updSourceUI(){const s=g('r-source').value;const ro=g('r-partner-opts');if(ro)ro.style.display=s!=='direct'?'block':'none';updCalc();}
 function updPartnerType(){const t=g('r-partner-type').value;const rcb=g('r-commission-box');if(rcb)rcb.style.display=t==='commission'?'block':'none';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display=t==='prepaye'?'block':'none';if(t==='prepaye')setChips('r-paiement-chips','r-paiement','prepaye');else setChips('r-paiement-chips','r-paiement','cash');updCalc();}
-function toggleVmt(){const p=g('r-paiement').value;const vs=g('r-vmt-section');if(vs)vs.style.display=p==='virement'?'block':'none';}
+function toggleVmt(){const p=g('r-paiement').value;const vs=g('r-vmt-section');if(vs)vs.style.display=(p==='virement'||p==='mixte')?'block':'none';const mb=g('r-mixte-box');if(mb)mb.style.display=p==='mixte'?'block':'none';}
+/* ===== PAIEMENT MIXTE (ex. aller en cash, retour par QR) ===== */
+// Montants bruts par mode de paiement pour une course
+function payParts(r){
+  const prix=parseFloat(r.prix||0)||0,p=r.paiement||'cash';
+  if(p==='mixte'&&r.paiementDetail){const d=r.paiementDetail,o={};['cash','virement','carte'].forEach(k=>{const v=parseFloat(d[k]||0)||0;if(v>0)o[k]=v;});return o;}
+  const o={};o[p==='mixte'?'cash':p]=prix;return o;
+}
+function payPartsLabel(r){
+  const L={cash:'💵',virement:'🏦',carte:'💳'};const pp=payParts(r);
+  return '🔀 Mixte : '+Object.keys(pp).map(k=>L[k]+' '+fmt(pp[k])).join(' + ');
+}
+function aVirementEnAttente(r){if(r.vmtRecu||r.statut==='annule')return false;if(r.paiement==='virement')return true;return r.paiement==='mixte'&&(payParts(r).virement||0)>0;}
+function initMixte(){
+  const c=g('r-mixte-cash'),v=g('r-mixte-virement'),k=g('r-mixte-carte');if(!c||!v||!k)return;
+  if(c.value||v.value||k.value){updMixteHint();return;}
+  const prix=parseFloat(g('r-prix')?.value||0)||0;const type=g('r-type')?.value||'aller';
+  if(prix>0){if(type!=='aller'){const half=Math.round(prix/2*100)/100;c.value=half;v.value=Math.round((prix-half)*100)/100;}else{c.value=prix;}}
+  updMixteHint();
+}
+function mixteTotal(){return ['r-mixte-cash','r-mixte-virement','r-mixte-carte'].reduce((s,id)=>s+(parseFloat(g(id)?.value||0)||0),0);}
+function updMixteHint(){
+  const h=g('r-mixte-hint');if(!h)return;const prix=parseFloat(g('r-prix')?.value||0)||0;const t=mixteTotal();
+  const ok=Math.abs(t-prix)<0.01;
+  h.style.color=ok?'var(--green2)':'var(--red2, #f87171)';
+  h.textContent=ok?'✓ Total '+fmt(t)+' = prix de la course':'Total '+fmt(t)+' — prix de la course '+fmt(prix)+(t<prix?' (il manque '+fmt(prix-t)+')':' (trop de '+fmt(t-prix)+')');
+}
 
 
 async function calcKmPickupAuto(){
@@ -2152,6 +2188,7 @@ function saveReservationCore(){
   const distR=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||0):type==='ar-jour'?distRJ:0;
   const dist=parseFloat(g('r-distance').value||0);
   if(!db.clients.find(c=>c.nom===nom)){const _svc=g('r-service')?.value||'depose';const _isRec=_svc==='recuperation';const _adrField=_isRec?'r-arrivee':'r-depart';const _acKey=_isRec?'r-arrivee':'r-depart';db.clients.push({id:genId(),nom,tel,email:'',adresse:g(_adrField)?.value||'',lat:acC[_acKey]?.lat||null,lon:acC[_acKey]?.lon||null,langue,notes:'',blacklist:false});}
+  if(g('r-paiement').value==='mixte'){const _px=parseFloat(g('r-prix').value)||0;const _t=mixteTotal();if(Math.abs(_t-_px)>=0.01){updMixteHint();alert('Paiement mixte : le total cash + virement/QR + carte ('+_t.toFixed(2)+' €) doit être égal au prix de la course ('+_px.toFixed(2)+' €).');return;}}
   const editId=g('res-edit-id').value;
   const existingR=editId?(db.reservations.find(x=>x.id===editId)||{}):{}
   const r={
@@ -2176,7 +2213,7 @@ function saveReservationCore(){
     kmPickup:parseFloat(g('r-km-pickup')?.value||0),kmPickupRetour:kpr,
     kmVideAller:kva,kmVideAllerType:g('r-vide-aller-type')?.value||'maison',
     kmVideRetour:kvr,kmVideRetourType:g('r-vide-retour-type')?.value||'maison',
-    vol:g('r-vol').value.toUpperCase(),volRetour:(type==='ar-diff'?(g('r-vol-retour')?.value||''):type==='ar-jour'?(g('r-vol-retour-jour')?.value||''):'').toUpperCase(),prix:parseFloat(g('r-prix').value)||0,paiement:g('r-paiement').value,
+    vol:g('r-vol').value.toUpperCase(),volRetour:(type==='ar-diff'?(g('r-vol-retour')?.value||''):type==='ar-jour'?(g('r-vol-retour-jour')?.value||''):'').toUpperCase(),prix:parseFloat(g('r-prix').value)||0,paiement:g('r-paiement').value,paiementDetail:g('r-paiement').value==='mixte'?{cash:parseFloat(g('r-mixte-cash')?.value||0)||0,virement:parseFloat(g('r-mixte-virement')?.value||0)||0,carte:parseFloat(g('r-mixte-carte')?.value||0)||0}:null,
     vmtRecu:g('r-vmt-recu').checked,peages:parseFloat(g('r-peages').value)||0,parking:parseFloat(g('r-parking').value)||0,
     acompte:parseFloat(g('r-acompte')?.value||0),notes:g('r-notes').value,notesInternes:g('r-notes-interne')?.value||'',
     stopNom:g('r-stop-nom')?.value.trim()||'',stopTel:g('r-stop-tel')?.value.trim()||'',
@@ -2326,8 +2363,9 @@ function showDetailRes(id){
     if(r.type!=='aller'&&parseFloat(r.kmVideRetour||0)>0)h+='<div class="dr" style="padding-left:8px"><span class="dr-label" style="font-size:0.75rem">· Retour vide J2</span><span class="dr-val c-text2">'+fmtKm(r.kmVideRetour)+'</span></div>';
     h+='<div class="divider"></div>';
     h+='<div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-size:1.05rem;font-weight:800">'+fmt(r.prix)+'</span></div>';
-    var payLabel={cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement',prepaye:'🤝 Prépayé'}[r.paiement]||r.paiement;
-    h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(r.paiement==='virement'?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(r.paiement==='virement'&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
+    var payLabel=r.paiement==='mixte'?payPartsLabel(r):({cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement / QR',prepaye:'🤝 Prépayé'}[r.paiement]||r.paiement);
+    var _aVmt=r.paiement==='virement'||(r.paiement==='mixte'&&(payParts(r).virement||0)>0);
+    h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(_aVmt?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(_aVmt&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
     if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
     if(parseFloat(r.commission||0)>0){
       h+='<div class="dr"><span class="dr-label">Commission partenaire</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>';
@@ -2459,7 +2497,7 @@ function editRes(id){
   if(r.kmVideAllerType==='manuel'){const el=g('r-km-vide-aller');if(el)el.value=r.kmVideAller||0;}
   if(r.kmVideRetourType==='manuel'){const el=g('r-km-vide-retour');if(el)el.value=r.kmVideRetour||0;}
   acC['kva-auto']=r.kmVideAller||0;acC['kvr-auto']=r.kmVideRetour||0;acC['kpr-auto']=r.kmPickupRetour||0;
-  g('r-prix').value=r.prix||'';acC['prixManual']=!!r.prix;setChips('r-paiement-chips','r-paiement',r.paiement||'cash');
+  g('r-prix').value=r.prix||'';acC['prixManual']=!!r.prix;setChips('r-paiement-chips','r-paiement',r.paiement||'cash');{const _d=r.paiement==='mixte'&&r.paiementDetail?r.paiementDetail:{};[['cash','r-mixte-cash'],['virement','r-mixte-virement'],['carte','r-mixte-carte']].forEach(([k,id])=>{const el=g(id);if(el)el.value=_d[k]?_d[k]:'';});toggleVmt();if(r.paiement==='mixte')updMixteHint();}
   // Recharger arrêt intermédiaire
   if(r.stopAdresse){
     const sb=g('r-stop-box');if(sb)sb.style.display='block';
@@ -3023,15 +3061,19 @@ function setCarbFilter(f,el){carbFilter=f;document.querySelectorAll('#page-fin .
 function renderPayRepartition(){
   const res=getMonthResAller(curMonth,curYear); // aller uniquement → pas de double comptage
   if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
-  const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},carte:{label:'Carte',icon:'💳',color:'var(--blue2)',res:[]},virement:{label:'Virement',icon:'🏦',color:'var(--gold)',res:[]},prepaye:{label:'Partenaires',icon:'🤝',color:'var(--orange2)',res:[]}};
-  res.forEach(r=>{const p=r.paiement||'cash';
+  const groups={cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},carte:{label:'Carte',icon:'💳',color:'var(--blue2)',res:[]},virement:{label:'Virement / QR',icon:'🏦',color:'var(--gold)',res:[]},prepaye:{label:'Partenaires',icon:'🤝',color:'var(--orange2)',res:[]}};
+  Object.values(groups).forEach(g2=>{g2.amt=0;g2.part={};});
+  const netDe=r=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return Math.max(0,parseFloat(r.prix||0)-c);};
+  res.forEach(r=>{const p=r.paiement||'cash';const net=netDe(r);
     // Courses partenaires prépayées → groupe partenaires
-    const k=(p==='prepaye'||r.partnerType==='prepaye')?'prepaye':(groups[p]?p:'cash');
-    groups[k].res.push(r);});
+    if(p==='prepaye'||r.partnerType==='prepaye'){groups.prepaye.res.push(r);groups.prepaye.amt+=net;groups.prepaye.part[r.id]=net;return;}
+    // Paiement mixte → réparti entre les modes, au prorata du net
+    if(p==='mixte'){const pp=payParts(r);const brut=Object.values(pp).reduce((a,b)=>a+b,0);const f=brut>0?net/brut:0;Object.keys(pp).forEach(k=>{const v=pp[k]*f;groups[k].res.push(r);groups[k].amt+=v;groups[k].part[r.id]=v;});return;}
+    const k=groups[p]?p:'cash';groups[k].res.push(r);groups[k].amt+=net;groups[k].part[r.id]=net;});
   const total=res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);
   let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
   Object.entries(groups).forEach(([key,g2])=>{
-    const amt=g2.res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);
+    const amt=g2.amt;
     const pct=total>0?Math.round(amt/total*100):0;
     const active=window._payFilter===key;
     html+='<div onclick="togglePayFilter(&quot;'+key+'&quot;)" style="background:'+(active?'#1a1a1a':'var(--card)')+';border:1.5px solid '+(active?g2.color:'var(--border)')+';border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all 0.2s">';
@@ -3056,7 +3098,7 @@ function renderPayRepartition(){
       html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">';
       html+='<div style="flex:1"><div style="font-size:0.83rem;font-weight:600;color:var(--text)">'+escH(r.clientNom)+'</div>';
       html+='<div style="font-size:0.72rem;color:var(--text3)">'+new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+' · '+(r.depart||'').substring(0,18)+'</div></div>';
-      html+='<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:var(--gold)">'+fmt(r.prix)+'</span>';
+      html+='<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:var(--gold)">'+(r.paiement==='mixte'?'🔀 ':'')+fmt(r.paiement==='mixte'?(gf.part[r.id]||0):r.prix)+'</span>';
       html+='<button class="btn btn-red btn-xs" data-id="'+r.id+'" onclick="deleteOneResFromPay(this.dataset.id)">✕</button></div>';
       html+='</div>';
     });
