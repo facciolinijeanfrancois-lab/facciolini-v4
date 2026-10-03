@@ -2459,7 +2459,7 @@ function editRes(id){
   if(r.kmVideAllerType==='manuel'){const el=g('r-km-vide-aller');if(el)el.value=r.kmVideAller||0;}
   if(r.kmVideRetourType==='manuel'){const el=g('r-km-vide-retour');if(el)el.value=r.kmVideRetour||0;}
   acC['kva-auto']=r.kmVideAller||0;acC['kvr-auto']=r.kmVideRetour||0;acC['kpr-auto']=r.kmPickupRetour||0;
-  g('r-prix').value=r.prix||'';setChips('r-paiement-chips','r-paiement',r.paiement||'cash');
+  g('r-prix').value=r.prix||'';acC['prixManual']=!!r.prix;setChips('r-paiement-chips','r-paiement',r.paiement||'cash');
   // Recharger arrêt intermédiaire
   if(r.stopAdresse){
     const sb=g('r-stop-box');if(sb)sb.style.display='block';
