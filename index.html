@@ -276,6 +276,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="page" id="page-res">
   <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="res-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div class="sec"><span class="sec-title">Courses</span><button class="btn btn-gold btn-sm" onclick="openNewRes()">+ Nouvelle</button></div>
+  <div id="res-aconfirmer"></div>
   <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
     <div class="chip active" onclick="setResFilter('tous',this)">Tous</div>
     <div class="chip" onclick="setResFilter('semaine',this)">&#x1f4c6; Cette semaine</div>
@@ -1029,6 +1030,7 @@ function fixDb(){
   if(!Array.isArray(db.corbeille))db.corbeille=[];
   try{const lim=Date.now()-30*86400000;db.corbeille=db.corbeille.filter(c=>c&&c.del&&new Date(c.del).getTime()>lim);}catch(e){db.corbeille=[];}
   if(!db.provisions||typeof db.provisions!=='object')db.provisions={};
+  if(!db.settings.migPayOct26){try{db.reservations.forEach(r=>{if((r.dateAller||'')>='2026-10-03'&&(r.paiement||'cash')==='cash'&&r.partnerType!=='prepaye'&&r.statut!=='annule')r.paiement='aconfirmer';});}catch(e){}db.settings.migPayOct26=true;}
   if(!db.settings.migKmOct26){try{db.reservations.forEach(completerKmAuto);}catch(e){console.error('migration km',e);}db.settings.migKmOct26=true;}
   // migrateR pour les réservations
   db.reservations=(db.reservations||[]).map(function(r){return migrateR(r);});
@@ -1497,6 +1499,7 @@ function renderDash(){
   else if(sEl)sEl.innerHTML='';
 }
 function renderRes(){
+  try{renderAConfirmer('res-aconfirmer');}catch(e){}
   try{if(typeof majBadgeRelance==='function')majBadgeRelance();}catch(e){}
   try{if(typeof majBadgeAvis==='function')majBadgeAvis();}catch(e){}
   var sv2=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
@@ -2120,7 +2123,7 @@ function confirmerPaiement(id,mode){
   const r=db.reservations.find(x=>x.id===id);if(!r)return;
   if(mode==='mixte'){editRes(id);setTimeout(()=>{const c=[...(g('r-paiement-chips')?.children||[])].find(x=>(x.getAttribute('onclick')||'').includes("'mixte'"));if(c)c.click();},150);return;}
   r.paiement=mode;r.paiementDetail=null;if(mode==='virement')r.vmtRecu=true;
-  save();renderAll();if(typeof showToast==='function')showToast('✓ Paiement enregistré');
+  save();renderAll();try{renderRes();}catch(e){}if(typeof showToast==='function')showToast('✓ Paiement enregistré');
 }
 function renderAConfirmer(cible){
   const el=g(cible);if(!el)return;const L=getPaiementsAConfirmer();
@@ -2583,6 +2586,7 @@ function showDetailRes(id){
     h+='<div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-size:1.05rem;font-weight:800">'+fmt(r.prix)+'</span></div>';
     var payLabel=r.paiement==='mixte'?payPartsLabel(r):({aconfirmer:'⏳ À confirmer',cash:'💵 Cash',carte:'💳 Carte',virement:'🏦 Virement / QR',prepaye:'🤝 Prépayé'}[r.paiement||'cash']||r.paiement);
     var _aVmt=r.paiement==='virement'||(r.paiement==='mixte'&&(payParts(r).virement||0)>0);
+    if(r.paiement==='aconfirmer'&&r.statut!=='annule')h+='<div style="background:var(--bg3);border:1px solid var(--orange2);border-radius:var(--radius-sm);padding:8px 10px;margin:6px 0"><div style="font-size:0.78rem;font-weight:700;margin-bottom:6px">⏳ Comment le client a-t-il payé ?</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+[['cash','💵 Cash'],['virement','🏦 QR / virement'],['carte','💳 Carte'],['mixte','🔀 Mixte']].map(function(x){return '<button class="btn btn-ghost btn-xs" data-id="'+r.id+'" onclick="closeModal(\'m-detail-res\');confirmerPaiement(this.dataset.id,\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div></div>';
     var _rk2=rentaKm(r);if(_rk2!==null)h+='<div class="dr"><span class="dr-label">Gain par km roulé</span><span class="dr-val" style="color:'+(_rk2<SEUIL_RENTA?'var(--red2)':'var(--green2)')+'">'+_rk2.toFixed(2).replace('.',',')+' €/km · '+Math.round(getKmReels(r))+' km'+(Array.isArray(r.kmAuto)&&r.kmAuto.length?' (estimés)':'')+'</span></div>';
     h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(_aVmt?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(_aVmt&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
     if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
