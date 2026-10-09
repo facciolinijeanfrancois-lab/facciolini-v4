@@ -562,7 +562,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div id="dist-ok" style="display:none" class="dist-box ok"><div style="flex:1"><div class="dist-km" id="dist-km">—</div><div class="dist-time" id="dist-time">—</div></div><button class="btn btn-ghost btn-xs" onclick="calcDist()">↺</button></div>
     <div class="fg"><label class="fl" id="lbl-dist-aller">Distance aller (km)</label><input type="number" class="fi" id="r-distance" placeholder="Calculé automatiquement" step="0.1" oninput="updKmRecap();updCalc()"></div>
     <!-- Vol - affiché seulement si récupération -->
-    <div class="fg" id="r-vol-fg" style="display:none"><label class="fl">Numéro de vol</label><input type="text" class="fi" id="r-vol" placeholder="Ex: SN3724" style="text-transform:uppercase"></div>
+    <div class="fg" id="r-vol-fg" style="display:none"><label class="fl">Numéro de vol (arrivée de l'avion)</label><input type="text" class="fi" id="r-vol" placeholder="Ex: SN3724" style="text-transform:uppercase"></div>
     <!-- AR même jour -->
     <div id="sp2-ar-jour" style="display:none">
       <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-text">Retour même jour</div><div class="section-divider-line"></div></div>
@@ -633,7 +633,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="res-section-title">🚗 Véhicule & passagers</div>
     <div class="fr">
       <div class="fg"><label class="fl">Véhicule</label><select class="fs" id="r-vehicule" onchange="checkCapaciteApp()"><option value="0">🚗 Seat Leon</option><option value="1">🚐 Talento (+20€)</option></select></div>
-      <div class="fg"><label class="fl">Passagers</label><input type="number" class="fi" id="r-passagers" value="1" min="1" max="8" oninput="checkCapaciteApp()"></div>
+      <div class="fg"><label class="fl">Passagers</label><input type="number" class="fi" id="r-passagers" value="1" min="1" max="30" oninput="checkCapaciteApp()"></div>
       <div id="r-capacite-hint" style="display:none;font-size:0.78rem;margin:-6px 0 12px;padding:8px 10px;border-radius:8px"></div>
     </div>
     <div class="fr">
@@ -897,6 +897,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-outline btn-sm" id="dr-stop-wa-btn" style="display:none">&#x1f4ac; WA 2ème passager</button>
   <button class="btn btn-outline btn-sm" id="dr-stop-sms-btn" style="display:none">&#x1f4f1; SMS 2ème passager</button>
   <button class="btn btn-outline btn-sm" id="dr-edit-btn">Modifier</button>
+  <button class="btn btn-outline btn-sm" id="dr-veh2-btn" onclick="ajouterVehicule(currentDetailId)">➕ 2e véhicule</button>
   <button class="btn btn-red btn-sm" id="dr-del-btn">Supprimer</button>
 </div>
 <div style="margin-top:12px">
@@ -1549,6 +1550,7 @@ function renderRes(){
     if(r.volRetour)html+='<span class="badge badge-blue">✈ '+escH(r.volRetour)+' (ret.)</span>';
     if(aVirementEnAttente(r))html+='<span class="badge badge-red">💸 ⏳</span>';
     if(r.paiement==='aconfirmer'&&courseCommencee(r))html+='<span class="badge badge-orange">⏳ paiement ?</span>';
+    {var _g=groupeCourse(r);if(_g.length>1)html+='<span class="badge badge-blue" title="Groupe sur plusieurs véhicules">🚐 '+(_g.indexOf(r)+1)+'/'+_g.length+'</span>';}
     {var _rk=rentaKm(r);if(_rk!==null&&_rk<SEUIL_RENTA&&r.statut!=='annule')html+='<span class="badge badge-red" title="Gain par km roulé (approche et retour à vide compris)">⚠️ '+_rk.toFixed(2).replace('.',',')+' €/km</span>';}
     if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
@@ -2288,6 +2290,7 @@ function checkCapaciteApp(){
   const hint=g('r-capacite-hint');
   if(!vehEl||!hint)return;
 
+  if(passagers>8){hint.style.display='block';hint.style.background='rgba(45,125,210,0.12)';hint.style.color='var(--blue2)';hint.textContent='👥 Plus de 8 passagers : mets ici les passagers du 1er véhicule, enregistre, puis « ➕ 2e véhicule » dans la fiche de la course.';if(vehEl.value==='0'){vehEl.value='1';updCalc();}return;}
   const cap=evaluerCapaciteSeat(passagers,grandes,petites,bebes);
   if(!cap.ok){
     if(vehEl.value==='0'){ vehEl.value='1'; updCalc(); }
@@ -2322,7 +2325,7 @@ function checkCapaciteApp(){
   }
 }
 function setPeage(v){const el=g('r-peages');if(el){el.value=v;updCalc();}}
-function updCalc(){
+function updCalc(){try{updVolFieldLeger();}catch(e){}
   const dist=parseFloat(g('r-distance')?.value||0);
   const type=g('r-type')?.value||'aller';
   const prix=parseFloat(g('r-prix')?.value||0);
@@ -2509,13 +2512,18 @@ function genResSummary(){
   const svcAller=g('r-service')?.value||'depose';
   const isRecAller=svcAller==='recuperation';
   const legEmoji=isRecAller?'🛬':'✈️';
-  const legLabelFR=isRecAller?'RETOUR (récupération)':'ALLER (dépose)';
-  const legLabelEN=isRecAller?'RETURN (pickup)':'OUTBOUND (drop-off)';
-  const legLabelNL=isRecAller?'TERUGREIS (ophalen)':'HEENREIS (afzetten)';
+  const arT=(type==='ar-diff'||type==='ar-jour');
+  const legLabelFR=isRecAller?(arT?'ARRIVÉE (prise en charge à l\'aéroport)':'RETOUR (récupération)'):'ALLER (dépose)';
+  const legLabelEN=isRecAller?(arT?'ARRIVAL (airport pickup)':'RETURN (pickup)'):'OUTBOUND (drop-off)';
+  const legLabelNL=isRecAller?(arT?'AANKOMST (ophalen op de luchthaven)':'TERUGREIS (ophalen)'):'HEENREIS (afzetten)';
+  const leg2FR=isRecAller?'✈️ DÉPART (dépose à l\'aéroport)':'🛬 RETOUR',leg2EN=isRecAller?'✈️ DEPARTURE (airport drop-off)':'🛬 RETURN',leg2NL=isRecAller?'✈️ VERTREK (afzetten op de luchthaven)':'🛬 TERUGREIS';
+  const volR_FR=isRecAller?'Vol de départ':'Vol retour',volR_EN=isRecAller?'Departure flight':'Return flight',volR_NL=isRecAller?'Vertrekvlucht':'Terugvlucht';
+  const volAller=(g('r-vol')?.value||'').toUpperCase();
+  const volA_FR=volAller?'\n✈️ Vol : '+volAller:'',volA_EN=volAller?'\n✈️ Flight: '+volAller:'',volA_NL=volAller?'\n✈️ Vlucht: '+volAller:'';
   let msg='';
-  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n'+legEmoji+' '+legLabelEN+'\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n🛬 RETURN\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n🏠 To: '+arrRet+(volRetour?'\n✈️ Return flight: '+volRetour:'');msg+='\n\n💶 Total: '+fmt(prix)+(type==='ar-diff'?'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR):'');}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
-  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n'+legEmoji+' '+legLabelNL+'\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n🛬 TERUGREIS\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n🏠 Naar: '+arrRet+(volRetour?'\n✈️ Terugvlucht: '+volRetour:'');msg+='\n\n💶 Totaal: '+fmt(prix)+(type==='ar-diff'?'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR):'');}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
-  else{const stopInfo=acC['r-stop-adresse']&&g('r-stop-adresse')?.value?'\n📍 Arrêt : '+g('r-stop-adresse').value+(g('r-stop-nom')?.value?' ('+g('r-stop-nom').value+')':''):'';msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n'+legEmoji+' '+legLabelFR+'\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+stopInfo+'\n📍 Arrivée : '+arr;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n🛬 RETOUR\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n🏠 Arrivée : '+arrRet+(volRetour?'\n✈️ Vol retour : '+volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+(type==='ar-diff'?'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR):'');}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
+  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n'+legEmoji+' '+legLabelEN+'\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr+volA_EN;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2EN+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' To: '+arrRet+(volRetour?'\n✈️ '+volR_EN+': '+volRetour:'');msg+='\n\n💶 Total: '+fmt(prix)+(type==='ar-diff'?'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR):'');}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
+  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n'+legEmoji+' '+legLabelNL+'\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr+volA_NL;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2NL+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Naar: '+arrRet+(volRetour?'\n✈️ '+volR_NL+': '+volRetour:'');msg+='\n\n💶 Totaal: '+fmt(prix)+(type==='ar-diff'?'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR):'');}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
+  else{const stopInfo=acC['r-stop-adresse']&&g('r-stop-adresse')?.value?'\n📍 Arrêt : '+g('r-stop-adresse').value+(g('r-stop-nom')?.value?' ('+g('r-stop-nom').value+')':''):'';msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n'+legEmoji+' '+legLabelFR+'\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+stopInfo+'\n📍 Arrivée : '+arr+volA_FR;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2FR+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Arrivée : '+arrRet+(volRetour?'\n✈️ '+volR_FR+' : '+volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+(type==='ar-diff'?'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR):'');}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
   sv('wa-preview',msg);acC['wa-msg']=msg;acC['wa-tel']=(g('r-client-tel').value||'').replace(/[^+\d]/g,'');
 }
 function sendWA(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
@@ -2556,9 +2564,10 @@ function showDetailRes(id){
     if(r.clientTel)h+=' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">'+escH(r.clientTel)+'</a>';
     h+='</span></div>';
     h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';
+    {var _gr=groupeCourse(r);if(_gr.length>1)h+='<div class="dr"><span class="dr-label">🚐 Groupe</span><span class="dr-val">'+_gr.length+' véhicules · total '+fmt(_gr.reduce(function(s,x){return s+(parseFloat(x.prix)||0);},0))+' · '+_gr.reduce(function(s,x){return s+(parseInt(x.passagers)||0);},0)+' pers.</span></div>';}
     if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
-    h+='<div class="dr"><span class="dr-label">'+((r.type==='aller'&&r.service==='recuperation')?'🛬 Récupération':'Aller')+'</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
-    if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">Retour</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
+    h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'🛬 Récupération':'Aller')+'</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
+    if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'✈️ Dépose':'Retour')+'</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
     if(r.type==='ar-jour'&&r.heureRetour)h+='<div class="dr"><span class="dr-label">Retour même jour</span><span class="dr-val">'+r.heure+' → '+r.heureRetour+'</span></div>';
     h+='<div class="dr"><span class="dr-label">Trajet</span><span class="dr-val">'+(r.depart||'—').substring(0,22)+' → '+(r.arrivee||'—').substring(0,22)+'</span></div>';
     if(r.stopAdresse)h+='<div class="dr"><span class="dr-label" style="color:var(--blue2)">📍 Arrêt intermédiaire</span><span class="dr-val" style="color:var(--blue2)">'+escH(r.stopAdresse).substring(0,30)+(r.stopNom?' · '+escH(r.stopNom):'')+'</span></div>';
@@ -2768,6 +2777,24 @@ function showToast(msg){
   window._toastTimer=setTimeout(function(){t.classList.remove('show');},2200);
 }
 function majBoutonsStatut(r){const a=g('dr-s-annule'),b=g('dr-s-retablir');const an=r&&r.statut==='annule';if(a)a.style.display=an?'none':'';if(b)b.style.display=an?'':'none';}
+/* Course à plusieurs véhicules (groupe > 8 personnes) : une fiche par véhicule, reliées entre elles.
+   Chaque véhicule a son prix, son paiement, ses km et son contrôle d'horaire. */
+function groupeCourse(r){return r&&r.groupe?db.reservations.filter(x=>x.groupe===r.groupe&&x.statut!=='annule'):[];}
+function ajouterVehicule(id){
+  const r=db.reservations.find(x=>x.id===id);if(!r)return;
+  const grp=r.groupe||r.id;r.groupe=grp;
+  const c=JSON.parse(JSON.stringify(r));
+  c.id=genId();c.groupe=grp;
+  const n=groupeCourse(r).length+1;
+  c.vehicule=(parseInt(r.vehicule)||0)===1?0:1;
+  c.paiement='aconfirmer';c.paiementDetail=null;c.vmtRecu=false;
+  delete c.rappelEnvoye;delete c.rappelJ7Envoye;delete c.rappelJ7RetourEnvoye;
+  c.notesInternes=((c.notesInternes||'')+' [Véhicule '+n+' du groupe]').trim();
+  db.reservations.push(c);save();
+  closeModal('m-detail-res');renderAll();try{renderRes();}catch(e){}
+  editRes(c.id);
+  if(typeof showToast==='function')showToast('Véhicule '+n+' ajouté — ajuste passagers, véhicule et prix');
+}
 function setStatut(id,statut){
   var r=db.reservations.find(function(x){return x.id===id;});
   if(!r)return;
@@ -2985,16 +3012,18 @@ function fillClientAddrSimple(field){
   if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};const ids=(acKey==='r-depart')?['r-dep-lat','r-dep-lon']:['r-arr-lat','r-arr-lon'];if(g(ids[0]))g(ids[0]).value=c.lat;if(g(ids[1]))g(ids[1]).value=c.lon;}
   assurerDistanceAller();
 }
+function updVolFieldLeger(){const volFg=g('r-vol-fg');if(!volFg)return;const s=g('r-service')?.value||'depose';const a=(typeof coordsAeroport==='function')&&!!coordsAeroport(g('r-depart')?.value||'');volFg.style.display=(s==='recuperation'||a)?'block':'none';}
 function updVolField(){
   const service=g('r-service')?.value||'depose';
   const volFg=g('r-vol-fg');
-  if(volFg)volFg.style.display=service==='recuperation'?'block':'none';
+  const depAero=(typeof coordsAeroport==='function')&&!!coordsAeroport(g('r-depart')?.value||'');
+  if(volFg)volFg.style.display=(service==='recuperation'||depAero)?'block':'none';
   // Libellés dynamiques : en récupération, la course EST le retour
   const isRecL=(service==='recuperation');
   const typeL=g('r-type')?.value||'aller';
   const soloRec=isRecL&&typeL==='aller';
-  const ld=g('lbl-date-aller');if(ld)ld.textContent=soloRec?'Date récupération':'Date aller';
-  const lh=g('lbl-heure-aller');if(lh)lh.textContent=soloRec?'Heure atterrissage':'Heure aller';
+  const ld=g('lbl-date-aller');if(ld)ld.textContent=isRecL?'Date récupération (aéroport)':'Date aller';
+  const lh=g('lbl-heure-aller');if(lh)lh.textContent=isRecL?'Heure atterrissage':'Heure aller';
   const lk=g('lbl-dist-aller');if(lk)lk.textContent=soloRec?'Distance retour (km)':'Distance aller (km)';
   const lp=g('lbl-km-pickup');if(lp)lp.textContent=soloRec?'Km pickup (Carnières → aéroport)':'Km pickup (Carnières → client)';
   const lva=g('lbl-vide-aller');if(lva)lva.textContent=soloRec?'Retour après récupération':'Retour après dépose (J1)';
