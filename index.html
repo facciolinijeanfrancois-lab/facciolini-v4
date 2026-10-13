@@ -936,7 +936,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const MOIS_S=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MOI={nom:'Jean-François Facciolini',adresse:'Rue Saint-Eloi 173, 7141 Carnières',bce:'1033.793.336',email:'facciolini.mobility@outlook.com',tel:'0471692650'};
-const HOME_DEFAULT={adresse:'Rue Saint-Eloi 173, 7141 Carnières',lat:50.4089,lon:4.1756};
+const HOME_DEFAULT={adresse:'Rue Saint-Eloi 173, 7141 Carnières',lat:50.4460,lon:4.2346};
 const CHARGES_DEFAULT=[{id:'ch1',nom:'AG Compta Fisc (Adam)',montant:50.00},{id:'ch2',nom:'Proximus Pro',montant:65.37},{id:'ch3',nom:'Assurance P&V Seat Leon',montant:336.10},{id:'ch4',nom:'Crédit (remboursement mensuel)',montant:340.00},{id:'ch5',nom:'Lois sociales INASTI',montant:38.33},{id:'ch6',nom:'PLCI Vivium (épargne pension)',montant:83.95},{id:'ch7',nom:'Taxe de circulation Seat (528,40 €/an)',montant:44.03}];
 const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zaventem',lat:50.9010,lon:4.4844},{id:'f2',nom:'Charleroi CRL',adresse:'Brussels South Charleroi Airport',lat:50.4592,lon:4.4538},{id:'f3',nom:'Gare de Mons',adresse:'Place Leopold, Mons',lat:50.4542,lon:3.9563},{id:'f4',nom:'Gare Charleroi',adresse:'Boulevard Tirou, Charleroi',lat:50.4108,lon:4.4446},{id:'f5',nom:'Gare du Midi',adresse:'Rue de France 2, Bruxelles',lat:50.8354,lon:4.3360}];
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
@@ -1017,6 +1017,13 @@ function fixDb(){
   if(!db.partnerSoldes)db.partnerSoldes=[];
   if(!db.partnerMoisMasques)db.partnerMoisMasques={};
   if(!db.settings.homeAddress||!db.settings.homeAddress.lat)db.settings.homeAddress=HOME_DEFAULT;
+  /* Anciennes coordonnées par défaut (centre de Binche, ~7 km d'écart) → vraies coordonnées de la Rue Saint-Eloi */
+  if(db.settings.homeAddress&&Math.abs((db.settings.homeAddress.lat||0)-50.4089)<0.0005&&Math.abs((db.settings.homeAddress.lon||0)-4.1756)<0.0005){db.settings.homeAddress.lat=HOME_DEFAULT.lat;db.settings.homeAddress.lon=HOME_DEFAULT.lon;db.settings.recalcKmDomicile=true;}
+  /* Réglages incomplets (ancienne sauvegarde) : on remet les valeurs par défaut manquantes au lieu de planter */
+  if(!db.settings.tarifs)db.settings.tarifs={rayon:30,court:1.50,long:1.50,min:60,round:5,camion:20};
+  if(!db.settings.vip)db.settings.vip={seuil:4,reduc:10};
+  if(!Array.isArray(db.settings.vehicles)||!db.settings.vehicles.length)db.settings.vehicles=[{nom:'Seat Leon',cout:0.28,conso:4.12},{nom:'Talento',cout:0.45,conso:8.0}];
+  if(!db.settings.objectif)db.settings.objectif=2000;
   if(!db.settings.tarifs.round)db.settings.tarifs.round=5;
   if(!db.settings.tarifs.camion)db.settings.tarifs.camion=20;
   if(!db.settings.tarifs.min)db.settings.tarifs.min=50;
@@ -1034,6 +1041,9 @@ function fixDb(){
   if(!db.provisions||typeof db.provisions!=='object')db.provisions={};
   if(!db.settings.migPayOct26){try{db.reservations.forEach(r=>{if((r.dateAller||'')>='2026-10-03'&&(r.paiement||'cash')==='cash'&&r.partnerType!=='prepaye'&&r.statut!=='annule')r.paiement='aconfirmer';});}catch(e){}db.settings.migPayOct26=true;}
   if(!db.settings.migKmOct26){try{db.reservations.forEach(completerKmAuto);}catch(e){console.error('migration km',e);}db.settings.migKmOct26=true;}
+  /* Domicile corrigé : les km calculés automatiquement depuis l'ancienne position (Binche) sont recalculés.
+     Les km saisis à la main ne sont jamais touchés. */
+  if(db.settings.recalcKmDomicile){try{db.reservations.forEach(function(r){if(Array.isArray(r.kmAuto)&&r.kmAuto.length){r.kmAuto.forEach(function(k){r[k]=0;});r.kmAuto=[];completerKmAuto(r);}});}catch(e){console.error('recalcul km',e);}delete db.settings.recalcKmDomicile;}
   // migrateR pour les réservations
   db.reservations=(db.reservations||[]).map(function(r){return migrateR(r);});
 }
@@ -2389,14 +2399,15 @@ function saveReservationCore(){
   const type=g('r-type').value,source=g('r-source').value,partnerType=g('r-partner-type').value;
   const nom=g('r-client-nom').value.trim(),tel=g('r-client-tel').value.trim(),langue=g('r-langue').value;
   const vidx=parseInt(g('r-vehicule').value||0);
-  if(!nom){alert('Nom client requis');return;}
+  const reactiver=()=>{if(saveBtn)saveBtn.disabled=false;};
+  if(!nom){alert('Nom client requis');reactiver();return;}
   const kva=getKvA(),kvr=type!=='aller'?getKvR():0;
   const kpr=type==='ar-diff'?parseFloat(g('r-km-pickup-retour')?.value||acC['kpr-auto']||0):0;
   const distRJ=parseFloat(g('r-distance-retour-jour')?.value||0);
   const distR=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||0):type==='ar-jour'?distRJ:0;
   const dist=parseFloat(g('r-distance').value||0);
-  if(!db.clients.find(c=>c.nom===nom)){const _svc=g('r-service')?.value||'depose';const _isRec=_svc==='recuperation';const _adrField=_isRec?'r-arrivee':'r-depart';const _acKey=_isRec?'r-arrivee':'r-depart';db.clients.push({id:genId(),nom,tel,email:'',adresse:g(_adrField)?.value||'',lat:acC[_acKey]?.lat||null,lon:acC[_acKey]?.lon||null,langue,notes:'',blacklist:false});}
-  if(g('r-paiement').value==='mixte'){const _px=parseFloat(g('r-prix').value)||0;const _t=mixteTotal();if(Math.abs(_t-_px)>=0.01){updMixteHint();alert('Paiement mixte : le total cash + virement/QR + carte ('+_t.toFixed(2)+' €) doit être égal au prix de la course ('+_px.toFixed(2)+' €).');return;}}
+  const _creerClient=()=>{if(!db.clients.find(c=>c.nom===nom)){const _svc=g('r-service')?.value||'depose';const _isRec=_svc==='recuperation';const _adrField=_isRec?'r-arrivee':'r-depart';const _acKey=_isRec?'r-arrivee':'r-depart';db.clients.push({id:genId(),nom,tel,email:'',adresse:g(_adrField)?.value||'',lat:acC[_acKey]?.lat||null,lon:acC[_acKey]?.lon||null,langue,notes:'',blacklist:false});}};
+  if(g('r-paiement').value==='mixte'){const _px=parseFloat(g('r-prix').value)||0;const _t=mixteTotal();if(Math.abs(_t-_px)>=0.01){updMixteHint();alert('Paiement mixte : le total cash + virement/QR + carte ('+_t.toFixed(2)+' €) doit être égal au prix de la course ('+_px.toFixed(2)+' €).');reactiver();return;}}
   const editId=g('res-edit-id').value;
   const existingR=editId?(db.reservations.find(x=>x.id===editId)||{}):{}
   const r={
@@ -2474,6 +2485,7 @@ function saveReservationCore(){
       if(!confirm(_txt)){if(saveBtn)saveBtn.disabled=false;return;}
     }
   }catch(e){console.error('conflits:',e);}
+  _creerClient();
   if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;trackUsage('reservation-modifiee');}else{db.reservations.push(r);trackUsage('reservation-nouvelle');}
   if(r.stopNom||r.stopAdresse)trackUsage('2eme-passager');
   save();
@@ -2483,7 +2495,7 @@ function saveReservationCore(){
   if(confSec){confSec.style.display='block';}
   setTimeout(()=>{const fs=g('res-form-scroll');if(fs)fs.scrollTop=fs.scrollHeight;},150);
   const saveBtnClose=g('res-btn-save');if(saveBtnClose){saveBtnClose.disabled=false;saveBtnClose.textContent='✓ Fermer';saveBtnClose.onclick=function(){closeModal('m-res');saveBtnClose.textContent='✓ Enregistrer';saveBtnClose.onclick=saveReservation;};}
-  if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier Samsung ?"))exportICS(r);setTimeout(()=>{try{openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},700);},600);}
+  if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier Samsung ?"))exportICS(r);setTimeout(()=>{try{if(!estVehiculeSecondaire(r))openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},700);},600);}
 }
 function genResSummary(){
   const vipC=isVip(g('r-client-nom')?.value?.trim()||'');
@@ -2792,7 +2804,7 @@ function ajouterVehicule(id){
   const n=groupeCourse(r).length+1;
   c.vehicule=(parseInt(r.vehicule)||0)===1?0:1;
   c.paiement='aconfirmer';c.paiementDetail=null;c.vmtRecu=false;
-  delete c.rappelEnvoye;delete c.rappelJ7Envoye;delete c.rappelJ7RetourEnvoye;
+  delete c.rappelEnvoye;delete c.rappelJ7Envoye;delete c.rappelJ7RetourEnvoye;delete c.progMsgs;
   c.notesInternes=((c.notesInternes||'')+' [Véhicule '+n+' du groupe]').trim();
   db.reservations.push(c);save();
   closeModal('m-detail-res');renderAll();try{renderRes();}catch(e){}
@@ -2831,6 +2843,7 @@ function buildMsgRappel(r,sens,joursForces){
   var prix=parseFloat(r.prix||0);
   var acompte=parseFloat(r.acompte||0);
   var solde=r.type==='ar-diff'?(acompte>0?prix-acompte:prix/2):0;
+  if(r.paiement==='prepaye'||r.partnerType==='prepaye'||(r.paiement==='virement'&&r.vmtRecu))solde=0;
   var diff=Math.round((date.setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
   if(typeof joursForces==='number')diff=joursForces;
   var quand=diff===0?'aujourd\'hui':diff===1?'demain':'dans '+diff+' jours';
@@ -2909,7 +2922,7 @@ function buildMsgRappel(r,sens,joursForces){
 
 /* ===== PROGRAMMER LES MESSAGES J-7 / J-1 (Samsung Messages) ===== */
 function progMsgsListe(r){
-  var out=[];if(!r||r.statut==='annule')return out;
+  var out=[];if(!r||r.statut==='annule'||estVehiculeSecondaire(r))return out;
   var auj=new Date();auj.setHours(0,0,0,0);
   function ajoute(dateStr,sens,cle,jours,label){
     if(!dateStr)return;
@@ -3156,7 +3169,7 @@ function saveNotifSettings(){
     matinHeure: document.getElementById('notif-matin-heure')?.value || '07:00'
   };
   save();
-  if(Notification.permission === 'granted') scheduleAllNotifications();
+  if(('Notification' in window) && Notification.permission === 'granted') scheduleAllNotifications();
 }
 
 function loadNotifSettings(){
@@ -3211,7 +3224,7 @@ function rattraperNotifsManquees(){
 }
 
 function scheduleAllNotifications(){
-  if(Notification.permission !== 'granted') return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
   rattraperNotifsManquees();
   const ns = db.settings.notifs || {};
   const now = new Date();
@@ -3306,12 +3319,13 @@ function scheduleAllNotifications(){
 }
 
 function showLocalNotification(title, body, tag){
-  if(Notification.permission !== 'granted') return;
-  const notif = new Notification(title, {
-    body, icon: './icon-192.png', badge: './icon-96.png',
-    tag: tag || 'fm', vibrate: [200,100,200]
-  });
-  notif.onclick = () => { window.focus(); notif.close(); };
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts={ body, icon: './icon-192.png', badge: './icon-96.png', tag: tag || 'fm', vibrate: [200,100,200] };
+  /* Sur Android (Chrome, Samsung Internet), « new Notification() » est interdit : il faut passer par le service worker */
+  const viaPage=()=>{try{const n=new Notification(title,opts);n.onclick=()=>{window.focus();n.close();};}catch(e){console.error('notification:',e);}};
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(reg=>{ if(reg&&reg.showNotification) reg.showNotification(title,opts).catch(viaPage); else viaPage(); }).catch(viaPage);
+  } else viaPage();
 }
 
 function checkBackupReminder(){
@@ -3487,14 +3501,14 @@ function togglePayFilter(key){
 function deletePayGroup(payKey){
   const res=getMonthRes(curMonth,curYear).filter(r=>payStrict(r,payKey));
   if(!res.length)return;
-  if(!confirm('Supprimer les '+res.length+' courses '+payKey+' de ce mois ? Cette action est irréversible.'))return;
+  if(!confirm('Supprimer les '+res.length+' courses '+payKey+' de ce mois ?\n\nElles restent 30 jours dans la corbeille.'))return;
   const ids=new Set(res.map(r=>r.id));
   supprimerCourses([...ids]);
   window._payFilter=null;
   save();renderAll();
 }
 function deleteOneResFromPay(id){
-  if(!confirm('Supprimer cette course définitivement ?'))return;
+  if(!confirm('Supprimer cette course ?\n\nElle reste 30 jours dans la corbeille.'))return;
   supprimerCourses([id]);
   save();renderAll();
 }
@@ -3888,12 +3902,13 @@ function genNoteFrais(){
 }
 function exportNoteCSV(){const res=getMonthResAller(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
-function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());try{if(typeof majBanniereSauvegarde==='function')setTimeout(majBanniereSauvegarde,300);}catch(e){}const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+dateLocale()+'.json';a.click();}
+function sauvegardeJSON(){const extra={};['fm_avis_demandes','fm_campagnes'].forEach(k=>{try{const v=localStorage.getItem(k);if(v)extra[k]=v;}catch(e){}});return JSON.stringify(Object.assign({},db,{_local:extra}),null,2);}
+function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());try{if(typeof majBanniereSauvegarde==='function')setTimeout(majBanniereSauvegarde,300);}catch(e){}const blob=new Blob([sauvegardeJSON()],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+dateLocale()+'.json';a.click();}
 /* Envoie la sauvegarde vers Drive / e-mail / WhatsApp (menu Partager du téléphone). Sinon : téléchargement. */
 async function partagerSauvegarde(){
   const nom='facciolini_backup_v52_'+dateLocale()+'.json';
   try{
-    const file=new File([JSON.stringify(db,null,2)],nom,{type:'application/json'});
+    const file=new File([sauvegardeJSON()],nom,{type:'application/json'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       await navigator.share({files:[file],title:'Sauvegarde Facciolini Mobility',text:'Sauvegarde du '+new Date().toLocaleDateString('fr-BE')});
       localStorage.setItem('fm_last_backup',Date.now().toString());try{majBanniereSauvegarde();}catch(e){}renderAll();return;
@@ -3992,6 +4007,14 @@ function doImport(e){
         // Format v5.x natif
         db.reservations=(d.reservations||[]).map(function(r){return migrateR(r);});
         db.clients=d.clients||[];
+        // Tout le reste de la sauvegarde (partenaires et soldes, réglages, TVA, provisions, entretien, corbeille…)
+        Object.keys(d).forEach(function(k){
+          if(k==='reservations'||k==='clients'||k==='_local'||d[k]==null)return;
+          if(k==='settings'&&typeof d.settings==='object'){db.settings=Object.assign({},db.settings,d.settings);return;}
+          db[k]=d[k];
+        });
+        // Avis Google et campagnes déjà envoyés (évite de relancer deux fois les mêmes clients)
+        if(d._local&&typeof d._local==='object'){Object.keys(d._local).forEach(function(k){if(/^fm_(avis_demandes|campagnes)$/.test(k)){try{localStorage.setItem(k,d._local[k]);}catch(e){}}});}
       }
 
       // Carburant, charges, km communs aux deux formats
@@ -4724,11 +4747,13 @@ function applyUpdate(){
 
 <script>
 /* ===== RELANCE GROUPEE J-7 ===== */
+/* Véhicule 2, 3… d'un groupe : le client a déjà le message via le véhicule 1 */
+function estVehiculeSecondaire(r){return !!(r&&r.groupe&&r.groupe!==r.id&&db.reservations.some(function(x){return x.id===r.groupe&&x.statut!=='annule';}));}
 function getRelancesJ7(){
   var today=new Date();today.setHours(0,0,0,0);
   var out=[];
   db.reservations.forEach(function(r){
-    if(r.statut==='annule')return;
+    if(r.statut==='annule'||estVehiculeSecondaire(r))return;
     var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);
     var dj=Math.round((dA-today)/86400000);
     if(dj>3&&dj<=10&&!r.rappelJ7Envoye) out.push({r:r,sens:'aller',jours:dj,date:dA});
@@ -4941,7 +4966,9 @@ function detecterConflits(cible,ignoreId){
     if(o.statut==='annule') return;
     if(ignoreId && o.id===ignoreId) return;
     if(o.id===cible.id) return;
-    if(vCible!==undefined && o.vehicule!==undefined && o.vehicule!==vCible) return; /* vehicules differents = pas de conflit */
+    /* Un seul chauffeur : même sur deux véhicules différents, deux courses en même temps sont un conflit.
+       Exception : les véhicules d'un même groupe (2e véhicule conduit par quelqu'un d'autre). */
+    if(cible.groupe && o.groupe===cible.groupe) return;
     _creneaux(o).forEach(function(oc){
       cc.forEach(function(x){
         var ecart=Math.min(Math.abs(x.debut-oc.fin),Math.abs(oc.debut-x.fin));

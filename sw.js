@@ -1,5 +1,5 @@
-// Facciolini Mobility - Service Worker v6.2
-const CACHE_NAME = 'fm-v6-2';
+// Facciolini Mobility - Service Worker v6.3
+const CACHE_NAME = 'fm-v6-3';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -17,11 +17,16 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if(e.request.method !== 'GET') return;
+  /* Seuls les fichiers de l'appli sont mis en cache : les calculs d'itinéraire
+     et la recherche d'adresses (sites externes) passent directement par le réseau */
+  if(new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        if(res && res.ok){
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
         return res;
       })
       .catch(() => caches.match(e.request))
