@@ -1732,6 +1732,9 @@ function renderPartners(){
     var html='';
     db.partners.forEach(function(p){
       var s=soldes[p.nom]||{commissionsDues:0,aFacturer:0,courses:[]};
+      // Remise à zéro : la fiche ne montre que ce qui vient après (les dettes non réglées restent toujours visibles)
+      var depuis=p.resetDepuis||'';
+      if(depuis){s=Object.assign({},s,{courses:s.courses.filter(function(r){return (r.dateAller||'')>=depuis||(r.partnerType==='commission'&&!r.commissionPayee)||(r.partnerType==='prepaye'&&!r.facturePaye);})});}
       // Calcul net à facturer
       var netAFacturer=s.aFacturer-s.commissionsDues;
       html+='<div class="card card-gold" style="margin-bottom:12px">';
@@ -1740,15 +1743,17 @@ function renderPartners(){
       if(p.tel)html+='<div style="font-size:0.75rem;color:var(--text3);margin-top:2px">📞 '+escH(p.tel)+'</div>';
       html+='</div>';
       html+='<div style="display:flex;gap:6px">';
+      html+='<button class="btn btn-outline btn-xs" title="Remettre à zéro" onclick="remettreAZeroPartenaire(this.dataset.id)" data-id="'+p.id+'">🔄 Zéro</button>';
       html+='<button class="btn btn-outline btn-xs" onclick="openPartnerModal(this.dataset.id)" data-id="'+p.id+'">✏️</button>';
       html+='</div></div>';
+      if(depuis){html+='<div style="font-size:0.7rem;color:var(--text3);margin:-6px 0 10px">🔄 Remis à zéro le '+new Date(depuis+'T12:00').toLocaleDateString('fr-BE')+' · <span style="text-decoration:underline;cursor:pointer" onclick="annulerRemiseAZero(this.dataset.id)" data-id="'+p.id+'">annuler</span></div>';}
 
       // Résumé financier
       var nbCourses=s.courses.filter(r=>r.statut!=='annule').length;
       var totalEncaisse=s.courses.filter(r=>r.statut!=='annule').reduce((t,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return t+Math.max(0,parseFloat(r.prix||0)-c);},0);
       html+='<div style="background:rgba(255,255,255,0.1);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">';
       html+='<div style="font-size:0.62rem;color:var(--gold2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">💰 Situation financière</div>';
-      html+='<div class="dr"><span class="dr-label" style="color:rgba(255,255,255,0.6)">Courses effectuées</span><span class="dr-val">'+nbCourses+' course'+(nbCourses>1?'s':'')+'</span></div>';
+      html+='<div class="dr"><span class="dr-label" style="color:rgba(255,255,255,0.6)">Courses effectuées'+(depuis?' (depuis la remise à zéro)':'')+'</span><span class="dr-val">'+nbCourses+' course'+(nbCourses>1?'s':'')+'</span></div>';
       html+='<div class="dr"><span class="dr-label" style="color:rgba(255,255,255,0.6)">Total encaissé</span><span class="dr-val c-gold">'+fmt(totalEncaisse)+'</span></div>';
       if(s.commissionsDues>0){
         html+='<div class="dr"><span class="dr-label" style="color:var(--red2)">Commissions à reverser</span><span class="dr-val" style="color:var(--red2)">- '+fmt(s.commissionsDues)+'</span></div>';
@@ -1773,12 +1778,16 @@ function renderPartners(){
 
       // Historique des règlements
       if(db.partnerSoldes){
-        var histo=(db.partnerSoldes||[]).filter(function(h){return h.partenaire===p.nom;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+        var histo=(db.partnerSoldes||[]).filter(function(h){return h.partenaire===p.nom&&(!depuis||(h.date||'')>=depuis);}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
         if(histo.length){
           html+='<div style="font-size:0.62rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:10px 0 6px">📋 Historique règlements</div>';
           histo.forEach(function(h){
             var label,montantAff,couleur;
-            if(h.type==='net'){
+            if(h.type==='reset'){
+              label='🔄 Remise à zéro'+(h.nbCourses?' ('+h.nbCourses+' course'+(h.nbCourses>1?'s':'')+' considérée'+(h.nbCourses>1?'s':'')+' réglée'+(h.nbCourses>1?'s':'')+')':'');
+              montantAff=h.montant?fmt(Math.abs(h.montant)):'—';
+              couleur='var(--text3)';
+            }else if(h.type==='net'){
               label=h.montant>0?'💰 Facturé (net)':h.montant<0?'💸 Versé (net)':'✓ Soldé';
               montantAff=fmt(Math.abs(h.montant));
               couleur=h.montant>0?'var(--green2)':h.montant<0?'var(--red2)':'var(--text3)';
@@ -1808,9 +1817,13 @@ function renderPartners(){
         var moisMasquesPartner=(db.partnerMoisMasques&&db.partnerMoisMasques[p.nom])||[];
         var now=new Date();var moisCourantKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
         var nbMasques=moisOrdre.filter(function(k){return moisMasquesPartner.includes(k)&&k!==moisCourantKey;}).length;
+        var moisRegle=function(k){return moisGroupes[k].every(function(r){return !((r.partnerType==='commission'&&!r.commissionPayee&&parseFloat(r.commission||0)>0)||(r.partnerType==='prepaye'&&!r.facturePaye));});};
+        var voirRegles=!!(window._partVoirRegles&&window._partVoirRegles[p.nom]);
+        var nbRegles=moisOrdre.filter(function(k){return k<moisCourantKey&&!moisMasquesPartner.includes(k)&&moisRegle(k);}).length;
         moisOrdre.forEach(function(key){
           var estMasque=moisMasquesPartner.includes(key)&&key!==moisCourantKey;
           if(estMasque)return;
+          if(!voirRegles&&key<moisCourantKey&&moisRegle(key))return; /* mois passé déjà réglé : replié */
           var coursesMois=moisGroupes[key];
           var d0=new Date(coursesMois[0].dateAller);
           var moisLabel=d0.toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
@@ -1859,6 +1872,9 @@ function renderPartners(){
             html+='</div></div></div>';
           });
         });
+        if(nbRegles>0){
+          html+='<div style="text-align:center;margin-top:10px"><span style="font-size:0.68rem;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="basculerMoisRegles(this.dataset.nom)" data-nom="'+escH(p.nom)+'">'+(voirRegles?'Replier les mois réglés':nbRegles+' mois déjà réglé'+(nbRegles>1?'s':'')+' · Afficher')+'</span></div>';
+        }
         if(nbMasques>0){
           html+='<div style="text-align:center;margin-top:10px"><span style="font-size:0.68rem;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="reafficherMoisPartenaire(\''+escH(p.nom).replace(/'/g,"\\'")+'\')">'+nbMasques+' mois masqué'+(nbMasques>1?'s':'')+' · Réafficher</span></div>';
         }
@@ -1938,6 +1954,46 @@ function reglerMoisPartenaire(p,moisKey){
   coursesPrepaye.forEach(r=>{r.facturePaye=true;});
   save();renderAll();
   alert('✅ '+p+' — '+moisLabel+' réglé ('+(net>0?'facturé '+fmt(net):net<0?'versé '+fmt(Math.abs(net)):'soldé')+') — '+nbTotal+' course(s) archivée(s).');
+}
+function basculerMoisRegles(nom){window._partVoirRegles=window._partVoirRegles||{};window._partVoirRegles[nom]=!window._partVoirRegles[nom];renderPartners();}
+/* Remise à zéro d'un partenaire : tout ce qui est passé (jusqu'à aujourd'hui) est considéré comme réglé,
+   et la fiche repart d'aujourd'hui. Les courses à venir ne sont pas touchées. Annulable. */
+function remettreAZeroPartenaire(id){
+  var p=db.partners.find(function(x){return x.id===id;});if(!p)return;
+  var auj=dateLocale();
+  var ouvertes=db.reservations.filter(function(r){return r.source===p.nom&&r.statut!=='annule'&&(r.dateAller||'')<=auj&&((r.partnerType==='commission'&&!r.commissionPayee)||(r.partnerType==='prepaye'&&!r.facturePaye));});
+  var comm=ouvertes.filter(function(r){return r.partnerType==='commission';}).reduce(function(t,r){return t+parseFloat(r.commission||0);},0);
+  var fact=ouvertes.filter(function(r){return r.partnerType==='prepaye';}).reduce(function(t,r){return t+parseFloat(r.prix||0);},0);
+  var msg='🔄 Remettre '+p.nom+' à zéro ?\n\nLa fiche repartira d\'aujourd\'hui : l\'historique et les anciens mois ne s\'afficheront plus (tout reste dans tes Finances).';
+  if(ouvertes.length){
+    msg+='\n\n⚠️ '+ouvertes.length+' course(s) passée(s) ne sont pas encore réglées :';
+    if(fact>0)msg+='\n• '+fmt(fact)+' que '+p.nom+' devait te payer';
+    if(comm>0)msg+='\n• '+fmt(comm)+' de commission que tu devais verser';
+    msg+='\n\nElles seront considérées comme RÉGLÉES. Continue seulement si c\'est vrai.';
+  }
+  msg+='\n\nLes courses à venir ne changent pas. Tu peux annuler ensuite.';
+  if(!confirm(msg))return;
+  if(!db.partnerSoldes)db.partnerSoldes=[];
+  db.partnerSoldes.push({id:genId(),partenaire:p.nom,type:'reset',montant:Math.round((fact-comm)*100)/100,date:auj,nbCourses:ouvertes.length,
+    commIds:ouvertes.filter(function(r){return r.partnerType==='commission';}).map(function(r){return r.id;}),
+    factIds:ouvertes.filter(function(r){return r.partnerType==='prepaye';}).map(function(r){return r.id;}),
+    courseIds:ouvertes.map(function(r){return r.id;}),precedent:p.resetDepuis||''});
+  ouvertes.forEach(function(r){if(r.partnerType==='commission')r.commissionPayee=true;else r.facturePaye=true;});
+  p.resetDepuis=auj;
+  save();renderAll();try{renderPartners();}catch(e){}
+  if(typeof showToast==='function')showToast('🔄 '+p.nom+' remis à zéro');
+}
+function annulerRemiseAZero(id){
+  var p=db.partners.find(function(x){return x.id===id;});if(!p||!p.resetDepuis)return;
+  var L=(db.partnerSoldes||[]);var i=-1;for(var k=L.length-1;k>=0;k--){if(L[k].partenaire===p.nom&&L[k].type==='reset'){i=k;break;}}
+  if(!confirm('Annuler la remise à zéro de '+p.nom+' ?\n\nL\'historique complet réapparaît'+(i>=0&&L[i].nbCourses?' et les '+L[i].nbCourses+' course(s) marquées réglées redeviennent à régler':'')+'.'))return;
+  if(i>=0){var e=L[i];
+    (e.commIds||[]).forEach(function(cid){var r=db.reservations.find(function(x){return x.id===cid;});if(r)r.commissionPayee=false;});
+    (e.factIds||[]).forEach(function(cid){var r=db.reservations.find(function(x){return x.id===cid;});if(r)r.facturePaye=false;});
+    if(e.precedent)p.resetDepuis=e.precedent;else delete p.resetDepuis;
+    L.splice(i,1);
+  }else delete p.resetDepuis;
+  save();renderAll();try{renderPartners();}catch(e){}
 }
 function masquerMoisPartenaire(p,moisKey){
   var d=new Date(moisKey+'-01');
@@ -3634,12 +3690,14 @@ function savePartner(){
   const p={id:editId||genId(),nom:g('p-nom').value.trim(),email:g('p-email').value.trim(),tel:g('p-tel').value.trim(),adresse:g('p-adresse').value.trim(),tva:g('p-tva').value.trim()};
   if(!p.nom){alert('Nom requis');return;}
   if(editId){
-    const i=db.partners.findIndex(x=>x.id===editId);if(i!==-1)db.partners[i]=p;
+    const i=db.partners.findIndex(x=>x.id===editId);if(i!==-1)db.partners[i]=Object.assign({},oldPartner,p); /* garde la remise à zéro */
     // Propager le nouveau nom dans les réservations liées
     if(oldNom&&oldNom!==p.nom){
       var nbSync=0;
       db.reservations.forEach(function(r){if(r.source===oldNom){r.source=p.nom;nbSync++;}});
       if(nbSync>0)console.log('[FM] '+nbSync+' réservation(s) mises à jour pour partenaire renommé.');
+      (db.partnerSoldes||[]).forEach(function(h){if(h.partenaire===oldNom)h.partenaire=p.nom;});
+      if(db.partnerMoisMasques&&db.partnerMoisMasques[oldNom]){db.partnerMoisMasques[p.nom]=db.partnerMoisMasques[oldNom];delete db.partnerMoisMasques[oldNom];}
     }
   } else db.partners.push(p);
   save();closeModal('m-partner');renderPartners();
