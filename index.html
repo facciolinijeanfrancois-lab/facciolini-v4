@@ -933,6 +933,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 
 <script>
 // ===== CONFIG =====
+/* Calculs d'itinéraire et d'adresses : jamais plus de 8 s d'attente (réseau faible à l'aéroport, service saturé) */
+(function(){if(!window.fetch||!window.AbortController)return;var f0=window.fetch.bind(window);window.fetch=function(u,o){try{var url=String(u&&u.url||u);if(/router\.project-osrm\.org|photon\.komoot\.io/.test(url)&&!(o&&o.signal)){var c=new AbortController();var t=setTimeout(function(){try{c.abort();}catch(e){}},8000);return f0(u,Object.assign({},o||{},{signal:c.signal})).finally(function(){clearTimeout(t);});}}catch(e){}return f0(u,o);};})();
 const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const MOIS_S=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MOI={nom:'Jean-François Facciolini',adresse:'Rue Saint-Eloi 173, 7141 Carnières',bce:'1033.793.336',email:'facciolini.mobility@outlook.com',tel:'0471692650'};
@@ -3752,7 +3754,76 @@ function openKmModal(vIdx){const ms=curYear+'-'+String(curMonth+1).padStart(2,'0
 function updKmPreview(){const d=parseFloat(g('km-debut').value||0),f=parseFloat(g('km-fin').value||0);if(f>d)sv('km-calc-preview','→ '+Math.round(f-d)+' km réels ce mois');}
 function saveKm(){const mois=g('km-mois').value,debut=parseFloat(g('km-debut').value||0),fin=parseFloat(g('km-fin').value||0),vehicule=parseInt(g('km-vehicule')?.value||0);if(!mois||!debut||!fin){alert('Tous les champs requis');return;}if(fin<=debut){alert('Km fin doit être > km début');return;}const idx=db.kmReels.findIndex(k=>k.mois===mois&&parseInt(k.vehicule||0)===vehicule);if(idx!==-1)db.kmReels[idx]={mois,debut,fin,vehicule};else db.kmReels.push({mois,debut,fin,vehicule});save();closeModal('m-km');renderAll();}
 function saveFavAddr(){const nom=g('fav-nom').value.trim(),adresse=g('fav-adresse').value.trim();if(!nom||!adresse){alert('Nom et adresse requis');return;}db.favAddresses.push({id:genId(),nom,adresse,lat:parseFloat(g('fav-lat').value)||null,lon:parseFloat(g('fav-lon').value)||null});g('fav-nom').value='';g('fav-adresse').value='';save();closeModal('m-fav');renderParams();}
-async function acSearch(input,dropId,role){const q=input.value.trim(),drop=g(dropId);clearTimeout(acTimers[role]);if(q.length<3){drop.style.display='none';return;}acTimers[role]=setTimeout(async()=>{try{const homeLat=(db.settings.homeAddress&&db.settings.homeAddress.lat)||HOME_DEFAULT.lat;const homeLon=(db.settings.homeAddress&&db.settings.homeAddress.lon)||HOME_DEFAULT.lon;const url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=5&lang=fr&lat='+homeLat+'&lon='+homeLon+'&location_bias_scale=0.2&bbox=-2.0,46.5,9.5,53.7';const resp=await fetch(url);const data=await resp.json();const results=data.features||[];if(!results.length){drop.style.display='none';return;}drop.innerHTML=results.map(r=>{const p=r.properties,coords=r.geometry.coordinates;const main=[p.name,p.street?(p.housenumber?p.street+' '+p.housenumber:p.street):null].filter(Boolean).join(', ')||p.name||'';const city=p.city||p.town||p.village||'',country=p.country||'';const full=[main,city,country].filter(Boolean).join(', ');const safe=full.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return'<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+coords[1]+','+coords[0]+')"><div class="ac-main">'+(main||city)+'</div>'+(city?'<div class="ac-sub">'+city+', '+country+'</div>':'')+'</div>';}).join('');drop.style.display='block';}catch(e){drop.style.display='none';}},350);}
+/* ===== RECHERCHE D'ADRESSES =====
+   1) Adresses déjà connues (clients, courses passées, favoris) : affichées tout de suite, sans internet.
+   2) Service d'adresses en ligne (Photon / OpenStreetMap) : complété dès qu'il répond.
+   - Une seule recherche à la fois : la précédente est annulée, une vieille réponse lente
+     ne peut plus remplacer la liste de la recherche en cours.
+   - Délai maximum de 6 s, avec un message clair au lieu d'une liste qui ne vient jamais.
+   - Le numéro tapé est gardé quand la carte ne connaît que la rue. */
+var acSeq={},acCtrl={},acCache={};
+function acAdressesConnues(){
+  var out=[],vu={};
+  function add(a,lat,lon){a=(a||'').trim();lat=parseFloat(lat);lon=parseFloat(lon);if(!a||!isFinite(lat)||!isFinite(lon)||!lat||!lon)return;var k=normTxt(a);if(vu[k])return;vu[k]=1;out.push({label:a,lat:lat,lon:lon});}
+  (db.favAddresses||[]).forEach(function(f){add(f.adresse,f.lat,f.lon);});
+  (db.clients||[]).forEach(function(c){add(c.adresse,c.lat,c.lon);});
+  (db.reservations||[]).slice().reverse().forEach(function(r){add(r.depart,r.depLat,r.depLon);add(r.arrivee,r.arrLat,r.arrLon);add(r.departRetour,r.depRetLat,r.depRetLon);add(r.arriveeRetour,r.arrRetLat,r.arrRetLon);});
+  return out;
+}
+function acNumeroTape(q){var m=String(q).match(/(?:^|[\s,])(\d{1,3}[a-zA-Z]?(?:\s?(?:bte|bus|boite)\s?\d+)?)(?=[\s,]|$)/i);return m?m[1]:'';}
+function acItem(role,label,sub,lat,lon,icone){
+  var safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  return '<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+lat+','+lon+')"><div class="ac-main">'+(icone?icone+' ':'')+escH(label.split(',')[0])+'</div>'+(sub?'<div class="ac-sub">'+escH(sub)+'</div>':'')+'</div>';
+}
+async function acSearch(input,dropId,role){
+  const q=input.value.trim(),drop=g(dropId);clearTimeout(acTimers[role]);
+  if(acCtrl[role]){try{acCtrl[role].abort();}catch(e){}acCtrl[role]=null;}
+  if(q.length<3){drop.style.display='none';return;}
+  const seq=acSeq[role]=(acSeq[role]||0)+1;
+  /* 1) adresses connues : instantané */
+  const mots=normTxt(q).split(' ').filter(Boolean);
+  const locales=acAdressesConnues().filter(function(a){var t=normTxt(a.label);return mots.every(function(m){return t.indexOf(m)!==-1;});}).slice(0,4);
+  const htmlLocal=locales.map(function(a){var parts=a.label.split(',');return acItem(role,a.label,parts.slice(1).join(',').trim()||'Déjà utilisée',a.lat,a.lon,'🕘');}).join('');
+  const attente='<div class="ac-item" style="opacity:0.6;pointer-events:none"><div class="ac-sub">🔎 Recherche en ligne…</div></div>';
+  drop.innerHTML=htmlLocal+attente;drop.style.display='block';
+  acTimers[role]=setTimeout(async()=>{
+    const num=acNumeroTape(q);
+    const homeLat=(db.settings.homeAddress&&db.settings.homeAddress.lat)||HOME_DEFAULT.lat;
+    const homeLon=(db.settings.homeAddress&&db.settings.homeAddress.lon)||HOME_DEFAULT.lon;
+    const url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=8&lang=fr&lat='+homeLat+'&lon='+homeLon+'&location_bias_scale=0.2&bbox=-2.0,46.5,9.5,53.7';
+    let results;
+    try{
+      if(acCache[url])results=acCache[url];
+      else{
+        const ctrl=new AbortController();acCtrl[role]=ctrl;
+        const to=setTimeout(function(){try{ctrl.abort('timeout');}catch(e){}},6000);
+        const resp=await fetch(url,{signal:ctrl.signal});clearTimeout(to);
+        const data=await resp.json();results=data.features||[];acCache[url]=results;
+      }
+    }catch(e){
+      if(seq!==acSeq[role])return; /* une recherche plus récente est en cours */
+      drop.innerHTML=htmlLocal+'<div class="ac-item" style="pointer-events:none"><div class="ac-sub" style="color:var(--orange2)">⏱️ Le service d\'adresses ne répond pas. Tape l\'adresse complète : la distance sera calculée à l\'enregistrement.</div></div>';
+      drop.style.display='block';return;
+    }
+    if(seq!==acSeq[role])return; /* réponse périmée : on l'ignore */
+    const vus={};locales.forEach(function(a){vus[normTxt(a.label)]=1;});
+    const htmlNet=results.map(function(r){
+      const p=r.properties,c=r.geometry.coordinates;
+      let rue=p.street||((p.osm_key==='highway')?p.name:'');
+      let numero=p.housenumber||'';let ajoute=false;
+      if(!numero&&num&&rue){numero=num;ajoute=true;}
+      const ligne=rue?(rue+(numero?' '+numero:'')):'';
+      const main=[p.name&&p.name!==rue?p.name:null,ligne||null].filter(Boolean).join(', ')||p.name||'';
+      const city=p.city||p.town||p.village||p.locality||'';
+      const cp=p.postcode||'';
+      const full=[main,[cp,city].filter(Boolean).join(' '),p.country&&p.country!=='Belgique'&&p.country!=='België'?p.country:''].filter(Boolean).join(', ');
+      if(!main&&!city)return'';const k=normTxt(full);if(vus[k])return'';vus[k]=1;
+      return acItem(role,full,[cp,city].filter(Boolean).join(' ')+(ajoute?' · n° '+numero+' gardé (position de la rue)':''),c[1],c[0],'');
+    }).join('');
+    if(!htmlLocal&&!htmlNet){drop.innerHTML='<div class="ac-item" style="pointer-events:none"><div class="ac-sub">Aucune adresse trouvée. Essaie sans le numéro, ou avec la commune (ex. « Rue de Mons Binche »).</div></div>';drop.style.display='block';return;}
+    drop.innerHTML=htmlLocal+htmlNet;drop.style.display='block';
+  },300);
+}
 function acSel(role,display,lat,lon){
   acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};
   // Devis rapide
@@ -5077,7 +5148,8 @@ async function geocoderAdresse(txt){
     var url='https://photon.komoot.io/api/?q='+encodeURIComponent(txt.trim())
       +'&limit=1&lang=fr&lat='+homeLat+'&lon='+homeLon
       +'&location_bias_scale=0.2&bbox=-2.0,46.5,9.5,53.7';
-    var resp=await fetch(url);
+    var ctrl=new AbortController();var to=setTimeout(function(){try{ctrl.abort();}catch(e){}},8000);
+    var resp=await fetch(url,{signal:ctrl.signal});clearTimeout(to);
     var data=await resp.json();
     var f=(data.features||[])[0];
     if(!f) return null;
