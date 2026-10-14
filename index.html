@@ -3775,10 +3775,75 @@ function acItem(role,label,sub,lat,lon,icone){
   var safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
   return '<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+lat+','+lon+')"><div class="ac-main">'+(icone?icone+' ':'')+escH(label.split(',')[0])+'</div>'+(sub?'<div class="ac-sub">'+escH(sub)+'</div>':'')+'</div>';
 }
-async function acSearch(input,dropId,role){
+/* ===== GOOGLE (adresses précises et rapides) =====
+   Clé limitée à ce site et au seul service d'adresses ; plafonds Google : 300 recherches/jour.
+   Sécurité supplémentaire ici : au-delà de 250 appels Google dans la journée, l'appli repasse
+   toute seule sur le service gratuit (OpenStreetMap). Aucun coût possible. */
+var GKEY='AIzaSyBEMSdIENxC95y7woIHI4mAyoSSHjFsCfQ',G_MAX_JOUR=250;
+var acGItems={},acGTok={};
+function gCompteur(){try{var k='fm_g_'+dateLocale();return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
+function gCompter(){try{var k='fm_g_'+dateLocale();localStorage.setItem(k,String(gCompteur()+1));Object.keys(localStorage).forEach(function(x){if(/^fm_g_\d{4}-/.test(x)&&x!==k)localStorage.removeItem(x);});}catch(e){}}
+function gDispo(){return !!GKEY&&gCompteur()<G_MAX_JOUR&&!window._gPanne;}
+function gJeton(role){if(!acGTok[role])acGTok[role]=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+Math.random();return acGTok[role];}
+async function gAutocomplete(q,role,signal){
+  const homeLat=(db.settings.homeAddress&&db.settings.homeAddress.lat)||HOME_DEFAULT.lat;
+  const homeLon=(db.settings.homeAddress&&db.settings.homeAddress.lon)||HOME_DEFAULT.lon;
+  gCompter();
+  const r=await fetch('https://places.googleapis.com/v1/places:autocomplete',{method:'POST',signal:signal,headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY},
+    body:JSON.stringify({input:q,languageCode:'fr',sessionToken:gJeton(role),includedRegionCodes:['be','fr','nl','lu','de'],locationBias:{circle:{center:{latitude:homeLat,longitude:homeLon},radius:50000}}})});
+  if(!r.ok){if(r.status===403||r.status===429)window._gPanne=true;throw new Error('google '+r.status);}
+  const j=await r.json();
+  return (j.suggestions||[]).filter(function(x){return x.placePrediction;}).slice(0,6).map(function(x){var p=x.placePrediction,sf=p.structuredFormat||{};return {id:p.placeId,main:(sf.mainText&&sf.mainText.text)||p.text.text,sub:((sf.secondaryText&&sf.secondaryText.text)||'').replace(/, (Belgique|Belgium|België)$/,''),full:p.text.text};});
+}
+async function acSelG(role,i){
+  const it=(acGItems[role]||[])[i];if(!it)return;
+  const drop=document.querySelector('.ac-drop[style*="block"]');
+  let lat=null,lon=null,label=(it.full||it.main).replace(/, (Belgique|Belgium|België)$/,'');
+  try{
+    gCompter();
+    const ctrl=new AbortController();const to=setTimeout(function(){try{ctrl.abort();}catch(e){}},8000);
+    const r=await fetch('https://places.googleapis.com/v1/places/'+encodeURIComponent(it.id)+'?languageCode=fr&sessionToken='+encodeURIComponent(gJeton(role)),{signal:ctrl.signal,headers:{'X-Goog-Api-Key':GKEY,'X-Goog-FieldMask':'location,formattedAddress'}});
+    clearTimeout(to);
+    if(r.ok){const j=await r.json();if(j.location){lat=j.location.latitude;lon=j.location.longitude;}if(j.formattedAddress)label=j.formattedAddress.replace(/, (Belgique|Belgium|België)$/,'');}
+  }catch(e){console.error('google details',e);}
+  delete acGTok[role]; /* la session se termine avec le choix de l'adresse */
+  if(lat==null){try{const c=await geocoderAdresse(label);if(c){lat=c.lat;lon=c.lon;}}catch(e){}}
+  if(lat==null){
+    /* pas de position : on garde le texte, la distance sera calculée à l'enregistrement */
+    const map={'r-depart':'r-depart','r-arrivee':'r-arrivee','r-stop-adresse':'r-stop-adresse','r-depart-retour':'r-depart-retour','r-arrivee-retour':'r-arrivee-retour','c-adresse':'c-adresse','home':'home-adr','fav-addr':'fav-adresse','dv-depart':'dv-depart','dv-arrivee':'dv-arrivee'};
+    const e=g(map[role]||role);if(e)e.value=label;document.querySelectorAll('.ac-drop').forEach(function(d){d.style.display='none';});return;
+  }
+  acSel(role,label,lat,lon);
+}
+function acOsm(role){var inp=document.activeElement;var d=window._acDernier&&window._acDernier[role];if(d)acSearch(d.input,d.dropId,role,true);}
+
+/* ===== RECHERCHE D'ADRESSES =====
+   1) Adresses déjà connues (clients, courses passées, favoris) : affichées tout de suite, sans internet.
+   2) Google (précis, avec numéros) ; si Google ne répond pas ou plafond du jour atteint → OpenStreetMap.
+   3) Lien « Pas trouvé ? » pour chercher aussi sur OpenStreetMap.
+   - Une seule recherche à la fois : la précédente est annulée, une vieille réponse lente
+     ne peut plus remplacer la liste de la recherche en cours.
+   - Délai maximum de 12 s, avec un message clair au lieu d'une liste qui ne vient jamais.
+   - OpenStreetMap : le numéro tapé est gardé quand la carte ne connaît que la rue. */
+var acSeq={},acCtrl={},acCache={};
+function acAdressesConnues(){
+  var out=[],vu={};
+  function add(a,lat,lon){a=(a||'').trim();lat=parseFloat(lat);lon=parseFloat(lon);if(!a||!isFinite(lat)||!isFinite(lon)||!lat||!lon)return;var k=normTxt(a);if(vu[k])return;vu[k]=1;out.push({label:a,lat:lat,lon:lon});}
+  (db.favAddresses||[]).forEach(function(f){add(f.adresse,f.lat,f.lon);});
+  (db.clients||[]).forEach(function(c){add(c.adresse,c.lat,c.lon);});
+  (db.reservations||[]).slice().reverse().forEach(function(r){add(r.depart,r.depLat,r.depLon);add(r.arrivee,r.arrLat,r.arrLon);add(r.departRetour,r.depRetLat,r.depRetLon);add(r.arriveeRetour,r.arrRetLat,r.arrRetLon);});
+  return out;
+}
+function acNumeroTape(q){var m=String(q).match(/(?:^|[\s,])(\d{1,3}[a-zA-Z]?(?:\s?(?:bte|bus|boite)\s?\d+)?)(?=[\s,]|$)/i);return m?m[1]:'';}
+function acItem(role,label,sub,lat,lon,icone){
+  var safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  return '<div class="ac-item" onclick="acSel(\''+role+'\',\''+safe+'\','+lat+','+lon+')"><div class="ac-main">'+(icone?icone+' ':'')+escH(label.split(',')[0])+'</div>'+(sub?'<div class="ac-sub">'+escH(sub)+'</div>':'')+'</div>';
+}
+async function acSearch(input,dropId,role,forcerOsm){
   const q=input.value.trim(),drop=g(dropId);clearTimeout(acTimers[role]);
   if(acCtrl[role]){try{acCtrl[role].abort();}catch(e){}acCtrl[role]=null;}
   if(q.length<3){drop.style.display='none';return;}
+  window._acDernier=window._acDernier||{};window._acDernier[role]={input:input,dropId:dropId};
   const seq=acSeq[role]=(acSeq[role]||0)+1;
   /* 1) adresses connues : instantané */
   const mots=normTxt(q).split(' ').filter(Boolean);
@@ -3787,6 +3852,26 @@ async function acSearch(input,dropId,role){
   const attente='<div class="ac-item" style="opacity:0.6;pointer-events:none"><div class="ac-sub">🔎 Recherche en ligne…</div></div>';
   drop.innerHTML=htmlLocal+attente;drop.style.display='block';
   acTimers[role]=setTimeout(async()=>{
+    /* 2) Google */
+    if(!forcerOsm&&gDispo()){
+      try{
+        const ctrl=new AbortController();acCtrl[role]=ctrl;
+        const to=setTimeout(function(){try{ctrl.abort('timeout');}catch(e){}},6000);
+        const key='g|'+q;
+        const items=acCache[key]||await gAutocomplete(q,role,ctrl.signal);clearTimeout(to);acCache[key]=items;
+        if(seq!==acSeq[role])return;
+        acGItems[role]=items;
+        const vus={};locales.forEach(function(a){vus[normTxt(a.label.split(',')[0])]=1;});
+        const htmlG=items.map(function(it,i){if(vus[normTxt(it.main)])return'';return '<div class="ac-item" onclick="acSelG(\''+role+'\','+i+')"><div class="ac-main">'+escH(it.main)+'</div>'+(it.sub?'<div class="ac-sub">'+escH(it.sub)+'</div>':'')+'</div>';}).join('');
+        const lienOsm='<div class="ac-item" onclick="acOsm(\''+role+'\')"><div class="ac-sub" style="color:var(--text3)">🔎 Pas trouvé ? Chercher aussi sur OpenStreetMap</div></div>';
+        drop.innerHTML=htmlLocal+htmlG+lienOsm;drop.style.display='block';
+        return;
+      }catch(e){
+        if(seq!==acSeq[role])return;
+        console.warn('Google indisponible, OpenStreetMap à la place',e);
+      }
+    }
+    /* 3) OpenStreetMap (Photon) */
     const num=acNumeroTape(q);
     const homeLat=(db.settings.homeAddress&&db.settings.homeAddress.lat)||HOME_DEFAULT.lat;
     const homeLon=(db.settings.homeAddress&&db.settings.homeAddress.lon)||HOME_DEFAULT.lon;
@@ -3822,7 +3907,7 @@ async function acSearch(input,dropId,role){
     }).join('');
     if(!htmlLocal&&!htmlNet){drop.innerHTML='<div class="ac-item" style="pointer-events:none"><div class="ac-sub">Aucune adresse trouvée. Essaie sans le numéro, ou avec la commune (ex. « Rue de Mons Binche »).</div></div>';drop.style.display='block';return;}
     drop.innerHTML=htmlLocal+htmlNet;drop.style.display='block';
-  },500);
+  },400);
 }
 function acSel(role,display,lat,lon){
   acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};
