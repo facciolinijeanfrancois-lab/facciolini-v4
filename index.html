@@ -933,8 +933,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 
 <script>
 // ===== CONFIG =====
-/* Calculs d'itinéraire et d'adresses : jamais plus de 8 s d'attente (réseau faible à l'aéroport, service saturé) */
-(function(){if(!window.fetch||!window.AbortController)return;var f0=window.fetch.bind(window);window.fetch=function(u,o){try{var url=String(u&&u.url||u);if(/router\.project-osrm\.org|photon\.komoot\.io/.test(url)&&!(o&&o.signal)){var c=new AbortController();var t=setTimeout(function(){try{c.abort();}catch(e){}},8000);return f0(u,Object.assign({},o||{},{signal:c.signal})).finally(function(){clearTimeout(t);});}}catch(e){}return f0(u,o);};})();
+/* Calculs d'itinéraire et d'adresses : jamais plus de 12 s d'attente (réseau faible à l'aéroport, service saturé) */
+(function(){if(!window.fetch||!window.AbortController)return;var f0=window.fetch.bind(window);window.fetch=function(u,o){try{var url=String(u&&u.url||u);if(/router\.project-osrm\.org|photon\.komoot\.io/.test(url)&&!(o&&o.signal)){var c=new AbortController();var t=setTimeout(function(){try{c.abort();}catch(e){}},12000);return f0(u,Object.assign({},o||{},{signal:c.signal})).finally(function(){clearTimeout(t);});}}catch(e){}return f0(u,o);};})();
 const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const MOIS_S=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MOI={nom:'Jean-François Facciolini',adresse:'Rue Saint-Eloi 173, 7141 Carnières',bce:'1033.793.336',email:'facciolini.mobility@outlook.com',tel:'0471692650'};
@@ -3759,7 +3759,7 @@ function saveFavAddr(){const nom=g('fav-nom').value.trim(),adresse=g('fav-adress
    2) Service d'adresses en ligne (Photon / OpenStreetMap) : complété dès qu'il répond.
    - Une seule recherche à la fois : la précédente est annulée, une vieille réponse lente
      ne peut plus remplacer la liste de la recherche en cours.
-   - Délai maximum de 6 s, avec un message clair au lieu d'une liste qui ne vient jamais.
+   - Délai maximum de 12 s (le service gratuit met souvent 6-7 s), avec un message clair au lieu d'une liste qui ne vient jamais.
    - Le numéro tapé est gardé quand la carte ne connaît que la rue. */
 var acSeq={},acCtrl={},acCache={};
 function acAdressesConnues(){
@@ -3796,7 +3796,7 @@ async function acSearch(input,dropId,role){
       if(acCache[url])results=acCache[url];
       else{
         const ctrl=new AbortController();acCtrl[role]=ctrl;
-        const to=setTimeout(function(){try{ctrl.abort('timeout');}catch(e){}},6000);
+        const to=setTimeout(function(){try{ctrl.abort('timeout');}catch(e){}},12000);
         const resp=await fetch(url,{signal:ctrl.signal});clearTimeout(to);
         const data=await resp.json();results=data.features||[];acCache[url]=results;
       }
@@ -3822,7 +3822,7 @@ async function acSearch(input,dropId,role){
     }).join('');
     if(!htmlLocal&&!htmlNet){drop.innerHTML='<div class="ac-item" style="pointer-events:none"><div class="ac-sub">Aucune adresse trouvée. Essaie sans le numéro, ou avec la commune (ex. « Rue de Mons Binche »).</div></div>';drop.style.display='block';return;}
     drop.innerHTML=htmlLocal+htmlNet;drop.style.display='block';
-  },300);
+  },500);
 }
 function acSel(role,display,lat,lon){
   acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};
@@ -5148,7 +5148,7 @@ async function geocoderAdresse(txt){
     var url='https://photon.komoot.io/api/?q='+encodeURIComponent(txt.trim())
       +'&limit=1&lang=fr&lat='+homeLat+'&lon='+homeLon
       +'&location_bias_scale=0.2&bbox=-2.0,46.5,9.5,53.7';
-    var ctrl=new AbortController();var to=setTimeout(function(){try{ctrl.abort();}catch(e){}},8000);
+    var ctrl=new AbortController();var to=setTimeout(function(){try{ctrl.abort();}catch(e){}},12000);
     var resp=await fetch(url,{signal:ctrl.signal});clearTimeout(to);
     var data=await resp.json();
     var f=(data.features||[])[0];
