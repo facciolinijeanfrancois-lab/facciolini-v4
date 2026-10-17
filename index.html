@@ -490,15 +490,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     </div>
     <div class="fg"><label class="fl">Qui conduit ?</label><div class="chips" id="r-confie-chips"></div><input type="hidden" id="r-confie" value=""></div>
     <div id="r-confie-opts" style="display:none;border:1px dashed var(--gold);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px">
+      <div id="r-confie-info" style="font-size:0.75rem;color:var(--text2);margin-bottom:8px">🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.</div>
       <div id="r-confie-trajet-box" style="display:none"><div class="fg"><label class="fl">Il fait quel trajet ?</label>
         <div class="chips" id="r-confie-trajet-chips">
-          <div class="chip active" onclick="selectChip(this,'r-confie-trajet','');majConfieUI()">Tout (aller + retour)</div>
-          <div class="chip" onclick="selectChip(this,'r-confie-trajet','aller');majConfieUI()">Aller seulement</div>
-          <div class="chip" onclick="selectChip(this,'r-confie-trajet','retour');majConfieUI()">Retour seulement</div>
+          <div class="chip active" onclick="selectChip(this,'r-confie-trajet','');majConfieUI()">Tout</div>
+          <div class="chip" onclick="selectChip(this,'r-confie-trajet','aller');majConfieUI()">L'aller</div>
+          <div class="chip" onclick="selectChip(this,'r-confie-trajet','retour');majConfieUI()">Le retour</div>
         </div><input type="hidden" id="r-confie-trajet" value=""></div>
-        <div class="fg" id="r-confie-part-box" style="display:none"><label class="fl">Prix de son trajet (€)</label><input type="number" class="fi" id="r-confie-part" step="0.01" min="0" oninput="majConfieHint()"></div>
+        <div class="fg" id="r-confie-part-box" style="display:none"><label class="fl">Prix de son trajet (€)</label><input type="number" class="fi" id="r-confie-part" step="0.01" min="0" oninput="majConfieHint()" onfocus="majConfieUI()"></div>
       </div>
-      <div id="r-confie-info" style="font-size:0.75rem;color:var(--text2);margin-bottom:8px">🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.</div>
       <div class="fg"><label class="fl">Ta commission (€) — 0 si rien</label><input type="number" class="fi" id="r-confie-comm" placeholder="0" step="0.01" min="0" oninput="majConfieHint()"></div>
       <div class="fg"><label class="fl">Qui encaisse le client ?</label>
         <div class="chips" id="r-confie-enc-chips">
@@ -506,7 +506,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
           <div class="chip" onclick="selectChip(this,'r-confie-enc','moi');majConfieHint()">Moi (prépayé sur mon compte)</div>
         </div><input type="hidden" id="r-confie-enc" value="partenaire">
       </div>
-      <div id="r-confie-hint" style="font-size:0.78rem;font-weight:600"></div>
+      <div id="r-confie-hint" style="font-size:0.8rem;font-weight:600;background:var(--bg3);border-radius:var(--radius-xs);padding:8px 10px;line-height:1.5"></div>
     </div>
   </div>
 
@@ -1137,6 +1137,8 @@ function prixMoi(r){var p=parseFloat(r&&r.prix||0)||0;return estConfiee(r)?Math.
 function confComm(r){return parseFloat(r&&r.confieCommission)||0;}
 /* Solde de la course confiée, vu de moi : + il me doit, − je lui dois (0 si réglé) */
 function confDu(r){if(!estConfiee(r)||r.confieRegle||r.statut==='annule')return 0;var c=confComm(r);return r.confieEncaisse==='moi'?-(Math.max(0,prixConfie(r)-c)):c;}
+/* Titre des notifications : on voit tout de suite quand c'est le partenaire qui roule */
+function notifTitre(r,sens,base){if(!estConfiee(r))return base;var t=confTrajet(r);if(r.type==='ar-jour'&&t)return base+' (🤝 '+r.confieA+' fait '+(t==='aller'?"l'aller":'le retour')+')';return confieSens(r,sens)?'🤝 '+r.confieA+' — '+base.replace(/^\S+\s/,''):base;}
 function telPartenaire(nom){var p=(db.partners||[]).find(function(x){return x.nom===nom;});return p&&p.tel?p.tel:'';}
 function getKmClient(r){if(estConfieeTout(r))return 0;var t=confTrajet(r);let km=t==='aller'?0:parseFloat(r.distance||0);if((r.type==='ar-jour'||r.type==='ar-diff')&&t!=='retour')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
 function getKmReels(r){if(estConfieeTout(r))return 0;var t=confTrajet(r);let km=t==='aller'?0:parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(t!=='retour'){if(r.type==='ar-jour'){km+=(t==='aller'?parseFloat(r.kmPickupRetour||0):0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}}return km;}
@@ -1516,7 +1518,7 @@ function renderDash(){
   sv('d-charges',fmt(charges));sv('d-frais',fmt(fraisT));
   const alerts=[];const today2=new Date();
   const todayRes=db.reservations.filter(r=>r.statut!=='annule'&&new Date(r.dateAller).toDateString()===today2.toDateString());
-  if(todayRes.length>0){const tg=todayRes.reduce((s,r)=>s+parseFloat(r.prix||0),0);alerts.push(`<div class="alert alert-green" style="flex-direction:column;align-items:stretch"><div style="font-weight:700;margin-bottom:4px">📅 Aujourd&#x27;hui : ${todayRes.length} course${todayRes.length>1?'s':''} · ${fmt(tg)}</div>${todayRes.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).map(r=>`<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:0.8rem">→ <b>${r.heure||'?'}</b> · ${r.clientNom||'Client'} · <span style="color:var(--green2)">${fmt(r.prix)}</span>${r.clientTel?' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">📞</a>':''}</div>`).join('')}</div>`);}
+  if(todayRes.length>0){const tg=todayRes.reduce((s,r)=>s+(confTrajet(r)?getEncaisseAller(r):prixMoi(r)),0);alerts.push(`<div class="alert alert-green" style="flex-direction:column;align-items:stretch"><div style="font-weight:700;margin-bottom:4px">📅 Aujourd&#x27;hui : ${todayRes.length} course${todayRes.length>1?'s':''} · ${fmt(tg)}</div>${todayRes.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).map(r=>`<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:0.8rem">→ <b>${r.heure||'?'}</b> · ${r.clientNom||'Client'} · <span style="color:var(--green2)">${fmt(r.prix)}</span>${estConfiee(r)?' <span class="badge badge-gold">🤝 '+escH(r.confieA)+(confTrajet(r)?' ('+confTrajet(r)+')':'')+'</span>':''}${r.clientTel?' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">📞</a>':''}</div>`).join('')}</div>`);}
   const vmts=db.reservations.filter(aVirementEnAttente);
   if(vmts.length)alerts.push('<div class="alert alert-red">🏦 '+vmts.length+' virement'+(vmts.length>1?'s':'')+' en attente !</div>');
   if(kmReel===null)alerts.push('<div class="alert alert-blue" style="cursor:pointer" onclick="openKmModal()">📍 Relevé compteur non saisi pour '+MOIS[curMonth]+' — Cliquez ici</div>');
@@ -1594,7 +1596,7 @@ function renderRes(){
     html+='<div><div style="font-weight:700;font-size:0.95rem">'+escH(r.clientNom)+(vip?' ⭐':'');
     if(r.clientTel)html+=' <a href="tel:'+escH(r.clientTel)+'" onclick="event.stopPropagation()" style="color:var(--blue2);font-size:0.75rem">📞</a>';
     html+='</div><div style="font-size:0.73rem;color:var(--text3);margin-top:2px">'+dStr+' '+(r.heure||'')+'</div></div>';
-    html+='<div style="text-align:right"><div style="font-weight:800;font-size:1.1rem;color:var(--gold)">'+fmt(r.prix)+'</div><div style="margin-top:3px">'+getStatusBadge(r)+'</div></div></div>';
+    html+='<div style="text-align:right"><div style="font-weight:800;font-size:1.1rem;color:var(--gold)">'+fmt(r.prix)+'</div>'+(estConfiee(r)?'<div style="font-size:0.7rem;color:var(--text3)">pour toi '+fmt(prixMoi(r))+'</div>':'')+'<div style="margin-top:3px">'+getStatusBadge(r)+'</div></div></div>';
     html+='<div style="font-size:0.79rem;color:var(--text2);margin-bottom:6px">'+(r.depart||'—').substring(0,26)+' → '+(r.arrivee||'—').substring(0,26)+'</div>';
     if(r.type==='ar-diff'&&r.arriveeRetour)html+='<div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">↩ '+(r.departRetour||r.arrivee||'').substring(0,22)+' → '+escH(r.arriveeRetour).substring(0,22)+'</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">';
@@ -2250,15 +2252,15 @@ function majConfieUI(){var v=(g('r-confie')||{}).value||'';var o=g('r-confie-opt
   var ty=(g('r-type')||{}).value||'aller',ar=ty==='ar-diff'||ty==='ar-jour',t=confieTrajetForm();
   var tb=g('r-confie-trajet-box');if(tb)tb.style.display=ar?'block':'none';
   var pb=g('r-confie-part-box');if(pb)pb.style.display=t?'block':'none';
-  var pi=g('r-confie-part');if(pi){var prix=parseFloat((g('r-prix')||{}).value||0)||0;pi.placeholder=prix?String(Math.round(prix/2*100)/100)+' (moitié)':'moitié du prix';}
-  var inf=g('r-confie-info');if(inf)inf.textContent=t?((t==='aller'?"🤝 Il fait l'aller, tu fais le retour":"🤝 Il fait le retour, tu fais l'aller")+' : tes chiffres gardent ton trajet + ta commission. Km et horaires : seulement ton trajet.'):"🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.";
+  var pi=g('r-confie-part');if(pi){var prix=parseFloat((g('r-prix')||{}).value||0)||0;pi.placeholder=prix?String(Math.round(prix/2*100)/100).replace('.',',')+' € (la moitié, si tu laisses vide)':'la moitié du prix, si tu laisses vide';}
+  var inf=g('r-confie-info');if(inf)inf.textContent=t?((t==='aller'?"🤝 Il fait l'aller, tu fais le retour.":"🤝 Il fait le retour, tu fais l'aller.")+' Tes chiffres, tes km et tes horaires ne gardent que ton trajet (+ ta commission).'):"🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.";
   majConfieHint();}
 function majConfieHint(){
   var el=g('r-confie-hint');if(!el)return;var v=(g('r-confie')||{}).value||'';if(!v){el.textContent='';return;}
   var prix=parseFloat((g('r-prix')||{}).value||0)||0,c=parseFloat((g('r-confie-comm')||{}).value||0)||0,enc=(g('r-confie-enc')||{}).value||'partenaire';
   var t=confieTrajetForm(),total=prix;
   if(t){var pv=(g('r-confie-part')||{}).value;var px=parseFloat(pv);prix=(pv!==''&&isFinite(px)&&px>=0)?Math.min(px,total):Math.round(total/2*100)/100;}
-  var pre=t?('Ton trajet : '+fmt(Math.max(0,total-prix))+' · son '+t+' : '+fmt(prix)+'\n'):'';
+  var pre=t?('🚗 Toi ('+(t==='aller'?'retour':'aller')+') : '+fmt(Math.max(0,total-prix))+'\n🤝 '+v+' ('+t+') : '+fmt(prix)+'\n'):'';
   el.style.whiteSpace='pre-line';
   if(enc==='moi'){el.style.color='var(--red2)';el.textContent=pre+'→ Tu devras verser '+fmt(Math.max(0,prix-c))+' à '+v+(c>0?' (tu gardes '+fmt(c)+')':'');}
   else{el.style.color='var(--green2)';el.textContent=pre+(c>0?('→ '+v+' encaisse '+fmt(prix)+' et te doit '+fmt(c)):('→ '+v+' encaisse '+fmt(prix)+', rien pour toi'));}
@@ -2916,7 +2918,7 @@ function editRes(id){
   if(r.kmVideAllerType==='manuel'){const el=g('r-km-vide-aller');if(el)el.value=r.kmVideAller||0;}
   if(r.kmVideRetourType==='manuel'){const el=g('r-km-vide-retour');if(el)el.value=r.kmVideRetour||0;}
   acC['kva-auto']=r.kmVideAller||0;acC['kvr-auto']=r.kmVideRetour||0;acC['kpr-auto']=r.kmPickupRetour||0;
-  g('r-prix').value=r.prix||'';acC['prixManual']=!!r.prix;setChips('r-paiement-chips','r-paiement',r.paiement||'cash');{const _d=r.paiement==='mixte'&&r.paiementDetail?r.paiementDetail:{};[['cash','r-mixte-cash'],['virement','r-mixte-virement'],['carte','r-mixte-carte']].forEach(([k,id])=>{const el=g(id);if(el)el.value=_d[k]?_d[k]:'';});toggleVmt();if(r.paiement==='mixte')updMixteHint();}
+  g('r-prix').value=r.prix||'';acC['prixManual']=!!r.prix;try{majConfieUI();}catch(e){}setChips('r-paiement-chips','r-paiement',r.paiement||'cash');{const _d=r.paiement==='mixte'&&r.paiementDetail?r.paiementDetail:{};[['cash','r-mixte-cash'],['virement','r-mixte-virement'],['carte','r-mixte-carte']].forEach(([k,id])=>{const el=g(id);if(el)el.value=_d[k]?_d[k]:'';});toggleVmt();if(r.paiement==='mixte')updMixteHint();}
   // Recharger arrêt intermédiaire
   if(r.stopAdresse){
     const sb=g('r-stop-box');if(sb)sb.style.display='block';
@@ -3011,6 +3013,7 @@ function buildMsgRappel(r,sens,joursForces){
   var prix=parseFloat(r.prix||0);
   var acompte=parseFloat(r.acompte||0);
   var solde=r.type==='ar-diff'?(acompte>0?prix-acompte:prix/2):0;
+  if(r.type==='ar-diff'&&confTrajet(r))solde=confTrajet(r)==='aller'?Math.max(0,prix-prixConfie(r)):prixConfie(r);
   if(r.paiement==='prepaye'||r.partnerType==='prepaye'||(r.paiement==='virement'&&r.vmtRecu))solde=0;
   var diff=Math.round((date.setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
   if(typeof joursForces==='number')diff=joursForces;
@@ -3445,7 +3448,7 @@ function rattraperNotifsManquees(){
     });
     aSignaler.forEach(function(it){
       vues[it.k]=Date.now();
-      showLocalNotification('🚗 Course '+it.quand+' !',
+      showLocalNotification(notifTitre(it.r,'aller','🚗 Course '+it.quand+' !'),
         (it.r.heure||'')+' · '+(it.r.clientNom||'')+' · '+(it.r.depart||'').substring(0,30), it.r.id);
     });
     /* purge des cles de plus de 30 jours */
@@ -3479,7 +3482,7 @@ function scheduleAllNotifications(){
       if(delay > 0){
         const t = setTimeout(() => {
           showLocalNotification(
-            '🚗 Course demain !',
+            notifTitre(r,'aller','🚗 Course demain !'),
             r.heure + ' · ' +escH(r.clientNom) + ' · ' + (r.depart || '').substring(0,30),
             r.id
           );
@@ -3497,7 +3500,7 @@ function scheduleAllNotifications(){
       if(delay > 0){
         const t = setTimeout(() => {
           showLocalNotification(
-            '🚗 Course aujourd\'hui !',
+            notifTitre(r,'aller','🚗 Course aujourd\'hui !'),
             r.heure + ' · ' +escH(r.clientNom) + ' · ' + (r.depart || '').substring(0,30),
             r.id + '-matin'
           );
@@ -3520,7 +3523,7 @@ function scheduleAllNotifications(){
       if(delay > 0){
         const t = setTimeout(() => {
           showLocalNotification(
-            '🛬 Retour demain !',
+            notifTitre(r,'retour','🛬 Retour demain !'),
             (r.heureRetour||'') + ' · ' +escH(r.clientNom) + ' · ' + (r.departRetour||r.arrivee||'').substring(0,30),
             r.id + '-retour'
           );
@@ -3536,7 +3539,7 @@ function scheduleAllNotifications(){
       if(delay > 0){
         const t = setTimeout(() => {
           showLocalNotification(
-            '🛬 Retour aujourd\'hui !',
+            notifTitre(r,'retour','🛬 Retour aujourd\'hui !'),
             (r.heureRetour||'') + ' · ' +escH(r.clientNom) + ' · ' + (r.departRetour||r.arrivee||'').substring(0,30),
             r.id + '-retour-matin'
           );
