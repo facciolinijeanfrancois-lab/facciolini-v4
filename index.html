@@ -488,6 +488,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <div id="r-commission-box"><div class="fg"><label class="fl">Commission (€)</label><input type="number" class="fi" id="r-commission" placeholder="Ex: 15.00" step="0.01" oninput="updCalc()"></div></div>
       <div id="r-prepaye-box" style="display:none"><div class="alert alert-green">✅ Client prépayé — facturez le partenaire via Biltobox.</div></div>
     </div>
+    <div class="fg"><label class="fl">Qui conduit ?</label><div class="chips" id="r-confie-chips"></div><input type="hidden" id="r-confie" value=""></div>
+    <div id="r-confie-opts" style="display:none;border:1px dashed var(--gold);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px">
+      <div style="font-size:0.75rem;color:var(--text2);margin-bottom:8px">🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.</div>
+      <div class="fg"><label class="fl">Ta commission (€) — 0 si rien</label><input type="number" class="fi" id="r-confie-comm" placeholder="0" step="0.01" min="0" oninput="majConfieHint()"></div>
+      <div class="fg"><label class="fl">Qui encaisse le client ?</label>
+        <div class="chips" id="r-confie-enc-chips">
+          <div class="chip active" onclick="selectChip(this,'r-confie-enc','partenaire');majConfieHint()">Le partenaire (jour même)</div>
+          <div class="chip" onclick="selectChip(this,'r-confie-enc','moi');majConfieHint()">Moi (prépayé sur mon compte)</div>
+        </div><input type="hidden" id="r-confie-enc" value="partenaire">
+      </div>
+      <div id="r-confie-hint" style="font-size:0.78rem;font-weight:600"></div>
+    </div>
   </div>
 
   <!-- SECTION 2: TRAJET -->
@@ -893,6 +905,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-green btn-sm" id="dr-rappel-btn" style="display:none">&#x1f4ac; Rappel J-1</button>
   <button class="btn btn-outline btn-sm" id="dr-rappel-j7-btn" style="display:none;color:var(--gold2);border-color:var(--gold)">&#x1f4e8; Message J-7</button>
   <button class="btn btn-outline btn-sm" id="dr-prog-btn" style="display:none">&#x1f4c5; Programmer messages</button>
+  <button class="btn btn-gold btn-sm" id="dr-partenaire-btn" style="display:none">&#x1f91d; Rappel partenaire</button>
   <button class="btn btn-gold btn-sm" id="dr-avis-wa-btn" style="display:none">&#x1f4ac; Avis WhatsApp</button>
   <button class="btn btn-outline btn-sm" id="dr-avis-sms-btn" style="display:none">&#x1f4f1; Avis SMS</button>
   <button class="btn btn-outline btn-sm" id="dr-stop-wa-btn" style="display:none">&#x1f4ac; WA 2ème passager</button>
@@ -1101,10 +1114,20 @@ function getPrixFixeZone(depTxt,arrTxt,isTalento){
 }
 function g(id){return document.getElementById(id);}
 function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!==undefined)el.className=cls;}
-function getKmClient(r){let km=parseFloat(r.distance||0);if(r.type==='ar-jour')km+=parseFloat(r.distanceRetour||r.distance||0);else if(r.type==='ar-diff')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
-function getKmReels(r){let km=parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(r.type==='ar-jour'){km+=parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}return km;}
-function getBenef(r){const v=getV(r.vehicule);return parseFloat(r.prix||0)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
-function getBenefReel(r){const v=getV(r.vehicule);return parseFloat(r.prix||0)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
+/* ===== COURSES CONFIÉES À UN PARTENAIRE =====
+   Le partenaire conduit. Pour mes chiffres, seule ma commission compte (0 si rien).
+   Encaissement : 'partenaire' = il encaisse le client et me doit ma commission ;
+                  'moi'        = le client m'a payé (prépayé) et je dois verser prix − commission. */
+function estConfiee(r){return !!(r&&r.confieA);}
+function prixMoi(r){return estConfiee(r)?(parseFloat(r.confieCommission)||0):(parseFloat(r.prix||0)||0);}
+function confComm(r){return parseFloat(r&&r.confieCommission)||0;}
+/* Solde de la course confiée, vu de moi : + il me doit, − je lui dois (0 si réglé) */
+function confDu(r){if(!estConfiee(r)||r.confieRegle||r.statut==='annule')return 0;var c=confComm(r);return r.confieEncaisse==='moi'?-(Math.max(0,(parseFloat(r.prix)||0)-c)):c;}
+function telPartenaire(nom){var p=(db.partners||[]).find(function(x){return x.nom===nom;});return p&&p.tel?p.tel:'';}
+function getKmClient(r){if(estConfiee(r))return 0;let km=parseFloat(r.distance||0);if(r.type==='ar-jour')km+=parseFloat(r.distanceRetour||r.distance||0);else if(r.type==='ar-diff')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
+function getKmReels(r){if(estConfiee(r))return 0;let km=parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(r.type==='ar-jour'){km+=parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}return km;}
+function getBenef(r){const v=getV(r.vehicule);return prixMoi(r)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
+function getBenefReel(r){const v=getV(r.vehicule);return prixMoi(r)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getV(idx){return db.settings.vehicles[parseInt(idx||0)]||db.settings.vehicles[0];}
 function getMonthRes(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);if(da.getMonth()===m&&da.getFullYear()===y)return true;if(r.type==='ar-diff'&&r.dateRetour){const dr=new Date(r.dateRetour);if(dr.getMonth()===m&&dr.getFullYear()===y)return true;}return false;});}
 // getMonthResAller : uniquement les courses dont l'ALLER est ce mois
@@ -1161,7 +1184,7 @@ function completerKmAuto(r){
   if(auto.length)r.kmAuto=auto;
   return r;
 }
-function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
+function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfiee(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
 function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+prixHT(r)*k:s;},0);}
 function moisActif(m,y){
   // Un mois compte dans l'année dès que l'activité a commencé (1re course, plein ou frais)
@@ -1253,7 +1276,7 @@ function compteurA(vIdx,t){const P=pleinsAvecKm(vIdx);const TOL=3*86400000;
 function getKmPleinsMois(m,y,vIdx){const d=compteurA(vIdx,new Date(y,m,1,0,0).getTime()),f=compteurA(vIdx,new Date(y,m+1,1,0,0).getTime());if(d==null||f==null||f<d)return null;return {debut:Math.round(d),fin:Math.round(f),km:Math.round(f-d)};}
 function dernierPlein(vIdx,avantDate){const P=(db.carburant||[]).filter(c=>parseInt(c.vehicule||0)===vIdx&&parseFloat(c.km)>0&&c.date&&(!avantDate||c.date<=avantDate)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));return P.length?P[P.length-1]:null;}
 function getEncaisseAller(r){
-  const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
+  const p=prixMoi(r),a=estConfiee(r)?0:parseFloat(r.acompte||0);
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
   const net=Math.max(0,p-comm); // net encaissé après commission (1 seule fois sur la course)
   if(r.type==='aller'||r.type==='ar-jour')return Math.round(net*100)/100;
@@ -1262,7 +1285,7 @@ function getEncaisseAller(r){
   return Math.round(net/2*100)/100;
 }
 function getEncaisseRetour(r){
-  const p=parseFloat(r.prix||0),a=parseFloat(r.acompte||0);
+  const p=prixMoi(r),a=estConfiee(r)?0:parseFloat(r.acompte||0);
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
   const net=Math.max(0,p-comm);
   if(r.type==='aller'||r.type==='ar-jour')return 0;
@@ -1278,7 +1301,7 @@ function getEncaisseMois(m,y){return db.reservations.filter(r=>r.statut!=='annul
   if(allerDansMois&&retourDansMois){
     // Aller et retour même mois : on compte le net total une seule fois
     const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
-    enc=Math.max(0,parseFloat(r.prix||0)-comm);
+    enc=Math.max(0,prixMoi(r)-comm);
   } else {
     if(allerDansMois)enc+=getEncaisseAller(r);
     if(retourDansMois)enc+=getEncaisseRetour(r);
@@ -1299,15 +1322,15 @@ function getRatioMois(r,m,y){
   if(!allerDansMois&&!retourDansMois)return 0;
   if(allerDansMois&&retourDansMois)return 1; // même mois → tout
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
-  const net=Math.max(0,parseFloat(r.prix||0)-comm);
+  const net=Math.max(0,prixMoi(r)-comm);
   if(net===0)return allerDansMois?0.5:0.5;
   if(allerDansMois)return getEncaisseAller(r)/net;
   return getEncaisseRetour(r)/net;
 }
 /* TVA : une fois assujetti (date réglée dans Réglages), le prix encaissé est TVAC → la recette réelle est le HT */
 function tvaActive(r){const t=db.settings&&db.settings.tva;return !!(t&&t.assujetti&&t.depuis&&(r.dateAller||'')>=t.depuis);}
-function prixHT(r){const p=parseFloat(r.prix||0)||0;if(!tvaActive(r))return p;const tx=(parseFloat(db.settings.tva.taux)||6)/100;return Math.round(p/(1+tx)*100)/100;}
-function getTvaMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&tvaActive(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+((parseFloat(r.prix)||0)-prixHT(r))*k:s;},0);}
+function prixHT(r){const p=prixMoi(r);if(!tvaActive(r))return p;const tx=(parseFloat(db.settings.tva.taux)||6)/100;return Math.round(p/(1+tx)*100)/100;}
+function getTvaMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&tvaActive(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(prixMoi(r)-prixHT(r))*k:s;},0);}
 function getCAMois(m,y){
   // CA net du mois = somme des prix nets (HT si assujetti TVA) pondérés par le ratio du mois
   return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{
@@ -1363,7 +1386,7 @@ function getCommissionsMois(m,y){
 function normNom(s){return String(s||'').trim().toLowerCase();}
 function isVip(nom){const n=normNom(nom);return db.reservations.filter(r=>normNom(r.clientNom)===n&&r.statut!=='annule').length>=db.settings.vip.seuil;}
 function cntRes(nom){const n=normNom(nom);return db.reservations.filter(r=>normNom(r.clientNom)===n&&r.statut!=='annule').length;}
-function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commissionsDues:0,aFacturer:0,courses:[]};});db.reservations.filter(r=>r.statut!=='annule').forEach(r=>{if(!r.source||r.source==='direct')return;if(!s[r.source])s[r.source]={commissionsDues:0,aFacturer:0,courses:[]};if(r.partnerType==='commission'&&!r.commissionPayee)s[r.source].commissionsDues+=parseFloat(r.commission||0);else if(r.partnerType==='prepaye'&&!r.facturePaye)s[r.source].aFacturer+=parseFloat(r.prix||0);s[r.source].courses.push(r);});return s;}
+function calcPartnerSoldes(){const s={};db.partners.forEach(p=>{s[p.nom]={commissionsDues:0,aFacturer:0,confNet:0,courses:[]};});db.reservations.filter(r=>r.statut!=='annule'&&estConfiee(r)).forEach(r=>{if(!s[r.confieA])s[r.confieA]={commissionsDues:0,aFacturer:0,confNet:0,courses:[]};s[r.confieA].confNet+=confDu(r);s[r.confieA].courses.push(r);});db.reservations.filter(r=>r.statut!=='annule').forEach(r=>{if(!r.source||r.source==='direct')return;if(!s[r.source])s[r.source]={commissionsDues:0,aFacturer:0,confNet:0,courses:[]};if(r.partnerType==='commission'&&!r.commissionPayee)s[r.source].commissionsDues+=parseFloat(r.commission||0);else if(r.partnerType==='prepaye'&&!r.facturePaye)s[r.source].aFacturer+=parseFloat(r.prix||0);s[r.source].courses.push(r);});return s;}
 function getInastiAlerte(){const now=new Date();const y=now.getFullYear();for(const e of [{label:'T1',m:3,j:31},{label:'T2',m:6,j:31},{label:'T3',m:9,j:31},{label:'T4',m:12,j:31}]){const d=new Date(y,e.m-1,e.j);const diff=Math.round((d-now)/86400000);if(diff>=0&&diff<=45)return{label:e.label,date:d.toLocaleDateString('fr-BE',{day:'2-digit',month:'long'}),diff};}return null;}
 let pinBuf='';
 function pp(v){if(v==='C'){pinBuf='';updDots();return;}if(v==='D'){pinBuf=pinBuf.slice(0,-1);updDots();return;}if(pinBuf.length>=4)return;pinBuf+=v;updDots();if(pinBuf.length===4)setTimeout(checkPin,120);}
@@ -1492,7 +1515,7 @@ function renderDash(){
   const maxG=Math.max(...bars.map(b=>b.g),1),totalChart=bars.reduce((s,b)=>s+b.g,0);
   sv('d-chart-total','Total: '+fmt(totalChart));
   const dc=g('d-chart');if(dc)dc.innerHTML=bars.map(b=>'<div class="cbar-wrap">'+(b.g>0?'<div class="cbar-val">'+Math.round(b.g)+'€</div>':'<div class="cbar-val" style="opacity:0">0</div>')+'<div class="cbar '+(b.cur?'cur':'')+' '+(b.g>0?'has-data':'')+'" style="height:'+Math.max(b.g>0?8:3,b.g/maxG*92)+'px"></div><div class="cbar-label">'+b.m+'</div></div>').join('');
-  const resTopCl=getMonthResAller(curMonth,curYear);const cs={};resTopCl.forEach(r=>{const k=r.clientNom||'?';if(!cs[k])cs[k]={g:0,n:0};const commT=(r.partnerType==='commission')?parseFloat(r.commission||0):0;cs[k].g+=Math.max(0,parseFloat(r.prix||0)-commT);cs[k].n++;});
+  const resTopCl=getMonthResAller(curMonth,curYear);const cs={};resTopCl.forEach(r=>{const k=r.clientNom||'?';if(!cs[k])cs[k]={g:0,n:0};const commT=(r.partnerType==='commission')?parseFloat(r.commission||0):0;cs[k].g+=Math.max(0,prixMoi(r)-commT);cs[k].n++;});
   const top=Object.entries(cs).sort((a,b)=>b[1].g-a[1].g).slice(0,3);
   const topEl=g('d-top');
   if(topEl)topEl.innerHTML=top.length?top.map(([nom,s],i)=>'<div class="dr"><span class="dr-label">'+['🥇','🥈','🥉'][i]+' '+nom+(isVip(nom)?' ⭐':'')+'</span><span class="dr-val">'+fmt(s.g)+' · '+s.n+' course'+(s.n>1?'s':'')+'</span></div>').join(''):'<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Aucune course ce mois</div>';
@@ -1565,6 +1588,7 @@ function renderRes(){
     if(r.paiement==='aconfirmer'&&courseCommencee(r))html+='<span class="badge badge-orange">⏳ paiement ?</span>';
     {var _g=groupeCourse(r);if(_g.length>1)html+='<span class="badge badge-blue" title="Groupe sur plusieurs véhicules">🚐 '+(_g.indexOf(r)+1)+'/'+_g.length+'</span>';}
     {var _rk=rentaKm(r);if(_rk!==null&&_rk<SEUIL_RENTA&&r.statut!=='annule')html+='<span class="badge badge-red" title="Gain par km roulé (approche et retour à vide compris)">⚠️ '+_rk.toFixed(2).replace('.',',')+' €/km</span>';}
+    if(estConfiee(r))html+='<span class="badge badge-gold" title="Course confiée">🤝 '+escH(r.confieA)+'</span>';
     if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
@@ -1601,7 +1625,7 @@ function renderClients(){
   var clients=[].concat(db.clients);
   if(clientSort==='alpha')clients.sort(function(a,b){return a.nom.localeCompare(b.nom,'fr');});
   else if(clientSort==='courses')clients.sort(function(a,b){return cntRes(b.nom)-cntRes(a.nom);});
-  else if(clientSort==='ca')clients.sort(function(a,b){var ga=db.reservations.filter(r=>r.clientNom===a.nom&&r.statut!=='annule').reduce((s,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);var gb=db.reservations.filter(r=>r.clientNom===b.nom&&r.statut!=='annule').reduce((s,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);return gb-ga;});
+  else if(clientSort==='ca')clients.sort(function(a,b){var ga=db.reservations.filter(r=>r.clientNom===a.nom&&r.statut!=='annule').reduce((s,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,prixMoi(r)-c);},0);var gb=db.reservations.filter(r=>r.clientNom===b.nom&&r.statut!=='annule').reduce((s,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,prixMoi(r)-c);},0);return gb-ga;});
   else if(clientSort==='recent')clients.sort(function(a,b){var la=db.reservations.filter(r=>r.clientNom===a.nom).sort((x,y)=>new Date(y.dateAller)-new Date(x.dateAller))[0];var lb=db.reservations.filter(r=>r.clientNom===b.nom).sort((x,y)=>new Date(y.dateAller)-new Date(x.dateAller))[0];return (lb?new Date(lb.dateAller):0)-(la?new Date(la.dateAller):0);});
   if(search)clients=clients.filter(function(c){return c.nom.toLowerCase().includes(search)||(c.tel||'').includes(search);});
   var el=document.getElementById('clients-list');if(!el)return;
@@ -1609,7 +1633,7 @@ function renderClients(){
   var html='';
   clients.forEach(function(cl){
     var n=cntRes(cl.nom),vip=isVip(cl.nom);
-    var gains=db.reservations.filter(function(r){return r.clientNom===cl.nom&&r.statut!=='annule';}).reduce(function(s,r){var comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-comm);},0);
+    var gains=db.reservations.filter(function(r){return r.clientNom===cl.nom&&r.statut!=='annule';}).reduce(function(s,r){var comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,prixMoi(r)-comm);},0);
     var cid=cl.id;
     html+='<div class="item" data-id="'+cid+'" onclick="showDetailClient(this.dataset.id)">';
     if(cl.blacklist)html+='<div class="item-accent" style="background:var(--red2)"></div>';
@@ -1733,12 +1757,12 @@ function renderPartners(){
     if(!db.partners.length){pl.innerHTML='<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Aucun partenaire configuré</div>';return;}
     var html='';
     db.partners.forEach(function(p){
-      var s=soldes[p.nom]||{commissionsDues:0,aFacturer:0,courses:[]};
+      var s=soldes[p.nom]||{commissionsDues:0,aFacturer:0,confNet:0,courses:[]};
       // Remise à zéro : la fiche ne montre que ce qui vient après (les dettes non réglées restent toujours visibles)
       var depuis=p.resetDepuis||'';
-      if(depuis){s=Object.assign({},s,{courses:s.courses.filter(function(r){return (r.dateAller||'')>=depuis||(r.partnerType==='commission'&&!r.commissionPayee)||(r.partnerType==='prepaye'&&!r.facturePaye);})});}
+      if(depuis){s=Object.assign({},s,{courses:s.courses.filter(function(r){return (r.dateAller||'')>=depuis||(r.partnerType==='commission'&&!r.commissionPayee)||(r.partnerType==='prepaye'&&!r.facturePaye)||confDu(r)!==0;})});}
       // Calcul net à facturer
-      var netAFacturer=s.aFacturer-s.commissionsDues;
+      var netAFacturer=s.aFacturer-s.commissionsDues+(s.confNet||0);
       html+='<div class="card card-gold" style="margin-bottom:12px">';
       html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
       html+='<div><div style="font-weight:800;font-size:1rem;color:#ffffff">🤝 '+escH(p.nom)+'</div>';
@@ -1752,7 +1776,7 @@ function renderPartners(){
 
       // Résumé financier
       var nbCourses=s.courses.filter(r=>r.statut!=='annule').length;
-      var totalEncaisse=s.courses.filter(r=>r.statut!=='annule').reduce((t,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return t+Math.max(0,parseFloat(r.prix||0)-c);},0);
+      var totalEncaisse=s.courses.filter(r=>r.statut!=='annule').reduce((t,r)=>{var c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return t+Math.max(0,prixMoi(r)-c);},0);
       html+='<div style="background:rgba(255,255,255,0.1);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">';
       html+='<div style="font-size:0.62rem;color:var(--gold2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">💰 Situation financière</div>';
       html+='<div class="dr"><span class="dr-label" style="color:rgba(255,255,255,0.6)">Courses effectuées'+(depuis?' (depuis la remise à zéro)':'')+'</span><span class="dr-val">'+nbCourses+' course'+(nbCourses>1?'s':'')+'</span></div>';
@@ -1763,8 +1787,10 @@ function renderPartners(){
       if(s.aFacturer>0){
         html+='<div class="dr"><span class="dr-label" style="color:var(--green2)">Prépayées à facturer</span><span class="dr-val" style="color:var(--green2)">'+fmt(s.aFacturer)+'</span></div>';
       }
+      if((s.confNet||0)>0)html+='<div class="dr"><span class="dr-label" style="color:var(--green2)">🤝 Courses confiées : il te doit</span><span class="dr-val" style="color:var(--green2)">'+fmt(s.confNet)+'</span></div>';
+      if((s.confNet||0)<0)html+='<div class="dr"><span class="dr-label" style="color:var(--red2)">🤝 Courses confiées : tu lui dois</span><span class="dr-val" style="color:var(--red2)">- '+fmt(-s.confNet)+'</span></div>';
       // Ligne NET
-      if(s.commissionsDues>0||s.aFacturer>0){
+      if(s.commissionsDues>0||s.aFacturer>0||(s.confNet||0)!==0){
         html+='<div class="dr" style="border-top:1px solid var(--border);margin-top:6px;padding-top:8px;border-bottom:none">';
         html+='<span style="font-weight:700;color:rgba(255,255,255,0.9)">NET à facturer / verser</span>';
         if(netAFacturer>0){
@@ -1786,7 +1812,7 @@ function renderPartners(){
           histo.forEach(function(h){
             var label,montantAff,couleur;
             if(h.type==='reset'){
-              label='🔄 Remise à zéro'+(h.nbCourses?' ('+h.nbCourses+' course'+(h.nbCourses>1?'s':'')+' considérée'+(h.nbCourses>1?'s':'')+' réglée'+(h.nbCourses>1?'s':'')+')':'');
+              var _nb=(h.nbCourses||0)+((h.confIds||[]).length);label='🔄 Remise à zéro'+(_nb?' ('+_nb+' course'+(_nb>1?'s':'')+' considérée'+(_nb>1?'s':'')+' réglée'+(_nb>1?'s':'')+')':'');
               montantAff=h.montant?fmt(Math.abs(h.montant)):'—';
               couleur='var(--text3)';
             }else if(h.type==='net'){
@@ -1819,7 +1845,7 @@ function renderPartners(){
         var moisMasquesPartner=(db.partnerMoisMasques&&db.partnerMoisMasques[p.nom])||[];
         var now=new Date();var moisCourantKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
         var nbMasques=moisOrdre.filter(function(k){return moisMasquesPartner.includes(k)&&k!==moisCourantKey;}).length;
-        var moisRegle=function(k){return moisGroupes[k].every(function(r){return !((r.partnerType==='commission'&&!r.commissionPayee&&parseFloat(r.commission||0)>0)||(r.partnerType==='prepaye'&&!r.facturePaye));});};
+        var moisRegle=function(k){return moisGroupes[k].every(function(r){if(estConfiee(r))return confDu(r)===0;return !((r.partnerType==='commission'&&!r.commissionPayee&&parseFloat(r.commission||0)>0)||(r.partnerType==='prepaye'&&!r.facturePaye));});};
         var voirRegles=!!(window._partVoirRegles&&window._partVoirRegles[p.nom]);
         var nbRegles=moisOrdre.filter(function(k){return k<moisCourantKey&&!moisMasquesPartner.includes(k)&&moisRegle(k);}).length;
         moisOrdre.forEach(function(key){
@@ -1832,7 +1858,9 @@ function renderPartners(){
           moisLabel=moisLabel.charAt(0).toUpperCase()+moisLabel.slice(1);
           var commissionsDuesMois=coursesMois.filter(function(r){return r.partnerType==='commission'&&!r.commissionPayee;}).reduce(function(t,r){return t+parseFloat(r.commission||0);},0);
           var aFacturerMois=coursesMois.filter(function(r){return r.partnerType==='prepaye'&&!r.facturePaye;}).reduce(function(t,r){return t+parseFloat(r.prix||0);},0);
-          var netMois=aFacturerMois-commissionsDuesMois;
+          var confNetMois=coursesMois.filter(estConfiee).reduce(function(t,r){return t+confDu(r);},0);
+          var confOuvertesMois=coursesMois.filter(function(r){return estConfiee(r)&&!r.confieRegle;}).length;
+          var netMois=aFacturerMois-commissionsDuesMois+confNetMois;
           html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">';
           html+='<span style="font-size:0.68rem;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:0.05em">📅 '+moisLabel+'</span>';
           html+='<div style="display:flex;align-items:center;gap:8px">';
@@ -1845,7 +1873,7 @@ function renderPartners(){
           }
           html+='</div>';
           html+='</div>';
-          if(commissionsDuesMois>0||aFacturerMois>0){
+          if(commissionsDuesMois>0||aFacturerMois>0||confOuvertesMois>0){
             if(netMois>0){
               html+='<button class="btn btn-gold btn-full btn-sm" style="margin-bottom:6px" onclick="reglerMoisPartenaire(this.dataset.nom,this.dataset.mois)" data-nom="'+escH(p.nom)+'" data-mois="'+key+'">✓ Facturer '+moisLabel+' ('+fmt(netMois)+')</button>';
             }else if(netMois<0){
@@ -1857,6 +1885,19 @@ function renderPartners(){
           coursesMois.forEach(function(r){
             var comm=parseFloat(r.commission||0);
             var isPrepaye=r.partnerType==='prepaye';
+            if(estConfiee(r)){
+              var _cc=confComm(r),_du=confDu(r);
+              html+='<div style="background:var(--bg3);border-radius:var(--radius-xs);padding:10px;margin-bottom:6px;border:1px dashed var(--gold)">';
+              html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1">';
+              html+='<div style="font-weight:700;font-size:0.85rem">🤝 Confiée · '+escH(r.clientNom)+'</div>';
+              html+='<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">📅 '+new Date(r.dateAller).toLocaleDateString("fr-BE")+(r.heure?" à "+r.heure:"")+' · '+(r.confieEncaisse==='moi'?'payé sur ton compte':'il encaisse le client')+'</div>';
+              html+='</div><div style="text-align:right;min-width:90px">';
+              html+='<div style="font-weight:800;color:var(--gold2);font-family:Playfair Display,serif">'+fmt(r.prix)+'</div>';
+              html+='<div style="font-size:0.7rem;color:var(--text3)">Ta commission : '+fmt(_cc)+'</div>';
+              html+='<div style="font-size:0.7rem;color:'+(r.confieRegle||_du===0?'var(--green2)':(_du>0?'var(--green2)':'var(--red2)'))+'">'+(r.confieRegle||_du===0?'✓ Réglé':(_du>0?'Il te doit '+fmt(_du):'Tu lui dois '+fmt(-_du)))+'</div>';
+              html+='</div></div></div>';
+              return;
+            }
             html+='<div style="background:var(--bg3);border-radius:var(--radius-xs);padding:10px;margin-bottom:6px;border:1px solid var(--border)">';
             html+='<div style="display:flex;justify-content:space-between;align-items:flex-start">';
             html+='<div style="flex:1">';
@@ -1936,13 +1977,15 @@ function reglerMoisPartenaire(p,moisKey){
   trackUsage('partenaire-solder-mois');
   var coursesCommission=db.reservations.filter(r=>r.source===p&&r.partnerType==='commission'&&!r.commissionPayee&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
   var coursesPrepaye=db.reservations.filter(r=>r.source===p&&r.partnerType==='prepaye'&&!r.facturePaye&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
-  if(!coursesCommission.length&&!coursesPrepaye.length)return;
+  var coursesConf=db.reservations.filter(r=>r.confieA===p&&!r.confieRegle&&r.statut!=='annule'&&moisKeyRes(r)===moisKey);
+  if(!coursesCommission.length&&!coursesPrepaye.length&&!coursesConf.length)return;
   var commissionsDues=coursesCommission.reduce((t,r)=>t+parseFloat(r.commission||0),0);
   var aFacturer=coursesPrepaye.reduce((t,r)=>t+parseFloat(r.prix||0),0);
-  var net=aFacturer-commissionsDues;
-  var refCourse=coursesPrepaye[0]||coursesCommission[0];
+  var confNet=coursesConf.reduce((t,r)=>t+confDu(r),0);
+  var net=aFacturer-commissionsDues+confNet;
+  var refCourse=coursesPrepaye[0]||coursesCommission[0]||coursesConf[0];
   var moisLabel=new Date(refCourse.dateAller).toLocaleDateString('fr-BE',{month:'long',year:'numeric'});
-  var nbTotal=coursesCommission.length+coursesPrepaye.length;
+  var nbTotal=coursesCommission.length+coursesPrepaye.length+coursesConf.length;
   var msg;
   if(net>0)msg='Confirmer : tu factures '+fmt(net)+' net à '+p+' pour '+moisLabel+' (facture '+fmt(aFacturer)+' − commission '+fmt(commissionsDues)+') ?';
   else if(net<0)msg='Confirmer : tu verses '+fmt(Math.abs(net))+' net à '+p+' pour '+moisLabel+' (commission '+fmt(commissionsDues)+' − facture '+fmt(aFacturer)+') ?';
@@ -1950,10 +1993,11 @@ function reglerMoisPartenaire(p,moisKey){
   msg+='\n\nCes '+nbTotal+' course(s) seront archivées et ce mois repart à zéro.';
   if(!confirm(msg))return;
   if(!db.partnerSoldes)db.partnerSoldes=[];
-  var courseIds=coursesCommission.map(r=>r.id).concat(coursesPrepaye.map(r=>r.id));
+  var courseIds=coursesCommission.map(r=>r.id).concat(coursesPrepaye.map(r=>r.id)).concat(coursesConf.map(r=>r.id));
   db.partnerSoldes.push({id:genId(),partenaire:p,type:'net',montant:net,montantFacture:aFacturer,montantCommission:commissionsDues,date:dateLocale(),nbCourses:courseIds.length,courseIds:courseIds});
   coursesCommission.forEach(r=>{r.commissionPayee=true;});
   coursesPrepaye.forEach(r=>{r.facturePaye=true;});
+  coursesConf.forEach(r=>{r.confieRegle=true;});
   save();renderAll();
   alert('✅ '+p+' — '+moisLabel+' réglé ('+(net>0?'facturé '+fmt(net):net<0?'versé '+fmt(Math.abs(net)):'soldé')+') — '+nbTotal+' course(s) archivée(s).');
 }
@@ -1964,6 +2008,8 @@ function remettreAZeroPartenaire(id){
   var p=db.partners.find(function(x){return x.id===id;});if(!p)return;
   var auj=dateLocale();
   var ouvertes=db.reservations.filter(function(r){return r.source===p.nom&&r.statut!=='annule'&&(r.dateAller||'')<=auj&&((r.partnerType==='commission'&&!r.commissionPayee)||(r.partnerType==='prepaye'&&!r.facturePaye));});
+  var confOuv=db.reservations.filter(function(r){return r.confieA===p.nom&&(r.dateAller||'')<=auj&&confDu(r)!==0;});
+  var confN=confOuv.reduce(function(t,r){return t+confDu(r);},0);
   var comm=ouvertes.filter(function(r){return r.partnerType==='commission';}).reduce(function(t,r){return t+parseFloat(r.commission||0);},0);
   var fact=ouvertes.filter(function(r){return r.partnerType==='prepaye';}).reduce(function(t,r){return t+parseFloat(r.prix||0);},0);
   var msg='🔄 Remettre '+p.nom+' à zéro ?\n\nLa fiche repartira d\'aujourd\'hui : l\'historique et les anciens mois ne s\'afficheront plus (tout reste dans tes Finances).';
@@ -1971,16 +2017,23 @@ function remettreAZeroPartenaire(id){
     msg+='\n\n⚠️ '+ouvertes.length+' course(s) passée(s) ne sont pas encore réglées :';
     if(fact>0)msg+='\n• '+fmt(fact)+' que '+p.nom+' devait te payer';
     if(comm>0)msg+='\n• '+fmt(comm)+' de commission que tu devais verser';
+  }
+  if(confOuv.length){
+    msg+='\n\n⚠️ '+confOuv.length+' course(s) confiée(s) pas encore réglée(s) : '+(confN>=0?'il te doit '+fmt(confN):'tu lui dois '+fmt(-confN));
+  }
+  if(ouvertes.length||confOuv.length){
     msg+='\n\nElles seront considérées comme RÉGLÉES. Continue seulement si c\'est vrai.';
   }
   msg+='\n\nLes courses à venir ne changent pas. Tu peux annuler ensuite.';
   if(!confirm(msg))return;
   if(!db.partnerSoldes)db.partnerSoldes=[];
-  db.partnerSoldes.push({id:genId(),partenaire:p.nom,type:'reset',montant:Math.round((fact-comm)*100)/100,date:auj,nbCourses:ouvertes.length,
+  db.partnerSoldes.push({id:genId(),partenaire:p.nom,type:'reset',montant:Math.round((fact-comm+confN)*100)/100,date:auj,nbCourses:ouvertes.length,
     commIds:ouvertes.filter(function(r){return r.partnerType==='commission';}).map(function(r){return r.id;}),
     factIds:ouvertes.filter(function(r){return r.partnerType==='prepaye';}).map(function(r){return r.id;}),
-    courseIds:ouvertes.map(function(r){return r.id;}),precedent:p.resetDepuis||''});
+    confIds:confOuv.map(function(r){return r.id;}),
+    courseIds:ouvertes.map(function(r){return r.id;}).concat(confOuv.map(function(r){return r.id;})),precedent:p.resetDepuis||''});
   ouvertes.forEach(function(r){if(r.partnerType==='commission')r.commissionPayee=true;else r.facturePaye=true;});
+  confOuv.forEach(function(r){r.confieRegle=true;});
   p.resetDepuis=auj;
   save();renderAll();try{renderPartners();}catch(e){}
   if(typeof showToast==='function')showToast('🔄 '+p.nom+' remis à zéro');
@@ -1992,6 +2045,7 @@ function annulerRemiseAZero(id){
   if(i>=0){var e=L[i];
     (e.commIds||[]).forEach(function(cid){var r=db.reservations.find(function(x){return x.id===cid;});if(r)r.commissionPayee=false;});
     (e.factIds||[]).forEach(function(cid){var r=db.reservations.find(function(x){return x.id===cid;});if(r)r.facturePaye=false;});
+    (e.confIds||[]).forEach(function(cid){var r=db.reservations.find(function(x){return x.id===cid;});if(r)r.confieRegle=false;});
     if(e.precedent)p.resetDepuis=e.precedent;else delete p.resetDepuis;
     L.splice(i,1);
   }else delete p.resetDepuis;
@@ -2123,6 +2177,7 @@ function resetResForm(){
   const rha=g('r-heure-aller');const nowTime=new Date().toTimeString().slice(0,5);if(rha)rha.value=nowTime;updDtDisplay('r-heure-aller',nowTime);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/\'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value='direct';}
   renderFavChips();updKmRecap();
+  try{renderConfieChips('');const cc=g('r-confie-comm');if(cc)cc.value='';setChips('r-confie-enc-chips','r-confie-enc','partenaire');majConfieUI();}catch(e){}
   // Reset nouveau formulaire
   const adv=g('res-advanced');if(adv)adv.style.display='none';
   const btnAdv=g('btn-adv-toggle');if(btnAdv)btnAdv.textContent='⚙️ Options avancées';
@@ -2164,6 +2219,18 @@ function applyFavChip(favId,btn){
   if(role==='r-depart-retour'||role==='r-arrivee-retour')assurerDistanceRetour();
   setTimeout(()=>calcKmVideAuto(),300);
 }
+function renderConfieChips(sel){
+  var c=g('r-confie-chips');if(!c)return;sel=sel||'';
+  c.innerHTML='<div class="chip'+(sel?'':' active')+'" onclick="selectChip(this,\'r-confie\',\'\');majConfieUI()">🚗 Moi</div>'+(db.partners||[]).map(function(p){return '<div class="chip'+(sel===p.nom?' active':'')+'" data-nom="'+escH(p.nom)+'" onclick="selectChip(this,\'r-confie\',this.dataset.nom);majConfieUI()">🤝 '+escH(p.nom)+'</div>';}).join('');
+  var h=g('r-confie');if(h)h.value=sel;majConfieUI();
+}
+function majConfieUI(){var v=(g('r-confie')||{}).value||'';var o=g('r-confie-opts');if(o)o.style.display=v?'block':'none';majConfieHint();}
+function majConfieHint(){
+  var el=g('r-confie-hint');if(!el)return;var v=(g('r-confie')||{}).value||'';if(!v){el.textContent='';return;}
+  var prix=parseFloat((g('r-prix')||{}).value||0)||0,c=parseFloat((g('r-confie-comm')||{}).value||0)||0,enc=(g('r-confie-enc')||{}).value||'partenaire';
+  if(enc==='moi'){el.style.color='var(--red2)';el.textContent='→ Tu devras verser '+fmt(Math.max(0,prix-c))+' à '+v+(c>0?' (tu gardes '+fmt(c)+')':'');}
+  else{el.style.color='var(--green2)';el.textContent=c>0?('→ '+v+' encaisse '+fmt(prix)+' et te doit '+fmt(c)):('→ '+v+' encaisse '+fmt(prix)+', rien pour toi');}
+}
 function updSourceUI(){const s=g('r-source').value;const ro=g('r-partner-opts');if(ro)ro.style.display=s!=='direct'?'block':'none';updCalc();}
 function updPartnerType(){const t=g('r-partner-type').value;const rcb=g('r-commission-box');if(rcb)rcb.style.display=t==='commission'?'block':'none';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display=t==='prepaye'?'block':'none';if(t==='prepaye')setChips('r-paiement-chips','r-paiement','prepaye');else if(g('r-paiement').value==='prepaye')setChips('r-paiement-chips','r-paiement','aconfirmer');updCalc();}
 function toggleVmt(){const p=g('r-paiement').value;const vs=g('r-vmt-section');if(vs)vs.style.display=(p==='virement'||p==='mixte')?'block':'none';const mb=g('r-mixte-box');if(mb)mb.style.display=p==='mixte'?'block':'none';}
@@ -2189,7 +2256,7 @@ function debutCourse(r){const d=new Date((r.dateAller||'')+'T'+(r.heure||'00:00'
 function courseCommencee(r){const d=debutCourse(r);return !!d&&d.getTime()<=Date.now();}
 const SEUIL_RENTA=0.50;
 function rentaKm(r){const km=getKmReels(r);if(!(km>0))return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return (prixHT(r)-comm-(parseFloat(r.peages)||0)-(parseFloat(r.parking)||0))/km;}
-function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
+function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfiee(r)&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
 function confirmerPaiement(id,mode){
   const r=db.reservations.find(x=>x.id===id);if(!r)return;
   if(mode==='mixte'){editRes(id);setTimeout(()=>{const c=[...(g('r-paiement-chips')?.children||[])].find(x=>(x.getAttribute('onclick')||'').includes("'mixte'"));if(c)c.click();},150);return;}
@@ -2496,8 +2563,12 @@ function saveReservationCore(){
     stopNom:g('r-stop-nom')?.value.trim()||'',stopTel:g('r-stop-tel')?.value.trim()||'',
     stopAdresse:g('r-stop-adresse')?.value.trim()||'',
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
-    duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90)
+    duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90),
+    confieA:(g('r-confie')?.value||''),confieCommission:(g('r-confie')?.value?(parseFloat(g('r-confie-comm')?.value||0)||0):0),confieEncaisse:(g('r-confie')?.value?(g('r-confie-enc')?.value||'partenaire'):'')
   };
+  if(r.confieA&&existingR.confieA!==r.confieA)delete existingR.confieRegle; /* nouveau partenaire : à régler */
+  if(!r.confieA){delete existingR.confieRegle;}
+  if(r.confieA&&(r.paiement==='aconfirmer'))r.paiement=r.confieEncaisse==='moi'?'prepaye':'cash';
   // Coordonnées des adresses (servent aux km automatiques)
   (function(){const ll=(k,a,b)=>{const c=acC[k];const la=c?c.lat:parseFloat(g(a)?.value),lo=c?c.lon:parseFloat(g(b)?.value);return (isFinite(la)&&isFinite(lo)&&la&&lo)?[+la,+lo]:[null,null];};
     const d=ll('r-depart','r-dep-lat','r-dep-lon'),a=ll('r-arrivee','r-arr-lat','r-arr-lon');
@@ -2514,7 +2585,7 @@ function saveReservationCore(){
   if(editId&&Array.isArray(existingR.kmAuto)&&(r.depart!==existingR.depart||r.arrivee!==existingR.arrivee||r.departRetour!==existingR.departRetour||r.arriveeRetour!==existingR.arriveeRetour||r.type!==existingR.type)){
     existingR.kmAuto.forEach(k=>{if(parseFloat(r[k]||0)===parseFloat(existingR[k]||0))r[k]=0;});r.kmAuto=[];
   }
-  try{completerKmAuto(r);}catch(e){console.error('km auto',e);}
+  if(!estConfiee(r)){try{completerKmAuto(r);}catch(e){console.error('km auto',e);}}
   try{
     if(!(r.clientTel||'').trim()){
       if(!confirm('📱 AUCUN NUMÉRO DE TÉLÉPHONE\n\nSans numéro, vous ne pourrez envoyer ni rappel J-7, ni rappel J-1, ni confirmation à ce client.\n\nEnregistrer quand même ?')){
@@ -2636,6 +2707,7 @@ function showDetailRes(id){
     h+='</span></div>';
     h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';
     {var _gr=groupeCourse(r);if(_gr.length>1)h+='<div class="dr"><span class="dr-label">🚐 Groupe</span><span class="dr-val">'+_gr.length+' véhicules · total '+fmt(_gr.reduce(function(s,x){return s+(parseFloat(x.prix)||0);},0))+' · '+_gr.reduce(function(s,x){return s+(parseInt(x.passagers)||0);},0)+' pers.</span></div>';}
+    if(estConfiee(r)){var _d=confDu(r);h+='<div class="dr" style="border:1px dashed var(--gold);border-radius:8px;padding:6px 8px"><span class="dr-label">🤝 Confiée à</span><span class="dr-val">'+escH(r.confieA)+' · commission '+fmt(confComm(r))+'<br><span style="font-size:0.72rem;color:var(--text3)">'+(r.confieEncaisse==='moi'?'Payé sur ton compte':'Il encaisse le client')+' · '+(_d===0?'✓ réglé':(_d>0?'il te doit '+fmt(_d):'tu lui dois '+fmt(-_d)))+'</span></span></div>';}
     if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
     h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'🛬 Récupération':'Aller')+'</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
     if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'✈️ Dépose':'Retour')+'</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
@@ -2672,7 +2744,7 @@ function showDetailRes(id){
     if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
     if(parseFloat(r.commission||0)>0){
       h+='<div class="dr"><span class="dr-label">Commission partenaire</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>';
-      var netEnc=Math.max(0,parseFloat(r.prix||0)-parseFloat(r.commission||0));
+      var netEnc=Math.max(0,prixMoi(r)-parseFloat(r.commission||0));
       h+='<div class="dr"><span class="dr-label" style="font-weight:700">Net encaissé</span><span class="dr-val c-green" style="font-weight:700">'+fmt(netEnc)+'</span></div>';
     }
     h+='<div class="divider"></div>';
@@ -2695,6 +2767,8 @@ function showDetailRes(id){
   });
   try{majBoutonsStatut(r);}catch(e){}
   // Bouton programmer messages (J-7 / J-1)
+  var drpa=g('dr-partenaire-btn');
+  if(drpa){var _fut=(r.dateAller||'')>=dateLocale()||(r.dateRetour||'')>=dateLocale();drpa.style.display=(estConfiee(r)&&_fut)?'inline-flex':'none';drpa.onclick=function(){envoyerRappelPartenaire(id,(r.dateAller||'')>=dateLocale()?'aller':'retour');};}
   var drp=g('dr-prog-btn');
   if(drp){var _pl=progMsgsListe(r);var _ok=_pl.some(function(x){return !x.tard;});drp.style.display=_ok?'inline-flex':'none';drp.onclick=function(){closeModal('m-detail-res');openProgMsgs(id);};}
   // Bouton rappel
@@ -2795,6 +2869,7 @@ function editRes(id){
   if(sc){sc.innerHTML='<div class="chip'+(r.source==='direct'?' active':'')+'" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip'+(r.source===p.nom?' active':'')+'" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value=r.source||'direct';}
   updSourceUI();
   if(r.source!=='direct'){setChips('r-partner-type-chips','r-partner-type',r.partnerType||'commission');updPartnerType();const ce=g('r-commission');if(ce)ce.value=r.commission||'';}
+  try{renderConfieChips(r.confieA||'');const cc=g('r-confie-comm');if(cc)cc.value=r.confieA?(r.confieCommission||''):'';setChips('r-confie-enc-chips','r-confie-enc',r.confieEncaisse||'partenaire');majConfieUI();}catch(e){}
   setChips('r-type-chips','r-type',r.type||'aller');acC['_lastType']=r.type||'aller';setChips('r-service-chips','r-service',r.service||'depose');
   g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';updDtDisplay('r-date-aller',r.dateAller||'');g('r-heure-aller').value=r.heure||'';updDtDisplay('r-heure-aller',r.heure||'');
   g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';
@@ -2978,6 +3053,58 @@ function buildMsgRappel(r,sens,joursForces){
   return msg;
 }
 
+/* ===== RAPPEL AU PARTENAIRE (course confiée) ===== */
+function msgPartenaire(r,sens){
+  var ret=sens==='retour'&&r.type==='ar-diff'&&r.dateRetour;
+  var d=ret?r.dateRetour:r.dateAller,h=ret?(r.heureRetour||''):(r.heure||'');
+  var dep=ret?(r.departRetour||r.arrivee||''):(r.depart||''),arr=ret?(r.arriveeRetour||r.depart||''):(r.arrivee||'');
+  var vol=ret?(r.volRetour||''):(r.vol||'');
+  var dateStr=d?new Date(d+'T12:00').toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}):'';
+  var auj=dateLocale(),dem=new Date();dem.setDate(dem.getDate()+1);var demStr=dem.getFullYear()+'-'+String(dem.getMonth()+1).padStart(2,'0')+'-'+String(dem.getDate()).padStart(2,'0');
+  var quand=d===demStr?'demain':(d===auj?"aujourd'hui":'le '+dateStr);
+  var prix=parseFloat(r.prix)||0,c=confComm(r);
+  var aEnc=r.type==='ar-diff'?Math.round(prix/2*100)/100:prix;
+  var m='Bonjour 👋\n\nPetit rappel pour la course que je t\'ai confiée '+quand+' :\n\n';
+  m+='📅 '+dateStr+(h?' à '+h:'')+'\n';
+  m+='👤 Client : '+(r.clientNom||'')+(r.clientTel?' — 📞 '+r.clientTel:'')+'\n';
+  m+='🚗 Prise en charge : '+dep+'\n';
+  m+='📍 Destination : '+arr+'\n';
+  if(vol)m+='✈️ Vol : '+vol+'\n';
+  if(r.type==='ar-jour'&&r.heureRetour&&!ret)m+='🔁 Retour le même jour : '+r.heureRetour+(r.volRetour?' (vol '+r.volRetour+')':'')+'\n';
+  var pax=parseInt(r.passagers)||1;m+='👥 '+pax+' passager'+(pax>1?'s':'');
+  var gv=parseInt(r.grandesValises)||0,pv=parseInt(r.petitesValises)||0;if(gv||pv)m+=' · 🧳 '+(gv?gv+' grande'+(gv>1?'s':''):'')+(gv&&pv?' + ':'')+(pv?pv+' petite'+(pv>1?'s':''):'');
+  if(parseInt(r.siegesBebe)>0)m+=' · 👶 '+r.siegesBebe+' siège(s) bébé';
+  m+='\n';
+  if(r.stopAdresse)m+='📍 Arrêt : '+r.stopAdresse+(r.stopNom?' ('+r.stopNom+(r.stopTel?' — '+r.stopTel:'')+')':'')+'\n';
+  m+='\n';
+  if(r.confieEncaisse==='moi')m+='💶 Déjà payé par le client — rien à encaisser.\n';
+  else{m+='💶 À encaisser auprès du client : '+fmt(aEnc)+(r.type==='ar-diff'?' (pour ce trajet)':'')+'\n';if(c>0)m+='🤝 Commission convenue : '+fmt(c)+'\n';}
+  if(r.notes)m+='📋 '+r.notes+'\n';
+  m+='\nMerci et bonne route !\nJean-François — Facciolini Mobility';
+  return m;
+}
+function envoyerRappelPartenaire(id,sens){
+  var r=db.reservations.find(function(x){return x.id===id;});if(!r||!estConfiee(r))return;
+  trackUsage('rappel-partenaire');
+  var tel=telPartenaire(r.confieA).replace(/[^+\d]/g,'');if(tel&&tel[0]==='0')tel='32'+tel.slice(1);
+  var msg=encodeURIComponent(msgPartenaire(r,sens));
+  var old=document.getElementById('rappel-part-popup');if(old)old.remove();
+  var pop=document.createElement('div');pop.id='rappel-part-popup';
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)';
+  pop.innerHTML='<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px">'
+    +'<div style="text-align:center;font-weight:700;margin-bottom:6px">🤝 Rappel à '+escH(r.confieA)+'</div>'
+    +'<div style="text-align:center;font-size:0.8rem;color:var(--text3);margin-bottom:16px">'+(tel?escH(telPartenaire(r.confieA)):'⚠️ Pas de numéro : ajoute-le dans la fiche du partenaire, ou choisis le contact')+'</div>'
+    +'<div style="display:flex;gap:12px;margin-bottom:12px">'
+    +'<button id="rp-wa" style="flex:1;padding:14px 8px;background:#25D366;color:#fff;border:none;border-radius:14px;font-weight:700">📱 WhatsApp</button>'
+    +'<button id="rp-sms" style="flex:1;padding:14px 8px;background:var(--gold);color:#000;border:none;border-radius:14px;font-weight:700">✉️ SMS</button></div>'
+    +'<button id="rp-x" style="width:100%;padding:12px;background:var(--border);color:var(--text2);border:none;border-radius:14px">Annuler</button></div>';
+  pop.onclick=function(e){if(e.target===pop)pop.remove();};
+  document.body.appendChild(pop);
+  pop.querySelector('#rp-wa').onclick=function(){pop.remove();window.open(tel?'https://wa.me/'+tel+'?text='+msg:'https://wa.me/?text='+msg,'_blank');};
+  pop.querySelector('#rp-sms').onclick=function(){pop.remove();window.location.href=(tel?'sms:+'+tel.replace(/^\+/,''):'sms:')+'?body='+msg;};
+  pop.querySelector('#rp-x').onclick=function(){pop.remove();};
+}
+
 /* ===== PROGRAMMER LES MESSAGES J-7 / J-1 (Samsung Messages) ===== */
 function progMsgsListe(r){
   var out=[];if(!r||r.statut==='annule'||estVehiculeSecondaire(r))return out;
@@ -2992,6 +3119,11 @@ function progMsgsListe(r){
   if(r.type==='ar-diff'&&r.dateRetour){
     ajoute(r.dateRetour,'retour','rJ7',7,'Retour — 1 semaine avant');
     ajoute(r.dateRetour,'retour','rJ1',1,'Retour — la veille');
+  }
+  if(estConfiee(r)){
+    ajoute(r.dateAller,'aller','pJ1',1,'🤝 '+r.confieA+' — la veille'+(r.type==='ar-diff'?' (aller)':''));
+    if(r.type==='ar-diff'&&r.dateRetour)ajoute(r.dateRetour,'retour','pJ1r',1,'🤝 '+r.confieA+' — la veille (retour)');
+    out.forEach(function(x){if(x.cle==='pJ1'||x.cle==='pJ1r')x.dest='partenaire';});
   }
   return out;
 }
@@ -3045,9 +3177,12 @@ function openProgMsgs(id){
           rendu();return;
         }
         trackUsage('prog-msg:'+x.cle+':'+b.dataset.c);
-        var msg=encodeURIComponent(buildMsgRappel(r,x.sens,x.jours));
-        if(b.dataset.c==='wa')window.open(tel?'https://wa.me/'+tel+'?text='+msg:'https://wa.me/?text='+msg,'_blank');
-        else window.location.href=tel?'sms:'+tel+'?body='+msg:'sms:?body='+msg;
+        var estP=x.dest==='partenaire';
+        var msg=encodeURIComponent(estP?msgPartenaire(r,x.sens):buildMsgRappel(r,x.sens,x.jours));
+        var t2=tel;if(estP){t2=telPartenaire(r.confieA).replace(/[^+\d]/g,'');}
+        var tw=t2.replace(/^\+/,'');if(tw[0]==='0')tw='32'+tw.slice(1);
+        if(b.dataset.c==='wa')window.open(t2?'https://wa.me/'+tw+'?text='+msg:'https://wa.me/?text='+msg,'_blank');
+        else window.location.href=t2?'sms:'+t2+'?body='+msg:'sms:?body='+msg;
       };
     });
   }
@@ -3509,14 +3644,14 @@ function renderPayRepartition(){
   if(!res.length){const el=g('pay-repartition');if(el)el.innerHTML='';return;}
   const groups={aconfirmer:{label:'À confirmer',icon:'⏳',color:'var(--orange2)',res:[]},cash:{label:'Cash',icon:'💵',color:'var(--green2)',res:[]},compte:{label:'Sur mon compte (carte + QR + partenaires)',icon:'🏦',color:'var(--gold)',res:[]}};let partAmt=0;
   Object.values(groups).forEach(g2=>{g2.amt=0;g2.part={};});
-  const netDe=r=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return Math.max(0,parseFloat(r.prix||0)-c);};
+  const netDe=r=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return Math.max(0,prixMoi(r)-c);};
   res.forEach(r=>{const p=r.paiement||'cash';const net=netDe(r);
     // Courses partenaires prépayées → groupe partenaires
     if(p==='prepaye'||r.partnerType==='prepaye'){groups.compte.res.push(r);groups.compte.amt+=net;groups.compte.part[r.id]=net;partAmt+=net;return;}
     // Paiement mixte → réparti entre les modes, au prorata du net
     if(p==='mixte'){const pp=payParts(r);const brut=Object.values(pp).reduce((a,b)=>a+b,0);const f=brut>0?net/brut:0;Object.keys(pp).forEach(k0=>{const k=grpPay(k0);const v=pp[k0]*f;if(!(r.id in groups[k].part))groups[k].res.push(r);groups[k].amt+=v;groups[k].part[r.id]=(groups[k].part[r.id]||0)+v;});return;}
     const k=groups[grpPay(p)]?grpPay(p):'cash';groups[k].res.push(r);groups[k].amt+=net;groups[k].part[r.id]=net;});
-  const total=res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-c);},0);
+  const total=res.reduce((s,r)=>{const c=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,prixMoi(r)-c);},0);
   let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
   Object.entries(groups).forEach(([key,g2])=>{
     if(key==='aconfirmer'&&!g2.res.length)return;
@@ -3603,7 +3738,7 @@ function saveClient(){
 function showDetailClient(id){
   const c=db.clients.find(x=>x.id===id);if(!c)return;
   const n=cntRes(c.nom),vip=isVip(c.nom);
-  const gains=db.reservations.filter(r=>r.clientNom===c.nom&&r.statut!=='annule').reduce((s,r)=>{const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,parseFloat(r.prix||0)-comm);},0);
+  const gains=db.reservations.filter(r=>r.clientNom===c.nom&&r.statut!=='annule').reduce((s,r)=>{const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return s+Math.max(0,prixMoi(r)-comm);},0);
   const last=db.reservations.filter(r=>r.clientNom===c.nom).sort((a,b)=>new Date(b.dateAller)-new Date(a.dateAller)).slice(0,3);
   sv('dc-title',c.nom+(vip?' ⭐':'')+(c.blacklist?' ⛔':''));
   const dc=g('dc-content');
@@ -4053,7 +4188,7 @@ function exportICS(r){
   ].filter(Boolean);
   const descAller=escDesc(linesAller.join('\n'));
   // Titre : 🛫 HH:MM - Zaventem - NomClient  OU  🛬 HH:MM - Zaventem - NomClient
-  const summaryAller=emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+escH(r.clientNom);
+  const summaryAller=(estConfiee(r)?'🤝 '+r.confieA+' · ':'')+emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+escH(r.clientNom);
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
@@ -4086,7 +4221,7 @@ function exportICS(r){
     ].filter(Boolean);
     const descRetour=escDesc(linesRetour.join('\n'));
     // Titre RETOUR : 🛬 HH:MM - Zaventem - NomClient
-    const summaryRetour='🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+escH(r.clientNom);
+    const summaryRetour=(estConfiee(r)?'🤝 '+r.confieA+' · ':'')+'🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+escH(r.clientNom);
     events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:'+summaryRetour+'\r\nDESCRIPTION:'+descRetour+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
   }
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
@@ -4114,7 +4249,7 @@ function genNoteFrais(){
   if(nc)nc.innerHTML='<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:0.73rem;color:var(--text2);line-height:1.7">'+MOI.nom+' · BCE '+MOI.bce+'<br>'+MOI.adresse+'<br>'+MOI.email+' · '+MOI.tel+'</div><div class="dr"><span class="dr-label">Facturé (net)</span><span class="dr-val c-gold">'+fmt(recettes)+'</span></div><div class="dr"><span class="dr-label">Encaissé ce mois</span><span class="dr-val c-green">'+fmt(enc)+'</span></div><div class="dr"><span class="dr-label">Courses</span><span class="dr-val">'+resNF.length+'</span></div><div class="dr"><span class="dr-label">Km clients facturés</span><span class="dr-val c-blue">'+fmtKm(tKC)+'</span></div><div class="dr"><span class="dr-label">Km réels totaux</span><span class="dr-val c-purple">'+(kmReel?Math.round(kmReel)+' km (compteur)':fmtKm(tKR)+' (estimé)')+'</span></div><div class="dr"><span class="dr-label">Km annuels</span><span class="dr-val">'+fmtKm(getYearKm(curYear))+'</span></div><div class="divider"></div><div class="dr"><span class="dr-label">Carburant</span><span class="dr-val c-red">- '+fmt(diesel)+'</span></div><div class="dr"><span class="dr-label">Péages</span><span class="dr-val c-red">- '+fmt(peages)+'</span></div><div class="dr"><span class="dr-label">Parkings</span><span class="dr-val c-red">- '+fmt(parkings)+'</span></div><div class="dr"><span class="dr-label">Commissions</span><span class="dr-val c-red">- '+fmt(commissions)+'</span></div><div class="dr"><span class="dr-label">Frais exceptionnels</span><span class="dr-val c-red">- '+fmt(fraisT)+'</span></div>'+frais.map(f=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">'+(fi[f.type]||'📦')+' '+(f.desc||f.type)+(f.fournisseur?' · '+f.fournisseur:'')+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(f.montant)+'</span></div>').join('')+'<div class="dr"><span class="dr-label">Charges fixes</span><span class="dr-val c-red">- '+fmt(charges)+'</span></div>'+db.charges.map(c=>'<div class="dr" style="padding-left:12px"><span class="dr-label" style="font-size:0.72rem">· '+escH(c.nom)+'</span><span class="dr-val" style="font-size:0.72rem">- '+fmt(c.montant)+'</span></div>').join('')+'<div class="divider"></div><div class="dr" style="background:var(--bg3);border-radius:var(--radius-xs);padding:12px"><span class="dr-label" style="font-weight:700;color:var(--text);font-size:0.95rem">BÉNÉFICE COMPTABLE</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'" style="font-size:1.2rem;font-family:\'Playfair Display\',serif">'+fmt(benef)+'</span></div><div class="dr" style="padding:10px 0"><span class="dr-label" style="color:var(--text2)">Bénéfice réel (km réels)</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div><div class="divider"></div><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Détail des courses</div>'+resNF.map(r=>{const kmC=getKmClient(r),kmR=getKmReels(r);return'<div class="dr"><span class="dr-label">'+new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'})+' · '+(r.clientNom||'—')+'<br><span style="font-size:0.7rem;color:var(--text3)">'+(r.depart||'').substring(0,16)+'→'+(r.arrivee||'').substring(0,16)+' · '+fmtKm(kmC)+' / '+fmtKm(kmR)+' réels'+(r.source!=='direct'?' · '+r.source:'')+'</span></span><span class="dr-val">'+fmt(r.prix)+(parseFloat(r.commission||0)>0?'<br><span style="font-size:0.68rem;color:var(--red2)">comm.-'+fmt(r.commission)+'</span>':'')+'</span></div>';}).join('');
   openModal('m-note-frais');
 }
-function exportNoteCSV(){const res=getMonthResAller(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,parseFloat(r.prix||0)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
+function exportNoteCSV(){const res=getMonthResAller(curMonth,curYear);const frais=getMonthFrais(curMonth,curYear);let csv='Date;Client;Tel;Source;Commission;Prix_Brut;Prix_Net;Acompte;Solde_Retour;Départ;Arrivée;Départ_Retour;Arrivée_Retour;Type;Km_Client;Km_Réels;Péages;Parking;Paiement;Statut;Bénéfice_Comptable;Bénéfice_Réel\n';res.forEach(r=>{const comm=parseFloat(r.commission||0);const prixNet=Math.max(0,prixMoi(r)-comm);const solde=r.type==='ar-diff'?getEncaisseRetour(r):0;csv+=[new Date(r.dateAller).toLocaleDateString('fr-BE'),r.clientNom||'',r.clientTel||'',r.source||'direct',comm,r.prix,prixNet.toFixed(2),r.acompte||0,solde.toFixed(2),r.depart,r.arrivee,r.departRetour||'',r.arriveeRetour||'',r.type,getKmClient(r).toFixed(1),getKmReels(r).toFixed(1),r.peages||0,r.parking||0,r.paiement||'cash',r.statut||'',getBenef(r).toFixed(2),getBenefReel(r).toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});if(frais.length){csv+='\nFRAIS EXCEPTIONNELS\nDate;Catégorie;Description;Fournisseur;Montant\n';frais.forEach(f=>{csv+=[new Date(f.date).toLocaleDateString('fr-BE'),f.type,f.desc||'',f.fournisseur||'',f.montant].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')+'\n';});}const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_'+MOIS[curMonth]+'_'+curYear+'.csv';a.click();}
 function exportCSV(){genNoteFrais();setTimeout(exportNoteCSV,500);}
 function sauvegardeJSON(){const extra={};['fm_avis_demandes','fm_campagnes'].forEach(k=>{try{const v=localStorage.getItem(k);if(v)extra[k]=v;}catch(e){}});return JSON.stringify(Object.assign({},db,{_local:extra}),null,2);}
 function exportBackup(){localStorage.setItem('fm_last_backup',Date.now().toString());try{if(typeof majBanniereSauvegarde==='function')setTimeout(majBanniereSauvegarde,300);}catch(e){}const blob=new Blob([sauvegardeJSON()],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='facciolini_backup_v52_'+dateLocale()+'.json';a.click();}
@@ -5155,7 +5290,7 @@ function _dureeEstimee(r,sens){
 }
 
 function _creneaux(r){
-  var out=[];
+  var out=[];if(estConfiee(r))return out; /* course confiée : je ne conduis pas */
   function push(dateStr,heure,sens){
     if(!dateStr||!heure) return;
     var parts=String(heure).split(':');
