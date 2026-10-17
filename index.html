@@ -490,7 +490,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     </div>
     <div class="fg"><label class="fl">Qui conduit ?</label><div class="chips" id="r-confie-chips"></div><input type="hidden" id="r-confie" value=""></div>
     <div id="r-confie-opts" style="display:none;border:1px dashed var(--gold);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px">
-      <div style="font-size:0.75rem;color:var(--text2);margin-bottom:8px">🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.</div>
+      <div id="r-confie-trajet-box" style="display:none"><div class="fg"><label class="fl">Il fait quel trajet ?</label>
+        <div class="chips" id="r-confie-trajet-chips">
+          <div class="chip active" onclick="selectChip(this,'r-confie-trajet','');majConfieUI()">Tout (aller + retour)</div>
+          <div class="chip" onclick="selectChip(this,'r-confie-trajet','aller');majConfieUI()">Aller seulement</div>
+          <div class="chip" onclick="selectChip(this,'r-confie-trajet','retour');majConfieUI()">Retour seulement</div>
+        </div><input type="hidden" id="r-confie-trajet" value=""></div>
+        <div class="fg" id="r-confie-part-box" style="display:none"><label class="fl">Prix de son trajet (€)</label><input type="number" class="fi" id="r-confie-part" step="0.01" min="0" oninput="majConfieHint()"></div>
+      </div>
+      <div id="r-confie-info" style="font-size:0.75rem;color:var(--text2);margin-bottom:8px">🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.</div>
       <div class="fg"><label class="fl">Ta commission (€) — 0 si rien</label><input type="number" class="fi" id="r-confie-comm" placeholder="0" step="0.01" min="0" oninput="majConfieHint()"></div>
       <div class="fg"><label class="fl">Qui encaisse le client ?</label>
         <div class="chips" id="r-confie-enc-chips">
@@ -507,9 +515,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="res-section-title">🗺️ Trajet</div>
     <div class="fg"><label class="fl">Type de course</label>
       <div class="chips" id="r-type-chips">
-        <div class="chip active" onclick="selectChip(this,'r-type','aller');updResType()">Trajet simple</div>
-        <div class="chip" onclick="selectChip(this,'r-type','ar-jour');updResType()">A/R même jour</div>
-        <div class="chip" onclick="selectChip(this,'r-type','ar-diff');updResType()">A/R date différente</div>
+        <div class="chip active" onclick="selectChip(this,'r-type','aller');updResType();try{majConfieUI()}catch(e){}">Trajet simple</div>
+        <div class="chip" onclick="selectChip(this,'r-type','ar-jour');updResType();try{majConfieUI()}catch(e){}">A/R même jour</div>
+        <div class="chip" onclick="selectChip(this,'r-type','ar-diff');updResType();try{majConfieUI()}catch(e){}">A/R date différente</div>
       </div>
       <input type="hidden" id="r-type" value="aller">
     </div>
@@ -1119,13 +1127,19 @@ function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!=
    Encaissement : 'partenaire' = il encaisse le client et me doit ma commission ;
                   'moi'        = le client m'a payé (prépayé) et je dois verser prix − commission. */
 function estConfiee(r){return !!(r&&r.confieA);}
-function prixMoi(r){return estConfiee(r)?(parseFloat(r.confieCommission)||0):(parseFloat(r.prix||0)||0);}
+/* Trajet confié sur un aller-retour : '' = toute la course, 'aller' ou 'retour' = un seul trajet */
+function confTrajet(r){return (r&&r.confieA&&(r.type==='ar-diff'||r.type==='ar-jour')&&(r.confieTrajet==='aller'||r.confieTrajet==='retour'))?r.confieTrajet:'';}
+function estConfieeTout(r){return estConfiee(r)&&!confTrajet(r);}
+function confieSens(r,sens){if(!estConfiee(r))return false;var t=confTrajet(r);return !t||t===sens;}
+/* Prix de ce que roule le partenaire (moitié du prix par défaut quand il ne fait qu'un trajet) */
+function prixConfie(r){var p=parseFloat(r&&r.prix)||0;if(!confTrajet(r))return p;var x=parseFloat(r.confiePart);return (r.confiePart!==''&&r.confiePart!=null&&isFinite(x)&&x>=0)?Math.min(x,p):Math.round(p/2*100)/100;}
+function prixMoi(r){var p=parseFloat(r&&r.prix||0)||0;return estConfiee(r)?Math.max(0,p-prixConfie(r))+(parseFloat(r.confieCommission)||0):p;}
 function confComm(r){return parseFloat(r&&r.confieCommission)||0;}
 /* Solde de la course confiée, vu de moi : + il me doit, − je lui dois (0 si réglé) */
-function confDu(r){if(!estConfiee(r)||r.confieRegle||r.statut==='annule')return 0;var c=confComm(r);return r.confieEncaisse==='moi'?-(Math.max(0,(parseFloat(r.prix)||0)-c)):c;}
+function confDu(r){if(!estConfiee(r)||r.confieRegle||r.statut==='annule')return 0;var c=confComm(r);return r.confieEncaisse==='moi'?-(Math.max(0,prixConfie(r)-c)):c;}
 function telPartenaire(nom){var p=(db.partners||[]).find(function(x){return x.nom===nom;});return p&&p.tel?p.tel:'';}
-function getKmClient(r){if(estConfiee(r))return 0;let km=parseFloat(r.distance||0);if(r.type==='ar-jour')km+=parseFloat(r.distanceRetour||r.distance||0);else if(r.type==='ar-diff')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
-function getKmReels(r){if(estConfiee(r))return 0;let km=parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(r.type==='ar-jour'){km+=parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}return km;}
+function getKmClient(r){if(estConfieeTout(r))return 0;var t=confTrajet(r);let km=t==='aller'?0:parseFloat(r.distance||0);if((r.type==='ar-jour'||r.type==='ar-diff')&&t!=='retour')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
+function getKmReels(r){if(estConfieeTout(r))return 0;var t=confTrajet(r);let km=t==='aller'?0:parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(t!=='retour'){if(r.type==='ar-jour'){km+=(t==='aller'?parseFloat(r.kmPickupRetour||0):0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}}return km;}
 function getBenef(r){const v=getV(r.vehicule);return prixMoi(r)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getBenefReel(r){const v=getV(r.vehicule);return prixMoi(r)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getV(idx){return db.settings.vehicles[parseInt(idx||0)]||db.settings.vehicles[0];}
@@ -1180,11 +1194,14 @@ function completerKmAuto(r){
     if(n(r.kmVideRetour)===0&&(r.kmVideRetourType||'maison')==='maison'&&aR)set('kmVideRetour',kmRoute(aR,H));
   }else if(r.type==='ar-jour'){
     if(n(r.kmVideRetour)===0&&(r.kmVideRetourType||'maison')==='maison'&&dep)set('kmVideRetour',kmRoute(dep,H));
+    /* trajet partagé : je fais l'aller seul → je rentre à vide ; je fais le retour seul → je vais d'abord le chercher */
+    if(confTrajet(r)==='retour'&&n(r.kmVideAller)===0&&arr)set('kmVideAller',kmRoute(arr,H));
+    if(confTrajet(r)==='aller'&&n(r.kmPickupRetour)===0&&arr)set('kmPickupRetour',kmRoute(H,arr));
   }
   if(auto.length)r.kmAuto=auto;
   return r;
 }
-function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfiee(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
+function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfieeTout(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
 function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+prixHT(r)*k:s;},0);}
 function moisActif(m,y){
   // Un mois compte dans l'année dès que l'activité a commencé (1re course, plein ou frais)
@@ -1275,7 +1292,10 @@ function compteurA(vIdx,t){const P=pleinsAvecKm(vIdx);const TOL=3*86400000;
   for(let i=0;i<P.length-1;i++){if(P[i].t<=t&&P[i+1].t>=t){const a=P[i],b=P[i+1];if(b.km<a.km)return null;return b.t===a.t?a.km:a.km+(b.km-a.km)*(t-a.t)/(b.t-a.t);}}return null;}
 function getKmPleinsMois(m,y,vIdx){const d=compteurA(vIdx,new Date(y,m,1,0,0).getTime()),f=compteurA(vIdx,new Date(y,m+1,1,0,0).getTime());if(d==null||f==null||f<d)return null;return {debut:Math.round(d),fin:Math.round(f),km:Math.round(f-d)};}
 function dernierPlein(vIdx,avantDate){const P=(db.carburant||[]).filter(c=>parseInt(c.vehicule||0)===vIdx&&parseFloat(c.km)>0&&c.date&&(!avantDate||c.date<=avantDate)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));return P.length?P[P.length-1]:null;}
+/* Trajet partagé avec un partenaire : mon trajet rapporte son prix, le sien ma commission */
+function encPartage(r,sens){const t=confTrajet(r);if(!t)return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;const c=confComm(r),moi=Math.max(0,(parseFloat(r.prix)||0)-prixConfie(r)-comm);if(r.type==='ar-jour')return sens==='aller'?Math.round((moi+c)*100)/100:0;return Math.round((t===sens?c:moi)*100)/100;}
 function getEncaisseAller(r){
+  {const ep=encPartage(r,'aller');if(ep!==null)return ep;}
   const p=prixMoi(r),a=estConfiee(r)?0:parseFloat(r.acompte||0);
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
   const net=Math.max(0,p-comm); // net encaissé après commission (1 seule fois sur la course)
@@ -1285,6 +1305,7 @@ function getEncaisseAller(r){
   return Math.round(net/2*100)/100;
 }
 function getEncaisseRetour(r){
+  {const ep=encPartage(r,'retour');if(ep!==null)return ep;}
   const p=prixMoi(r),a=estConfiee(r)?0:parseFloat(r.acompte||0);
   const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;
   const net=Math.max(0,p-comm);
@@ -1588,7 +1609,7 @@ function renderRes(){
     if(r.paiement==='aconfirmer'&&courseCommencee(r))html+='<span class="badge badge-orange">⏳ paiement ?</span>';
     {var _g=groupeCourse(r);if(_g.length>1)html+='<span class="badge badge-blue" title="Groupe sur plusieurs véhicules">🚐 '+(_g.indexOf(r)+1)+'/'+_g.length+'</span>';}
     {var _rk=rentaKm(r);if(_rk!==null&&_rk<SEUIL_RENTA&&r.statut!=='annule')html+='<span class="badge badge-red" title="Gain par km roulé (approche et retour à vide compris)">⚠️ '+_rk.toFixed(2).replace('.',',')+' €/km</span>';}
-    if(estConfiee(r))html+='<span class="badge badge-gold" title="Course confiée">🤝 '+escH(r.confieA)+'</span>';
+    if(estConfiee(r))html+='<span class="badge badge-gold" title="Course confiée">🤝 '+escH(r.confieA)+(confTrajet(r)?' ('+confTrajet(r)+')':'')+'</span>';
     if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
     if(r.type==='ar-diff'&&getEncaisseRetour(r)>0){var dr2=new Date(r.dateRetour);dr2.setHours(0,0,0,0);var dj=Math.round((dr2-new Date().setHours(0,0,0,0))/86400000);if(dj<=3&&dj>=0)html+='<span class="badge badge-orange">💰 Solde '+fmt(getEncaisseRetour(r))+(dj===0?' auj.':(dj===1?' demain':' J+'+dj))+'</span>';}
@@ -1889,10 +1910,10 @@ function renderPartners(){
               var _cc=confComm(r),_du=confDu(r);
               html+='<div style="background:var(--bg3);border-radius:var(--radius-xs);padding:10px;margin-bottom:6px;border:1px dashed var(--gold)">';
               html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1">';
-              html+='<div style="font-weight:700;font-size:0.85rem">🤝 Confiée · '+escH(r.clientNom)+'</div>';
+              html+='<div style="font-weight:700;font-size:0.85rem">🤝 Confiée · '+escH(r.clientNom)+(confTrajet(r)?' <span style="font-weight:600;color:var(--text3)">('+confTrajet(r)+' seulement)</span>':'')+'</div>';
               html+='<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">📅 '+new Date(r.dateAller).toLocaleDateString("fr-BE")+(r.heure?" à "+r.heure:"")+' · '+(r.confieEncaisse==='moi'?'payé sur ton compte':'il encaisse le client')+'</div>';
               html+='</div><div style="text-align:right;min-width:90px">';
-              html+='<div style="font-weight:800;color:var(--gold2);font-family:Playfair Display,serif">'+fmt(r.prix)+'</div>';
+              html+='<div style="font-weight:800;color:var(--gold2);font-family:Playfair Display,serif">'+fmt(prixConfie(r))+'</div>';
               html+='<div style="font-size:0.7rem;color:var(--text3)">Ta commission : '+fmt(_cc)+'</div>';
               html+='<div style="font-size:0.7rem;color:'+(r.confieRegle||_du===0?'var(--green2)':(_du>0?'var(--green2)':'var(--red2)'))+'">'+(r.confieRegle||_du===0?'✓ Réglé':(_du>0?'Il te doit '+fmt(_du):'Tu lui dois '+fmt(-_du)))+'</div>';
               html+='</div></div></div>';
@@ -2177,7 +2198,7 @@ function resetResForm(){
   const rha=g('r-heure-aller');const nowTime=new Date().toTimeString().slice(0,5);if(rha)rha.value=nowTime;updDtDisplay('r-heure-aller',nowTime);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/\'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value='direct';}
   renderFavChips();updKmRecap();
-  try{renderConfieChips('');const cc=g('r-confie-comm');if(cc)cc.value='';setChips('r-confie-enc-chips','r-confie-enc','partenaire');majConfieUI();}catch(e){}
+  try{renderConfieChips('');const cc=g('r-confie-comm');if(cc)cc.value='';setChips('r-confie-enc-chips','r-confie-enc','partenaire');setChips('r-confie-trajet-chips','r-confie-trajet','');const cp=g('r-confie-part');if(cp)cp.value='';majConfieUI();}catch(e){}
   // Reset nouveau formulaire
   const adv=g('res-advanced');if(adv)adv.style.display='none';
   const btnAdv=g('btn-adv-toggle');if(btnAdv)btnAdv.textContent='⚙️ Options avancées';
@@ -2224,12 +2245,24 @@ function renderConfieChips(sel){
   c.innerHTML='<div class="chip'+(sel?'':' active')+'" onclick="selectChip(this,\'r-confie\',\'\');majConfieUI()">🚗 Moi</div>'+(db.partners||[]).map(function(p){return '<div class="chip'+(sel===p.nom?' active':'')+'" data-nom="'+escH(p.nom)+'" onclick="selectChip(this,\'r-confie\',this.dataset.nom);majConfieUI()">🤝 '+escH(p.nom)+'</div>';}).join('');
   var h=g('r-confie');if(h)h.value=sel;majConfieUI();
 }
-function majConfieUI(){var v=(g('r-confie')||{}).value||'';var o=g('r-confie-opts');if(o)o.style.display=v?'block':'none';majConfieHint();}
+function confieTrajetForm(){var ty=(g('r-type')||{}).value||'aller';if(ty!=='ar-diff'&&ty!=='ar-jour')return '';return (g('r-confie-trajet')||{}).value||'';}
+function majConfieUI(){var v=(g('r-confie')||{}).value||'';var o=g('r-confie-opts');if(o)o.style.display=v?'block':'none';
+  var ty=(g('r-type')||{}).value||'aller',ar=ty==='ar-diff'||ty==='ar-jour',t=confieTrajetForm();
+  var tb=g('r-confie-trajet-box');if(tb)tb.style.display=ar?'block':'none';
+  var pb=g('r-confie-part-box');if(pb)pb.style.display=t?'block':'none';
+  var pi=g('r-confie-part');if(pi){var prix=parseFloat((g('r-prix')||{}).value||0)||0;pi.placeholder=prix?String(Math.round(prix/2*100)/100)+' (moitié)':'moitié du prix';}
+  var inf=g('r-confie-info');if(inf)inf.textContent=t?((t==='aller'?"🤝 Il fait l'aller, tu fais le retour":"🤝 Il fait le retour, tu fais l'aller")+' : tes chiffres gardent ton trajet + ta commission. Km et horaires : seulement ton trajet.'):"🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.";
+  majConfieHint();}
 function majConfieHint(){
   var el=g('r-confie-hint');if(!el)return;var v=(g('r-confie')||{}).value||'';if(!v){el.textContent='';return;}
   var prix=parseFloat((g('r-prix')||{}).value||0)||0,c=parseFloat((g('r-confie-comm')||{}).value||0)||0,enc=(g('r-confie-enc')||{}).value||'partenaire';
-  if(enc==='moi'){el.style.color='var(--red2)';el.textContent='→ Tu devras verser '+fmt(Math.max(0,prix-c))+' à '+v+(c>0?' (tu gardes '+fmt(c)+')':'');}
-  else{el.style.color='var(--green2)';el.textContent=c>0?('→ '+v+' encaisse '+fmt(prix)+' et te doit '+fmt(c)):('→ '+v+' encaisse '+fmt(prix)+', rien pour toi');}
+  var t=confieTrajetForm(),total=prix;
+  if(t){var pv=(g('r-confie-part')||{}).value;var px=parseFloat(pv);prix=(pv!==''&&isFinite(px)&&px>=0)?Math.min(px,total):Math.round(total/2*100)/100;}
+  var pre=t?('Ton trajet : '+fmt(Math.max(0,total-prix))+' · son '+t+' : '+fmt(prix)+'\n'):'';
+  el.style.whiteSpace='pre-line';
+  if(enc==='moi'){el.style.color='var(--red2)';el.textContent=pre+'→ Tu devras verser '+fmt(Math.max(0,prix-c))+' à '+v+(c>0?' (tu gardes '+fmt(c)+')':'');}
+  else{el.style.color='var(--green2)';el.textContent=pre+(c>0?('→ '+v+' encaisse '+fmt(prix)+' et te doit '+fmt(c)):('→ '+v+' encaisse '+fmt(prix)+', rien pour toi'));}
+
 }
 function updSourceUI(){const s=g('r-source').value;const ro=g('r-partner-opts');if(ro)ro.style.display=s!=='direct'?'block':'none';updCalc();}
 function updPartnerType(){const t=g('r-partner-type').value;const rcb=g('r-commission-box');if(rcb)rcb.style.display=t==='commission'?'block':'none';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display=t==='prepaye'?'block':'none';if(t==='prepaye')setChips('r-paiement-chips','r-paiement','prepaye');else if(g('r-paiement').value==='prepaye')setChips('r-paiement-chips','r-paiement','aconfirmer');updCalc();}
@@ -2256,7 +2289,7 @@ function debutCourse(r){const d=new Date((r.dateAller||'')+'T'+(r.heure||'00:00'
 function courseCommencee(r){const d=debutCourse(r);return !!d&&d.getTime()<=Date.now();}
 const SEUIL_RENTA=0.50;
 function rentaKm(r){const km=getKmReels(r);if(!(km>0))return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return (prixHT(r)-comm-(parseFloat(r.peages)||0)-(parseFloat(r.parking)||0))/km;}
-function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfiee(r)&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
+function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfieeTout(r)&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
 function confirmerPaiement(id,mode){
   const r=db.reservations.find(x=>x.id===id);if(!r)return;
   if(mode==='mixte'){editRes(id);setTimeout(()=>{const c=[...(g('r-paiement-chips')?.children||[])].find(x=>(x.getAttribute('onclick')||'').includes("'mixte'"));if(c)c.click();},150);return;}
@@ -2564,11 +2597,13 @@ function saveReservationCore(){
     stopAdresse:g('r-stop-adresse')?.value.trim()||'',
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
     duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90),
-    confieA:(g('r-confie')?.value||''),confieCommission:(g('r-confie')?.value?(parseFloat(g('r-confie-comm')?.value||0)||0):0),confieEncaisse:(g('r-confie')?.value?(g('r-confie-enc')?.value||'partenaire'):'')
+    confieA:(g('r-confie')?.value||''),confieCommission:(g('r-confie')?.value?(parseFloat(g('r-confie-comm')?.value||0)||0):0),confieEncaisse:(g('r-confie')?.value?(g('r-confie-enc')?.value||'partenaire'):''),
+    confieTrajet:(g('r-confie')?.value?confieTrajetForm():''),confiePart:''
   };
-  if(r.confieA&&existingR.confieA!==r.confieA)delete existingR.confieRegle; /* nouveau partenaire : à régler */
+  if(r.confieTrajet){const _pv=g('r-confie-part')?.value;const _px=parseFloat(_pv);r.confiePart=(_pv!==''&&_pv!=null&&isFinite(_px)&&_px>=0)?_px:'';}
+  if(r.confieA&&(existingR.confieA!==r.confieA||(existingR.confieTrajet||'')!==(r.confieTrajet||'')))delete existingR.confieRegle; /* nouveau partenaire ou autre trajet : à régler */
   if(!r.confieA){delete existingR.confieRegle;}
-  if(r.confieA&&(r.paiement==='aconfirmer'))r.paiement=r.confieEncaisse==='moi'?'prepaye':'cash';
+  if(r.confieA&&!r.confieTrajet&&(r.paiement==='aconfirmer'))r.paiement=r.confieEncaisse==='moi'?'prepaye':'cash';
   // Coordonnées des adresses (servent aux km automatiques)
   (function(){const ll=(k,a,b)=>{const c=acC[k];const la=c?c.lat:parseFloat(g(a)?.value),lo=c?c.lon:parseFloat(g(b)?.value);return (isFinite(la)&&isFinite(lo)&&la&&lo)?[+la,+lo]:[null,null];};
     const d=ll('r-depart','r-dep-lat','r-dep-lon'),a=ll('r-arrivee','r-arr-lat','r-arr-lon');
@@ -2585,7 +2620,7 @@ function saveReservationCore(){
   if(editId&&Array.isArray(existingR.kmAuto)&&(r.depart!==existingR.depart||r.arrivee!==existingR.arrivee||r.departRetour!==existingR.departRetour||r.arriveeRetour!==existingR.arriveeRetour||r.type!==existingR.type)){
     existingR.kmAuto.forEach(k=>{if(parseFloat(r[k]||0)===parseFloat(existingR[k]||0))r[k]=0;});r.kmAuto=[];
   }
-  if(!estConfiee(r)){try{completerKmAuto(r);}catch(e){console.error('km auto',e);}}
+  if(!estConfieeTout(r)){try{completerKmAuto(r);}catch(e){console.error('km auto',e);}}
   try{
     if(!(r.clientTel||'').trim()){
       if(!confirm('📱 AUCUN NUMÉRO DE TÉLÉPHONE\n\nSans numéro, vous ne pourrez envoyer ni rappel J-7, ni rappel J-1, ni confirmation à ce client.\n\nEnregistrer quand même ?')){
@@ -2707,7 +2742,7 @@ function showDetailRes(id){
     h+='</span></div>';
     h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';
     {var _gr=groupeCourse(r);if(_gr.length>1)h+='<div class="dr"><span class="dr-label">🚐 Groupe</span><span class="dr-val">'+_gr.length+' véhicules · total '+fmt(_gr.reduce(function(s,x){return s+(parseFloat(x.prix)||0);},0))+' · '+_gr.reduce(function(s,x){return s+(parseInt(x.passagers)||0);},0)+' pers.</span></div>';}
-    if(estConfiee(r)){var _d=confDu(r);h+='<div class="dr" style="border:1px dashed var(--gold);border-radius:8px;padding:6px 8px"><span class="dr-label">🤝 Confiée à</span><span class="dr-val">'+escH(r.confieA)+' · commission '+fmt(confComm(r))+'<br><span style="font-size:0.72rem;color:var(--text3)">'+(r.confieEncaisse==='moi'?'Payé sur ton compte':'Il encaisse le client')+' · '+(_d===0?'✓ réglé':(_d>0?'il te doit '+fmt(_d):'tu lui dois '+fmt(-_d)))+'</span></span></div>';}
+    if(estConfiee(r)){var _d=confDu(r);h+='<div class="dr" style="border:1px dashed var(--gold);border-radius:8px;padding:6px 8px"><span class="dr-label">🤝 Confiée à</span><span class="dr-val">'+escH(r.confieA)+(confTrajet(r)?' · '+confTrajet(r)+' seulement ('+fmt(prixConfie(r))+')':'')+' · commission '+fmt(confComm(r))+'<br><span style="font-size:0.72rem;color:var(--text3)">'+(r.confieEncaisse==='moi'?'Payé sur ton compte':'Il encaisse le client')+' · '+(_d===0?'✓ réglé':(_d>0?'il te doit '+fmt(_d):'tu lui dois '+fmt(-_d)))+'</span></span></div>';}
     if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
     h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'🛬 Récupération':'Aller')+'</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
     if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'✈️ Dépose':'Retour')+'</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
@@ -2768,7 +2803,7 @@ function showDetailRes(id){
   try{majBoutonsStatut(r);}catch(e){}
   // Bouton programmer messages (J-7 / J-1)
   var drpa=g('dr-partenaire-btn');
-  if(drpa){var _fut=(r.dateAller||'')>=dateLocale()||(r.dateRetour||'')>=dateLocale();drpa.style.display=(estConfiee(r)&&_fut)?'inline-flex':'none';drpa.onclick=function(){envoyerRappelPartenaire(id,(r.dateAller||'')>=dateLocale()?'aller':'retour');};}
+  if(drpa){var _fut=(r.dateAller||'')>=dateLocale()||(r.dateRetour||'')>=dateLocale();drpa.style.display=(estConfiee(r)&&_fut)?'inline-flex':'none';drpa.onclick=function(){envoyerRappelPartenaire(id,confTrajet(r)||((r.dateAller||'')>=dateLocale()?'aller':'retour'));};}
   var drp=g('dr-prog-btn');
   if(drp){var _pl=progMsgsListe(r);var _ok=_pl.some(function(x){return !x.tard;});drp.style.display=_ok?'inline-flex':'none';drp.onclick=function(){closeModal('m-detail-res');openProgMsgs(id);};}
   // Bouton rappel
@@ -2869,8 +2904,8 @@ function editRes(id){
   if(sc){sc.innerHTML='<div class="chip'+(r.source==='direct'?' active':'')+'" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip'+(r.source===p.nom?' active':'')+'" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value=r.source||'direct';}
   updSourceUI();
   if(r.source!=='direct'){setChips('r-partner-type-chips','r-partner-type',r.partnerType||'commission');updPartnerType();const ce=g('r-commission');if(ce)ce.value=r.commission||'';}
-  try{renderConfieChips(r.confieA||'');const cc=g('r-confie-comm');if(cc)cc.value=r.confieA?(r.confieCommission||''):'';setChips('r-confie-enc-chips','r-confie-enc',r.confieEncaisse||'partenaire');majConfieUI();}catch(e){}
-  setChips('r-type-chips','r-type',r.type||'aller');acC['_lastType']=r.type||'aller';setChips('r-service-chips','r-service',r.service||'depose');
+  try{renderConfieChips(r.confieA||'');const cc=g('r-confie-comm');if(cc)cc.value=r.confieA?(r.confieCommission||''):'';setChips('r-confie-enc-chips','r-confie-enc',r.confieEncaisse||'partenaire');setChips('r-confie-trajet-chips','r-confie-trajet',r.confieA?(r.confieTrajet||''):'');const cp=g('r-confie-part');if(cp)cp.value=(r.confieA&&r.confieTrajet&&r.confiePart!=null)?r.confiePart:'';majConfieUI();}catch(e){}
+  setChips('r-type-chips','r-type',r.type||'aller');acC['_lastType']=r.type||'aller';try{majConfieUI();}catch(e){}setChips('r-service-chips','r-service',r.service||'depose');
   g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';updDtDisplay('r-date-aller',r.dateAller||'');g('r-heure-aller').value=r.heure||'';updDtDisplay('r-heure-aller',r.heure||'');
   g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';
   if(r.depLat&&r.depLon){acC['r-depart']={lat:r.depLat,lon:r.depLon};if(g('r-dep-lat'))g('r-dep-lat').value=r.depLat;if(g('r-dep-lon'))g('r-dep-lon').value=r.depLon;}
@@ -3055,22 +3090,23 @@ function buildMsgRappel(r,sens,joursForces){
 
 /* ===== RAPPEL AU PARTENAIRE (course confiée) ===== */
 function msgPartenaire(r,sens){
-  var ret=sens==='retour'&&r.type==='ar-diff'&&r.dateRetour;
-  var d=ret?r.dateRetour:r.dateAller,h=ret?(r.heureRetour||''):(r.heure||'');
+  var ret=sens==='retour'&&((r.type==='ar-diff'&&r.dateRetour)||r.type==='ar-jour');
+  var d=(ret&&r.type==='ar-diff')?r.dateRetour:r.dateAller,h=ret?(r.heureRetour||''):(r.heure||'');
   var dep=ret?(r.departRetour||r.arrivee||''):(r.depart||''),arr=ret?(r.arriveeRetour||r.depart||''):(r.arrivee||'');
   var vol=ret?(r.volRetour||''):(r.vol||'');
   var dateStr=d?new Date(d+'T12:00').toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}):'';
   var auj=dateLocale(),dem=new Date();dem.setDate(dem.getDate()+1);var demStr=dem.getFullYear()+'-'+String(dem.getMonth()+1).padStart(2,'0')+'-'+String(dem.getDate()).padStart(2,'0');
   var quand=d===demStr?'demain':(d===auj?"aujourd'hui":'le '+dateStr);
   var prix=parseFloat(r.prix)||0,c=confComm(r);
-  var aEnc=r.type==='ar-diff'?Math.round(prix/2*100)/100:prix;
+  var aEnc=confTrajet(r)?prixConfie(r):(r.type==='ar-diff'?Math.round(prix/2*100)/100:prix);
   var m='Bonjour 👋\n\nPetit rappel pour la course que je t\'ai confiée '+quand+' :\n\n';
   m+='📅 '+dateStr+(h?' à '+h:'')+'\n';
   m+='👤 Client : '+(r.clientNom||'')+(r.clientTel?' — 📞 '+r.clientTel:'')+'\n';
   m+='🚗 Prise en charge : '+dep+'\n';
   m+='📍 Destination : '+arr+'\n';
   if(vol)m+='✈️ Vol : '+vol+'\n';
-  if(r.type==='ar-jour'&&r.heureRetour&&!ret)m+='🔁 Retour le même jour : '+r.heureRetour+(r.volRetour?' (vol '+r.volRetour+')':'')+'\n';
+  if(confTrajet(r))m+='🔁 '+(ret?"L'aller":'Le retour')+", c'est moi qui m'en occupe.\n";
+  if(r.type==='ar-jour'&&r.heureRetour&&!ret&&!confTrajet(r))m+='🔁 Retour le même jour : '+r.heureRetour+(r.volRetour?' (vol '+r.volRetour+')':'')+'\n';
   var pax=parseInt(r.passagers)||1;m+='👥 '+pax+' passager'+(pax>1?'s':'');
   var gv=parseInt(r.grandesValises)||0,pv=parseInt(r.petitesValises)||0;if(gv||pv)m+=' · 🧳 '+(gv?gv+' grande'+(gv>1?'s':''):'')+(gv&&pv?' + ':'')+(pv?pv+' petite'+(pv>1?'s':''):'');
   if(parseInt(r.siegesBebe)>0)m+=' · 👶 '+r.siegesBebe+' siège(s) bébé';
@@ -3078,7 +3114,7 @@ function msgPartenaire(r,sens){
   if(r.stopAdresse)m+='📍 Arrêt : '+r.stopAdresse+(r.stopNom?' ('+r.stopNom+(r.stopTel?' — '+r.stopTel:'')+')':'')+'\n';
   m+='\n';
   if(r.confieEncaisse==='moi')m+='💶 Déjà payé par le client — rien à encaisser.\n';
-  else{m+='💶 À encaisser auprès du client : '+fmt(aEnc)+(r.type==='ar-diff'?' (pour ce trajet)':'')+'\n';if(c>0)m+='🤝 Commission convenue : '+fmt(c)+'\n';}
+  else{m+='💶 À encaisser auprès du client : '+fmt(aEnc)+(r.type==='ar-diff'||confTrajet(r)?' (pour ce trajet)':'')+'\n';if(c>0)m+='🤝 Commission convenue : '+fmt(c)+'\n';}
   if(r.notes)m+='📋 '+r.notes+'\n';
   m+='\nMerci et bonne route !\nJean-François — Facciolini Mobility';
   return m;
@@ -3121,8 +3157,10 @@ function progMsgsListe(r){
     ajoute(r.dateRetour,'retour','rJ1',1,'Retour — la veille');
   }
   if(estConfiee(r)){
-    ajoute(r.dateAller,'aller','pJ1',1,'🤝 '+r.confieA+' — la veille'+(r.type==='ar-diff'?' (aller)':''));
-    if(r.type==='ar-diff'&&r.dateRetour)ajoute(r.dateRetour,'retour','pJ1r',1,'🤝 '+r.confieA+' — la veille (retour)');
+    var _t=confTrajet(r);
+    if(_t!=='retour')ajoute(r.dateAller,'aller','pJ1',1,'🤝 '+r.confieA+' — la veille'+(r.type==='ar-diff'||_t?' (aller)':''));
+    if(_t==='retour')ajoute(r.type==='ar-diff'?r.dateRetour:r.dateAller,'retour','pJ1r',1,'🤝 '+r.confieA+' — la veille (retour)');
+    else if(!_t&&r.type==='ar-diff'&&r.dateRetour)ajoute(r.dateRetour,'retour','pJ1r',1,'🤝 '+r.confieA+' — la veille (retour)');
     out.forEach(function(x){if(x.cle==='pJ1'||x.cle==='pJ1r')x.dest='partenaire';});
   }
   return out;
@@ -4188,7 +4226,7 @@ function exportICS(r){
   ].filter(Boolean);
   const descAller=escDesc(linesAller.join('\n'));
   // Titre : 🛫 HH:MM - Zaventem - NomClient  OU  🛬 HH:MM - Zaventem - NomClient
-  const summaryAller=(estConfiee(r)?'🤝 '+r.confieA+' · ':'')+emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+escH(r.clientNom);
+  const summaryAller=(confieSens(r,'aller')?'🤝 '+r.confieA+' · ':'')+emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+escH(r.clientNom);
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
@@ -4221,7 +4259,7 @@ function exportICS(r){
     ].filter(Boolean);
     const descRetour=escDesc(linesRetour.join('\n'));
     // Titre RETOUR : 🛬 HH:MM - Zaventem - NomClient
-    const summaryRetour=(estConfiee(r)?'🤝 '+r.confieA+' · ':'')+'🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+escH(r.clientNom);
+    const summaryRetour=(confieSens(r,'retour')?'🤝 '+r.confieA+' · ':'')+'🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+escH(r.clientNom);
     events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:'+summaryRetour+'\r\nDESCRIPTION:'+descRetour+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
   }
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
@@ -5290,9 +5328,10 @@ function _dureeEstimee(r,sens){
 }
 
 function _creneaux(r){
-  var out=[];if(estConfiee(r))return out; /* course confiée : je ne conduis pas */
+  var out=[];if(estConfieeTout(r))return out; /* course confiée : je ne conduis pas */
   function push(dateStr,heure,sens){
     if(!dateStr||!heure) return;
+    if(confieSens(r,sens)) return; /* ce trajet-là, c'est le partenaire */
     var parts=String(heure).split(':');
     if(parts.length<2) return;
     var d=new Date(dateStr);
