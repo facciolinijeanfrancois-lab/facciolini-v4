@@ -214,6 +214,76 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .fab:active{transform:scale(0.92)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style id="desktop-css">
+/* =====================================================================
+   MODE ORDINATEUR (Mac, PC, tablette en paysage) — à partir de 1024 px
+   Le téléphone n'est pas concerné : tout est dans ce media query.
+   - Menu à gauche au lieu de la barre en bas
+   - Contenu sur toute la largeur, listes en plusieurs colonnes
+   - Tableau de bord sur deux colonnes
+   - Fenêtres au centre de l'écran (et plus larges) au lieu de remonter du bas
+   ===================================================================== */
+@media (min-width:1024px){
+  :root{--side-w:236px}
+  #app-wrapper{max-width:none}
+
+  /* Barre du haut : à droite du menu, toute la largeur */
+  .topbar{left:var(--side-w);right:0;transform:none;width:auto;max-width:none;padding-left:32px;padding-right:32px}
+
+  /* Menu vertical à gauche */
+  .navbar{top:0;bottom:0;left:0;transform:none;width:var(--side-w);max-width:none;height:auto;
+    flex-direction:column;justify-content:flex-start;align-items:stretch;gap:4px;
+    padding:calc(var(--top-h) + 18px) 14px 18px;border-top:none;border-right:1px solid rgba(255,255,255,0.06)}
+  .navbar::before{content:'Facciolini Mobility';position:absolute;top:0;left:0;right:0;height:var(--top-h);
+    display:flex;align-items:center;padding-left:22px;font-family:'Playfair Display',serif;font-weight:900;
+    font-size:1.05rem;color:var(--gold);border-bottom:1px solid rgba(255,255,255,0.06)}
+  .nav-btn{flex:none;flex-direction:row;justify-content:flex-start;gap:14px;padding:12px 16px;border-radius:12px;
+    font-size:0.86rem;letter-spacing:0.02em;text-transform:none;height:auto;transition:background .15s,color .15s}
+  .nav-btn .nav-icon{width:20px;height:20px;flex:none}
+  .nav-btn:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+  .nav-btn.active{background:rgba(201,168,76,0.12)}
+  .nav-btn.active::before{top:10px;bottom:10px;left:0;transform:none;width:3px;height:auto;border-radius:0 4px 4px 0}
+
+  /* Nom de l'app : déjà dans le menu, on garde la barre du haut pour les actions */
+  .topbar-name,.topbar-sub{display:none}
+
+  /* Zone de contenu */
+  .content{left:var(--side-w);right:0;transform:none;width:auto;max-width:none;bottom:0}
+  .page{max-width:1280px;margin:0 auto;padding:26px 36px 80px}
+
+  /* Listes en colonnes : courses, clients, partenaires, pleins, frais, historique */
+  #res-list,#clients-list,#partners-list,#carb-list,#frais-list,#partner-history{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start}
+  #res-list>.item,#clients-list>.item,#partner-history>.item,#partners-list>.card,#carb-list>*,#frais-list>*{margin-bottom:0}
+  #res-list>.empty,#clients-list>.empty,#carb-list>.empty,#frais-list>.empty,#partner-history>:not(.item){grid-column:1/-1}
+  .item:hover{border-color:var(--border2);box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+
+  /* Tableau de bord sur deux colonnes (les blocs se rangent l'un sous l'autre dans chaque colonne) */
+  #page-dash.active{column-count:2;column-gap:20px}
+  #page-dash>*{break-inside:avoid}
+  #page-dash>.mnav,#page-dash>.card-gold{column-span:all}
+  #page-dash>.sg2{grid-template-columns:repeat(4,1fr)}
+
+  /* Finances et réglages : une colonne plus lisible, centrée */
+  #page-fin{max-width:1080px}
+  #page-fin .sg2{grid-template-columns:repeat(3,1fr)}
+  #page-params{max-width:780px}
+
+  /* Fenêtres au centre de l'écran */
+  .overlay{align-items:center;justify-content:center;padding:24px}
+  .modal{max-width:760px;border-radius:22px;border-bottom:1px solid var(--border2);max-height:calc(100vh - 48px);padding:26px 32px 30px;margin:0}
+  .modal-handle{display:none}
+  .dt-picker-sheet{border-radius:22px;max-width:480px}
+
+  /* Bouton + et messages */
+  .fab{right:36px;bottom:32px}
+  .app-toast{bottom:40px;left:calc(50% + var(--side-w) / 2)}
+}
+/* Très grand écran : listes un peu plus larges */
+@media (min-width:1600px){
+  #res-list,#clients-list{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
+}
+</style>
 </head>
 <body>
 
@@ -6230,7 +6300,7 @@ function ecouter(){
     });
     saveShadow();
     if(touched){persistLocal();S.lastRemote=Date.now();scheduleRender();}
-    if(!snap.metadata.fromCache){lsSet(LS_LAST,String(Date.now()));if(tmax>(parseInt(lsGet(LS_TMAX)||'0',10)||0))lsSet(LS_TMAX,String(tmax));}
+    if(!snap.metadata.fromCache){lsSet(LS_LAST,String(Date.now()));noterSauvegardeCloud();if(tmax>(parseInt(lsGet(LS_TMAX)||'0',10)||0))lsSet(LS_TMAX,String(tmax));}
     majEtat(snap.metadata);
   },function(e){console.error('[sync] écoute',e);S.err=messageErreur(e);setState('error');majUi();});
 }
@@ -6295,7 +6365,7 @@ function pushNow(){
   }
   /* Les écritures sont gardées par Firestore même hors ligne : on note tout de suite qu'elles sont parties */
   saveShadow();majEtat();
-  return Promise.all(proms).then(function(){lsSet(LS_LAST,String(Date.now()));majEtat();return ch.length;},function(e){
+  return Promise.all(proms).then(function(){lsSet(LS_LAST,String(Date.now()));noterSauvegardeCloud();majEtat();return ch.length;},function(e){
     console.error('[sync] envoi',e);
     /* refus du serveur : on remet les empreintes pour réessayer plus tard */
     Object.keys(ancien).forEach(function(id){if(ancien[id]===undefined)delete S.shadow[id];else S.shadow[id]=ancien[id];});
@@ -6517,6 +6587,23 @@ if(typeof resetOrig==='function'){
     if(!confirm("Effacer toutes les données DE CET APPAREIL ?\n\nLes données du cloud ne sont pas touchées : cet appareil sera simplement déconnecté."))return;
     if(!confirm("Dernière confirmation — tout sera supprimé sur cet appareil."))return;
     deconnecter().catch(function(){}).then(function(){origClear.call(localStorage);location.reload();});
+  };
+}
+
+/* ---------- avertissement "pas de sauvegarde" ----------
+   Avec la synchro, les données sont aussi dans le cloud (et copiées chaque semaine) :
+   chaque échange réussi compte comme une sauvegarde, et l'alerte rouge/orange
+   n'a plus lieu d'être tant que le cloud est à jour. */
+function cloudAJour(){var t=parseInt(lsGet(LS_LAST)||'0',10);return !!(S.user&&t&&Date.now()-t<3*86400000);}
+function noterSauvegardeCloud(){
+  lsSet('fm_last_backup',String(Date.now()));
+  try{if(typeof window.majBanniereSauvegarde==='function')window.majBanniereSauvegarde();}catch(e){}
+}
+var banniereOrig=window.majBanniereSauvegarde;
+if(typeof banniereOrig==='function'){
+  window.majBanniereSauvegarde=function(){
+    if(cloudAJour()){var ex=document.getElementById('backup-warn-banner');if(ex)ex.remove();return;}
+    return banniereOrig.apply(this,arguments);
   };
 }
 
