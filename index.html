@@ -241,7 +241,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div id="app-wrapper"><div id="app" style="display:none">
 <div class="topbar">
   <div><div class="topbar-name">Facciolini Mobility</div><div class="topbar-sub">Transport Priv&#xe9; &middot; Hainaut</div></div>
-  <div class="topbar-right"><div class="topbar-date" id="tb-date"></div><button class="btn btn-ghost btn-xs" onclick="openDevisRapide()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2)">&#x1f4b0; Devis</button><button class="btn btn-ghost btn-xs" onclick="openStorySemaine()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2);margin-left:6px">&#x1f4f8; Story</button><div class="topbar-badge" id="tb-month"></div></div>
+  <div class="topbar-right"><div class="topbar-date" id="tb-date"></div><button class="btn btn-ghost btn-xs sync-pill" id="sync-pill" onclick="FMSync.ui.ouvrir()" title="Cloud">&#x2601;&#xfe0f;</button><button class="btn btn-ghost btn-xs" onclick="openDevisRapide()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2)">&#x1f4b0; Devis</button><button class="btn btn-ghost btn-xs" onclick="openStorySemaine()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2);margin-left:6px">&#x1f4f8; Story</button><div class="topbar-badge" id="tb-month"></div></div>
 </div>
 <div class="content">
 <div class="page active" id="page-dash">
@@ -433,6 +433,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="stitle">TVA</div>
   <div class="sitem"><div class="sitem-left"><div class="sitem-label">Assujetti &#xe0; la TVA</div><div class="sitem-sub">&#xc0; activer seulement quand Adam te le dit. Les prix encaiss&#xe9;s sont alors TVAC : l'app compte le HT comme recette et affiche la TVA &#xe0; reverser.</div></div><label class="toggle"><input type="checkbox" id="p-tva-on" onchange="majTvaReglages()"><span class="tslider"></span></label></div>
   <div class="fr" id="p-tva-details" style="display:none"><div class="fg"><label class="fl">Depuis le</label><input type="date" class="fi" id="p-tva-depuis" onchange="majTvaReglages()"></div><div class="fg"><label class="fl">Taux (%)</label><input type="number" class="fi" id="p-tva-taux" value="6" step="0.5" onchange="majTvaReglages()"></div></div>
+  <div class="stitle">&#x2601;&#xfe0f; Synchronisation</div><div class="sitem"><div class="sitem-left"><div class="sitem-label">T&#xe9;l&#xe9;phone &#x2194; Mac</div><div class="sitem-sub" id="sync-param-sub">Non activ&#xe9;e</div></div><button class="btn btn-outline btn-sm" onclick="FMSync.ui.ouvrir()">Ouvrir</button></div>
   <div class="stitle">Donn&#xe9;es</div>
   <button class="btn btn-outline btn-full" onclick="exportCSV()" style="margin-bottom:8px">&#x1f4ca; Exporter CSV comptable</button>
   <button class="btn btn-gold btn-full" onclick="partagerSauvegarde()" style="margin-bottom:8px">&#x1f4e4; Envoyer la sauvegarde (Drive, e-mail…)</button>
@@ -902,6 +903,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="overlay" id="m-charge"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Charge fixe mensuelle</div><div class="fg"><label class="fl">Nom</label><input type="text" class="fi" id="ch-nom" placeholder="Ex: Assurance TL..."></div><div class="fg"><label class="fl">Montant mensuel (&#x20ac;)</label><input type="number" class="fi" id="ch-montant" step="0.01"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-charge')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveCharge()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-entretien"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Entretien v&#xe9;hicule</div><div class="fg"><label class="fl">Type</label><input type="text" class="fi" id="ent-type" placeholder="Ex: Vidange, Pneus..."></div><div class="fr"><div class="fg"><label class="fl">Km actuel</label><input type="number" class="fi" id="ent-km-last" placeholder="Ex: 54000"></div><div class="fg"><label class="fl">Intervalle (km)</label><input type="number" class="fi" id="ent-intervalle" placeholder="Ex: 15000"></div></div><div class="fg"><label class="fl">Prochain entretien (date)</label><input type="date" class="fi" id="ent-date"></div><div class="fg"><label class="fl">Notes</label><textarea class="ft" id="ent-notes"></textarea></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-entretien')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveEntretien()">Enregistrer</button></div></div></div>
 <div class="overlay" id="m-fav"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Adresse favorite</div><div class="fg"><label class="fl">Nom court</label><input type="text" class="fi" id="fav-nom" placeholder="Ex: Zaventem BRU"></div><div class="fg"><label class="fl">Adresse compl&#xe8;te</label><div class="ac-wrap"><input type="text" class="fi" id="fav-adresse" placeholder="Tapez l'adresse..." autocomplete="off" oninput="acSearch(this,'ac-fav','fav-addr')"><input type="hidden" id="fav-lat"><input type="hidden" id="fav-lon"><div class="ac-drop" id="ac-fav"></div></div></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-fav')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveFavAddr()">Enregistrer</button></div></div></div>
+<div class="overlay" id="m-sync"><div class="modal"><div class="modal-handle"></div><div class="modal-title">&#x2601;&#xfe0f; Synchronisation cloud</div><div id="sync-body"></div><button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="closeModal('m-sync')">Fermer</button></div></div>
+<div class="overlay" id="m-sync-choix"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Premi&#xe8;re synchronisation</div><div id="sync-choix-body"></div></div></div>
 <div class="overlay" id="m-pin"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Configurer PIN</div><div class="fg"><label class="fl">Nouveau PIN (4 chiffres)</label><input type="password" class="fi" id="new-pin" maxlength="4" inputmode="numeric" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;"></div><div class="fg"><label class="fl">Confirmer PIN</label><input type="password" class="fi" id="confirm-pin" maxlength="4" inputmode="numeric" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;"></div><div class="ferr" id="pin-modal-err"></div><div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-pin')">Annuler</button><button class="btn btn-gold btn-full" onclick="savePinCfg()">Enregistrer</button></div></div></div>
 
 <!-- MODALS DETAIL -->
@@ -5970,6 +5973,571 @@ function annulerDemandeAvis(nom){
   if(n>0) localStorage.setItem('fm_avis_jour_'+dateLocale(),String(n-1));
   renderDemandeAvis();
 }
+</script>
+<style>
+.sync-pill{position:relative;padding:5px 9px!important;font-size:0.8rem!important;border-color:var(--border2)!important;margin-right:6px;--sc:var(--text3)}
+.sync-pill::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--sc);box-shadow:0 0 0 2px var(--bg)}
+</style>
+<script>
+/* =====================================================================
+   SYNCHRONISATION CLOUD (Firebase) — téléphone ↔ Mac
+   ---------------------------------------------------------------------
+   Principe :
+   - Les données restent d'abord dans l'appareil (localStorage 'fm_v52'),
+     l'app fonctionne donc toujours, même sans réseau ni connexion.
+   - Chaque élément (une course, un client, un plein…) est un document
+     Firestore : users/{uid}/data/{collection~id}. Les réglages et les
+     petites listes sans identifiant sont un document entier ({clé~*}).
+   - À chaque enregistrement, on compare l'état local à la dernière
+     version synchronisée (empreintes dans 'fm_sync_shadow') et on
+     n'envoie QUE ce qui a changé. Une suppression laisse une "pierre
+     tombale" (d:true) pour que l'autre appareil la supprime aussi.
+   - Ce qui arrive du cloud est appliqué élément par élément.
+     Si le même élément a été modifié ici et pas encore envoyé,
+     la version de cet appareil gagne (elle part juste après).
+   - Une copie complète datée est rangée dans le cloud une fois par
+     semaine (4 dernières gardées). Tout reste dans l'offre gratuite.
+   ===================================================================== */
+(function(){
+'use strict';
+var FB_VER='12.19.0';
+var FB_CFG={
+  apiKey:"AIzaSyDwQjKxCjhO2gliRRUY8FB6zwjxDDYh3Us",
+  authDomain:"facciolini-app.firebaseapp.com",
+  projectId:"facciolini-app",
+  storageBucket:"facciolini-app.firebasestorage.app",
+  messagingSenderId:"301767310737",
+  appId:"1:301767310737:web:9cdc543c3cbb6262b5ee30"
+};
+var ITEM_KEYS=['reservations','clients','carburant','frais','charges','entretien','favAddresses','partners','partnerSoldes'];
+var EXTRA_KEYS=['fm_campagnes','fm_avis_demandes'];
+var LS_SHADOW='fm_sync_shadow',LS_UID='fm_sync_uid',LS_DEV='fm_sync_device',LS_LAST='fm_sync_last',LS_EMAIL='fm_sync_email',LS_PROMPT='fm_sync_propose',LS_TMAX='fm_sync_tmax';
+var BACKUP_EVERY=7*86400000,BACKUP_KEEP=4,PART_SIZE=700000,BATCH_MAX=400;
+
+var S={fb:null,app:null,auth:null,fs:null,user:null,ready:false,linking:false,unsub:null,
+       shadow:{},pending:0,online:navigator.onLine,state:'off',err:'',pushTimer:null,renderTimer:null,
+       loadErr:false,loading:null,lastRemote:0};
+
+/* ---------- outils ---------- */
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{origSet.call(localStorage,k,v);return true;}catch(e){return false;}}
+function lsDel(k){try{origRemove.call(localStorage,k);}catch(e){}}
+function stable(v){
+  if(v===null||v===undefined)return 'null';
+  if(typeof v==='number')return isFinite(v)?JSON.stringify(v):'null';
+  if(typeof v!=='object')return JSON.stringify(v);
+  if(typeof v.toJSON==='function')return stable(v.toJSON());
+  if(Array.isArray(v))return '['+v.map(function(x){return (x===undefined||typeof x==='function')?'null':stable(x);}).join(',')+']';
+  var ks=Object.keys(v).filter(function(k){return v[k]!==undefined&&typeof v[k]!=='function';}).sort();
+  return '{'+ks.map(function(k){return JSON.stringify(k)+':'+stable(v[k]);}).join(',')+'}';
+}
+function hash(s){
+  var h1=0x811c9dc5,h2=0x01000193^0x5bd1e995;
+  for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);h1^=c;h1=Math.imul(h1,0x01000193)>>>0;h2^=c;h2=Math.imul(h2,0x5bd1e995)>>>0;h2^=h2>>>13;}
+  return (h1>>>0).toString(36)+'.'+(h2>>>0).toString(36)+'.'+s.length.toString(36);
+}
+function safeId(x){x=String(x).replace(/\//g,'_').slice(0,300);if(!x||x==='.'||x==='..'||/^__.*__$/.test(x))x='x'+x;return x;}
+function deviceId(){var d=lsGet(LS_DEV);if(!d){d='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);lsSet(LS_DEV,d);}return d;}
+function itemIds(arr){
+  var seen={},out=[];
+  arr.forEach(function(it,idx){
+    var id=(it&&typeof it==='object'&&it.id!=null&&it.id!=='')?safeId(it.id):'h'+hash(stable(it));
+    if(seen[id])id=id+'_'+idx;
+    seen[id]=1;out.push(id);
+  });
+  return out;
+}
+function getDb(){return db;}            /* 'db' est la variable globale de l'app */
+function setDb(v){db=v;}
+
+/* État local découpé en documents : { 'reservations~abc': {k,i,j,o}, 'settings~*': {...}, '_ls~fm_campagnes': {...} } */
+function localEntries(){
+  var out={},d=getDb()||{};
+  Object.keys(d).forEach(function(k){
+    var v=d[k];if(v===undefined||typeof v==='function')return;
+    if(ITEM_KEYS.indexOf(k)>=0&&Array.isArray(v)){
+      var ids=itemIds(v);
+      v.forEach(function(it,idx){out[k+'~'+ids[idx]]={k:k,i:ids[idx],j:stable(it),o:idx};});
+    }else out[safeId(k)+'~*']={k:k,i:'*',j:stable(v),o:0};
+  });
+  EXTRA_KEYS.forEach(function(x){var v=lsGet(x);if(v!=null)out['_ls~'+x]={k:'_ls',i:x,j:stable(v),o:0};});
+  return out;
+}
+function loadShadow(){try{S.shadow=JSON.parse(lsGet(LS_SHADOW)||'{}')||{};}catch(e){S.shadow={};}}
+function saveShadow(){lsSet(LS_SHADOW,JSON.stringify(S.shadow));}
+function persistLocal(){lsSet('fm_v52',JSON.stringify(getDb()));}
+
+/* ---------- interception des enregistrements de l'app ---------- */
+var origSet=Storage.prototype.setItem,origRemove=Storage.prototype.removeItem,origClear=Storage.prototype.clear;
+Storage.prototype.setItem=function(k,v){
+  origSet.call(this,k,v);
+  try{if(this===localStorage&&(k==='fm_v52'||EXTRA_KEYS.indexOf(k)>=0))schedulePush();}catch(e){}
+};
+Storage.prototype.removeItem=function(k){
+  origRemove.call(this,k);
+  try{if(this===localStorage&&EXTRA_KEYS.indexOf(k)>=0)schedulePush();}catch(e){}
+};
+
+/* ---------- chargement de Firebase ---------- */
+function loadFirebase(){
+  if(S.fb)return Promise.resolve(S.fb);
+  if(S.loading)return S.loading;
+  var base='https://www.gstatic.com/firebasejs/'+FB_VER+'/';
+  var loader=window.__FM_FB_LOADER||function(){
+    return Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-firestore.js')])
+      .then(function(m){return Object.assign({},m[0],m[1],m[2]);});
+  };
+  S.loading=loader().then(function(fb){
+    S.fb=fb;S.loadErr=false;
+    S.app=fb.initializeApp(FB_CFG);
+    S.auth=fb.getAuth(S.app);
+    try{S.fs=fb.initializeFirestore(S.app,{localCache:fb.persistentLocalCache({tabManager:fb.persistentMultipleTabManager()})});}
+    catch(e){S.fs=fb.getFirestore?fb.getFirestore(S.app):fb.initializeFirestore(S.app,{});}
+    fb.onAuthStateChanged(S.auth,onAuth);
+    return fb;
+  }).catch(function(e){S.loading=null;S.loadErr=true;setState('offline');console.warn('[sync] Firebase indisponible',e);throw e;});
+  return S.loading;
+}
+function col(){return S.fb.collection(S.fs,'users',S.user.uid,'data');}
+
+/* ---------- connexion ---------- */
+function onAuth(user){
+  if(S.unsub){try{S.unsub();}catch(e){}S.unsub=null;}
+  S.user=user||null;S.ready=false;
+  if(!user){setState('off');majUi();return;}
+  lsSet(LS_EMAIL,user.email||'');
+  demarrer();
+}
+function connecter(email,pwd){
+  return loadFirebase().then(function(fb){return fb.signInWithEmailAndPassword(S.auth,email.trim(),pwd);});
+}
+function deconnecter(){
+  if(!S.auth)return Promise.resolve();
+  return flushPush().catch(function(){}).then(function(){return S.fb.signOut(S.auth);}).then(function(){
+    lsDel(LS_SHADOW);lsDel(LS_UID);lsDel(LS_TMAX);S.shadow={};setState('off');majUi();
+  });
+}
+function messageErreur(e){
+  var c=(e&&e.code)||'';
+  if(/invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c))return 'Adresse mail ou mot de passe incorrect.';
+  if(/too-many-requests/.test(c))return 'Trop d\'essais. Patiente quelques minutes puis réessaie.';
+  if(/network/.test(c))return 'Pas de connexion internet.';
+  if(/permission-denied/.test(c))return 'Accès refusé par le cloud (compte non autorisé).';
+  return 'Erreur : '+((e&&e.message)||c||'inconnue');
+}
+
+/* ---------- démarrage après connexion ---------- */
+function demarrer(){
+  var uid=S.user.uid;
+  loadShadow();
+  var lie=lsGet(LS_UID)===uid;
+  (lie?Promise.resolve():premiereLiaison())
+    .then(function(ok){
+      if(ok===false){setState('attente');majUi();return;}
+      S.ready=true;
+      ecouter();
+      return pushNow().then(function(){setTimeout(sauvegardeHebdo,4000);});
+    })
+    .catch(function(e){console.error('[sync] démarrage',e);S.err=messageErreur(e);setState(S.online?'error':'offline');majUi();
+      /* nouvel essai quand le réseau revient */
+    });
+}
+
+/* Première fois sur cet appareil avec ce compte */
+function premiereLiaison(){
+  if(S.linking)return Promise.resolve(false);
+  S.linking=true;setState('sync');majUi('Première synchronisation…');
+  var fb=S.fb;
+  return fb.getDocsFromServer(col()).then(function(snap){
+    var remote={},tmax=0;snap.forEach(function(d){var r=d.data();if(r.t&&typeof r.t.toMillis==='function')tmax=Math.max(tmax,r.t.toMillis());if(!r.d)remote[d.id]=r;});
+    if(tmax)lsSet(LS_TMAX,String(tmax));else lsDel(LS_TMAX);
+    var n=Object.keys(remote).length;
+    var d=getDb()||{};
+    var nResLoc=(d.reservations||[]).length,nCliLoc=(d.clients||[]).length;
+    if(n===0){
+      /* Cloud vide : cet appareil envoie tout */
+      S.shadow={};saveShadow();lsSet(LS_UID,S.user.uid);
+      return true;
+    }
+    var nResCloud=0,nCliCloud=0;Object.keys(remote).forEach(function(id){if(remote[id].k==='reservations')nResCloud++;else if(remote[id].k==='clients')nCliCloud++;});
+    var localVide=!nResLoc&&!nCliLoc;
+    var p=localVide?Promise.resolve('cloud'):demanderChoix(nResLoc,nCliLoc,nResCloud,nCliCloud);
+    return p.then(function(choix){
+      if(choix==='cloud'){
+        if(!localVide){try{lsSet('fm_avant_synchro',typeof sauvegardeJSON==='function'?sauvegardeJSON():JSON.stringify(d));}catch(e){}try{if(typeof exportBackup==='function')exportBackup();}catch(e){}}
+        adopterCloud(remote);
+        lsSet(LS_UID,S.user.uid);
+        return true;
+      }
+      if(choix==='local'){
+        /* Cet appareil écrase le cloud : on part des empreintes du cloud, la différence partira */
+        S.shadow={};Object.keys(remote).forEach(function(id){S.shadow[id]=hash(remote[id].j);});
+        saveShadow();lsSet(LS_UID,S.user.uid);
+        return true;
+      }
+      return false;
+    });
+  }).then(function(r){S.linking=false;return r;},function(e){S.linking=false;throw e;});
+}
+
+/* Remplace les données de cet appareil par celles du cloud */
+function adopterCloud(remote){
+  var d=Object.assign({},getDb()||{});
+  ITEM_KEYS.forEach(function(k){d[k]=[];});
+  var items={},extras={};
+  Object.keys(remote).forEach(function(id){
+    var r=remote[id],v;
+    try{v=JSON.parse(r.j);}catch(e){return;}
+    if(r.k==='_ls'){extras[r.i]=v;return;}
+    if(r.i==='*'){d[r.k]=v;return;}
+    (items[r.k]=items[r.k]||[]).push({o:r.o||0,v:v});
+  });
+  Object.keys(items).forEach(function(k){d[k]=items[k].sort(function(a,b){return a.o-b.o;}).map(function(x){return x.v;});});
+  setDb(d);
+  try{if(typeof fixDb==='function')fixDb();}catch(e){console.error('[sync] fixDb',e);}
+  EXTRA_KEYS.forEach(function(x){if(x in extras)lsSet(x,extras[x]);});
+  S.shadow={};Object.keys(remote).forEach(function(id){S.shadow[id]=hash(remote[id].j);});
+  saveShadow();persistLocal();
+  scheduleRender(true);
+}
+
+/* ---------- réception des changements ---------- */
+/* On n'écoute que ce qui a changé depuis le dernier échange : à chaque ouverture de l'app,
+   seuls les éléments modifiés sont relus (et pas tout l'historique), ce qui garde
+   la lecture très loin de la limite gratuite même avec des années de courses. */
+function ecouter(){
+  var fb=S.fb,tmin=parseInt(lsGet(LS_TMAX)||'0',10)||0;
+  var q=(tmin&&fb.where&&fb.Timestamp)?fb.query(col(),fb.where('t','>=',fb.Timestamp.fromMillis(tmin-120000))):col();
+  S.unsub=fb.onSnapshot(q,{includeMetadataChanges:true},function(snap){
+    var loc=null,touched=false,tmax=0;
+    snap.docChanges().forEach(function(c){
+      var d=c.doc;
+      if(c.type==='removed'||d.metadata.hasPendingWrites)return;
+      var r=d.data(),id=d.id;
+      if(!r||!r.k)return;
+      if(r.t&&typeof r.t.toMillis==='function')tmax=Math.max(tmax,r.t.toMillis());
+      if(!loc)loc=localEntries();
+      var le=loc[id],lh=le?hash(le.j):undefined,sh=S.shadow[id];
+      if(lh!==sh)return;                       /* modifié ici, pas encore envoyé : cet appareil gagne */
+      if(r.d){
+        if(le){retirerLocal(r.k,r.i);touched=true;delete loc[id];}
+        delete S.shadow[id];
+      }else{
+        var rh=hash(r.j);
+        if(rh!==lh){appliquerLocal(r.k,r.i,r.j,r.o||0);touched=true;loc[id]={k:r.k,i:r.i,j:r.j,o:r.o||0};}
+        S.shadow[id]=rh;
+      }
+    });
+    saveShadow();
+    if(touched){persistLocal();S.lastRemote=Date.now();scheduleRender();}
+    if(!snap.metadata.fromCache){lsSet(LS_LAST,String(Date.now()));if(tmax>(parseInt(lsGet(LS_TMAX)||'0',10)||0))lsSet(LS_TMAX,String(tmax));}
+    majEtat(snap.metadata);
+  },function(e){console.error('[sync] écoute',e);S.err=messageErreur(e);setState('error');majUi();});
+}
+function appliquerLocal(k,i,j,o){
+  var v;try{v=JSON.parse(j);}catch(e){return;}
+  if(k==='_ls'){lsSet(i,v);return;}
+  var d=getDb();
+  if(i==='*'){d[k]=v;return;}
+  if(!Array.isArray(d[k]))d[k]=[];
+  var arr=d[k],ids=itemIds(arr),idx=ids.indexOf(i);
+  if(idx>=0)arr[idx]=v;
+  else if(o>=0&&o<arr.length)arr.splice(o,0,v);
+  else arr.push(v);
+}
+function retirerLocal(k,i){
+  if(k==='_ls'){lsDel(i);return;}
+  var d=getDb();
+  if(i==='*'){delete d[k];return;}
+  if(!Array.isArray(d[k]))return;
+  var ids=itemIds(d[k]),idx=ids.indexOf(i);
+  if(idx>=0)d[k].splice(idx,1);
+}
+function scheduleRender(now){
+  clearTimeout(S.renderTimer);
+  S.renderTimer=setTimeout(function tryRender(){
+    /* on ne redessine pas sous les doigts pendant une saisie : on attend la fermeture de la fenêtre */
+    if(!now&&document.querySelector('.overlay.open')){S.renderTimer=setTimeout(tryRender,1200);return;}
+    try{if(typeof renderAll==='function')renderAll();}catch(e){console.error('[sync] rendu',e);}
+  },now?50:400);
+}
+
+/* ---------- envoi des changements ---------- */
+function schedulePush(){
+  if(!S.ready)return;
+  clearTimeout(S.pushTimer);
+  S.pushTimer=setTimeout(function(){pushNow().catch(function(){});},1200);
+}
+function flushPush(){clearTimeout(S.pushTimer);return S.ready?pushNow():Promise.resolve();}
+function pushNow(){
+  if(!S.ready||!S.user)return Promise.resolve(0);
+  var fb=S.fb,loc=localEntries(),ch=[];
+  Object.keys(loc).forEach(function(id){var h=hash(loc[id].j);if(S.shadow[id]!==h)ch.push({id:id,e:loc[id],h:h});});
+  Object.keys(S.shadow).forEach(function(id){if(!(id in loc))ch.push({id:id,del:true});});
+  if(!ch.length){majEtat();return Promise.resolve(0);}
+  var dev=deviceId(),proms=[],ancien={};
+  for(var s=0;s<ch.length;s+=BATCH_MAX){
+    var b=fb.writeBatch(S.fs);
+    ch.slice(s,s+BATCH_MAX).forEach(function(c){
+      var ref=fb.doc(col(),c.id);
+      ancien[c.id]=S.shadow[c.id];
+      if(c.del){
+        var p=c.id.split('~');
+        b.set(ref,{k:p[0],i:p.slice(1).join('~'),d:true,t:fb.serverTimestamp(),dv:dev});
+        delete S.shadow[c.id];
+      }else{
+        b.set(ref,{k:c.e.k,i:c.e.i,j:c.e.j,o:c.e.o,d:false,t:fb.serverTimestamp(),dv:dev});
+        S.shadow[c.id]=c.h;
+      }
+    });
+    S.pending++;
+    proms.push(b.commit().then(function(){S.pending--;},function(e){S.pending--;throw e;}));
+  }
+  /* Les écritures sont gardées par Firestore même hors ligne : on note tout de suite qu'elles sont parties */
+  saveShadow();majEtat();
+  return Promise.all(proms).then(function(){lsSet(LS_LAST,String(Date.now()));majEtat();return ch.length;},function(e){
+    console.error('[sync] envoi',e);
+    /* refus du serveur : on remet les empreintes pour réessayer plus tard */
+    Object.keys(ancien).forEach(function(id){if(ancien[id]===undefined)delete S.shadow[id];else S.shadow[id]=ancien[id];});
+    saveShadow();S.err=messageErreur(e);setState('error');majUi();throw e;
+  });
+}
+
+/* ---------- sauvegardes hebdomadaires dans le cloud ---------- */
+function bkCol(){return S.fb.collection(S.fs,'users',S.user.uid,'backups');}
+function partCol(){return S.fb.collection(S.fs,'users',S.user.uid,'backupParts');}
+function listerSauvegardes(){
+  var fb=S.fb;
+  return fb.getDocsFromServer(fb.query(bkCol(),fb.orderBy('t','desc'))).then(function(snap){
+    var L=[];snap.forEach(function(d){L.push(Object.assign({id:d.id},d.data()));});return L;
+  });
+}
+function gz(str){
+  if(typeof CompressionStream==='undefined')return Promise.resolve({bytes:new TextEncoder().encode(str),gz:false});
+  var s=new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Response(s).arrayBuffer().then(function(b){return {bytes:new Uint8Array(b),gz:true};});
+}
+function ungz(bytes,isGz){
+  if(!isGz)return Promise.resolve(new TextDecoder().decode(bytes));
+  var s=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(s).text();
+}
+function creerSauvegarde(){
+  var fb=S.fb,json=(typeof sauvegardeJSON==='function')?sauvegardeJSON():JSON.stringify(getDb());
+  var d=getDb()||{},now=Date.now(),id=(typeof dateLocale==='function'?dateLocale():new Date(now).toISOString().slice(0,10))+'_'+now.toString(36);
+  return gz(json).then(function(z){
+    var n=Math.max(1,Math.ceil(z.bytes.length/PART_SIZE)),b=fb.writeBatch(S.fs);
+    for(var p=0;p<n;p++){b.set(fb.doc(partCol(),id+'_p'+p),{b:fb.Bytes.fromUint8Array(z.bytes.slice(p*PART_SIZE,(p+1)*PART_SIZE)),bk:id,p:p});}
+    b.set(fb.doc(bkCol(),id),{t:now,n:n,gz:z.gz,taille:z.bytes.length,brut:json.length,nRes:(d.reservations||[]).length,nCli:(d.clients||[]).length,dv:deviceId()});
+    return b.commit();
+  }).then(function(){return nettoyerSauvegardes();}).then(function(){return id;});
+}
+function nettoyerSauvegardes(){
+  var fb=S.fb;
+  return listerSauvegardes().then(function(L){
+    var vieux=L.slice(BACKUP_KEEP);if(!vieux.length)return;
+    var b=fb.writeBatch(S.fs);
+    vieux.forEach(function(m){for(var p=0;p<(m.n||1);p++)b.delete(fb.doc(partCol(),m.id+'_p'+p));b.delete(fb.doc(bkCol(),m.id));});
+    return b.commit();
+  });
+}
+function sauvegardeHebdo(){
+  if(!S.ready||!S.online)return Promise.resolve();
+  return listerSauvegardes().then(function(L){
+    if(L.length&&Date.now()-(L[0].t||0)<BACKUP_EVERY)return;
+    return creerSauvegarde();
+  }).catch(function(e){console.warn('[sync] sauvegarde hebdo',e);});
+}
+function lireSauvegarde(m){
+  var fb=S.fb,ps=[];
+  for(var p=0;p<(m.n||1);p++)ps.push(fb.getDoc(fb.doc(partCol(),m.id+'_p'+p)));
+  return Promise.all(ps).then(function(docs){
+    var parts=docs.map(function(d){if(!d.exists())throw new Error('Morceau de sauvegarde manquant');return d.data().b.toUint8Array();});
+    var tot=parts.reduce(function(a,x){return a+x.length;},0),all=new Uint8Array(tot),o=0;
+    parts.forEach(function(x){all.set(x,o);o+=x.length;});
+    return ungz(all,m.gz);
+  });
+}
+function restaurerSauvegarde(m){
+  return lireSauvegarde(m).then(function(txt){
+    var file=new File([txt],'sauvegarde_cloud_'+m.id+'.json',{type:'application/json'});
+    if(typeof doImport==='function')doImport({target:{files:[file],value:''}});
+  });
+}
+
+/* ---------- état affiché ---------- */
+function setState(s){S.state=s;majPastille();}
+function majEtat(meta){
+  if(!S.user){setState('off');return;}
+  if(!S.ready){return;}
+  if(!S.online||(meta&&meta.fromCache&&!navigator.onLine))setState('offline');
+  else if(S.pending>0||(meta&&meta.hasPendingWrites))setState('pending');
+  else setState('ok');
+  majUi();
+}
+var LIB={off:'Non connecté',ok:'Synchronisé',pending:'Envoi en cours…',offline:'Hors ligne — envoi au retour du réseau',error:'Problème de synchronisation',sync:'Synchronisation…',attente:'En attente de ton choix'};
+var COUL={off:'var(--text3)',ok:'#3ecf8e',pending:'#f0a020',offline:'#f0a020',error:'#e5484d',sync:'#f0a020',attente:'#f0a020'};
+function majPastille(){
+  var el=document.getElementById('sync-pill');if(!el)return;
+  el.style.setProperty('--sc',COUL[S.state]||'var(--text3)');
+  el.title='Cloud : '+(LIB[S.state]||'');
+}
+function depuis(ts){
+  if(!ts)return 'jamais';
+  var s=Math.round((Date.now()-ts)/1000);
+  if(s<60)return 'à l\'instant';if(s<3600)return 'il y a '+Math.round(s/60)+' min';
+  if(s<86400)return 'il y a '+Math.round(s/3600)+' h';return 'il y a '+Math.round(s/86400)+' j';
+}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function majUi(msg){
+  majPastille();
+  var sub=document.getElementById('sync-param-sub');
+  if(sub)sub.textContent=S.user?(LIB[S.state]+' · '+(S.user.email||'')):'Téléphone ↔ Mac — non activée';
+  var box=document.getElementById('sync-body');if(!box)return;
+  if(!S.user){
+    box.innerHTML=
+      '<div style="font-size:0.8rem;color:var(--text2);line-height:1.6;margin-bottom:14px">Connecte-toi avec le compte créé dans Firebase. Tes courses, clients et finances seront les mêmes sur le téléphone et sur le Mac.</div>'+
+      '<div class="fg"><label class="fl">Adresse mail</label><input type="email" class="fi" id="sync-email" autocomplete="username" value="'+esc(lsGet(LS_EMAIL)||'')+'"></div>'+
+      '<div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="sync-pwd" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')FMSync.ui.connecter()"></div>'+
+      '<div id="sync-msg" style="font-size:0.78rem;color:#e5484d;min-height:18px;margin-bottom:8px">'+esc(msg||S.err||'')+'</div>'+
+      '<button class="btn btn-gold btn-full" id="sync-btn-login" onclick="FMSync.ui.connecter()" style="margin-bottom:8px">Se connecter</button>'+
+      '<button class="btn btn-ghost btn-full" onclick="FMSync.ui.oubli()" style="font-size:0.75rem">Mot de passe oublié ?</button>';
+    return;
+  }
+  var last=parseInt(lsGet(LS_LAST)||'0',10);
+  box.innerHTML=
+    '<div class="sitem"><div class="sitem-left"><div class="sitem-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(COUL[S.state]||'#999')+';margin-right:7px"></span>'+esc(msg||LIB[S.state]||'')+'</div><div class="sitem-sub">'+esc(S.user.email||'')+' · dernier échange '+depuis(last)+'</div></div></div>'+
+    (S.state==='error'&&S.err?'<div style="font-size:0.78rem;color:#e5484d;margin:-2px 2px 10px">'+esc(S.err)+'</div>':'')+
+    '<button class="btn btn-gold btn-full" onclick="FMSync.ui.maintenant()" style="margin-bottom:8px">🔄 Synchroniser maintenant</button>'+
+    '<div class="stitle">Sauvegardes dans le cloud</div>'+
+    '<div style="font-size:0.75rem;color:var(--text3);margin:-4px 2px 8px;line-height:1.5">Une copie complète est faite automatiquement chaque semaine. Les 4 dernières sont gardées.</div>'+
+    '<div id="sync-bk-list" style="margin-bottom:8px"><div style="font-size:0.78rem;color:var(--text3);padding:6px 2px">Chargement…</div></div>'+
+    '<button class="btn btn-outline btn-full" onclick="FMSync.ui.sauverMaintenant()" style="margin-bottom:8px">☁️ Faire une sauvegarde cloud maintenant</button>'+
+    '<button class="btn btn-ghost btn-full" onclick="FMSync.ui.deconnecter()" style="font-size:0.75rem;color:var(--text3)">Se déconnecter de cet appareil</button>';
+  if(document.getElementById('m-sync')&&document.getElementById('m-sync').classList.contains('open'))chargerListeBk();
+}
+function chargerListeBk(){
+  var el=document.getElementById('sync-bk-list');if(!el||!S.ready)return;
+  listerSauvegardes().then(function(L){
+    S.bk=L;
+    if(!L.length){el.innerHTML='<div style="font-size:0.78rem;color:var(--text3);padding:6px 2px">Aucune pour l\'instant — la première se fait toute seule.</div>';return;}
+    el.innerHTML=L.map(function(m,ix){
+      var dt=new Date(m.t).toLocaleString('fr-BE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      return '<div class="sitem"><div class="sitem-left"><div class="sitem-label">'+esc(dt)+'</div><div class="sitem-sub">'+(m.nRes||0)+' courses · '+(m.nCli||0)+' clients · '+Math.max(1,Math.round((m.taille||0)/1024))+' Ko</div></div><button class="btn btn-outline btn-sm" onclick="FMSync.ui.restaurer('+ix+')">Restaurer</button></div>';
+    }).join('');
+  }).catch(function(){el.innerHTML='<div style="font-size:0.78rem;color:var(--text3);padding:6px 2px">Liste indisponible hors ligne.</div>';});
+}
+
+/* ---------- choix lors de la première liaison ---------- */
+var choixResolve=null;
+function demanderChoix(rl,cl,rc,cc){
+  return new Promise(function(res){
+    choixResolve=res;
+    var b=document.getElementById('sync-choix-body');
+    if(b)b.innerHTML=
+      '<div style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:14px">Le cloud contient déjà des données, et cet appareil aussi. Lesquelles garder ?</div>'+
+      '<div class="sitem"><div class="sitem-left"><div class="sitem-label">☁️ Dans le cloud</div><div class="sitem-sub">'+rc+' courses · '+cc+' clients</div></div></div>'+
+      '<div class="sitem"><div class="sitem-left"><div class="sitem-label">📱 Sur cet appareil</div><div class="sitem-sub">'+rl+' courses · '+cl+' clients</div></div></div>'+
+      '<button class="btn btn-gold btn-full" onclick="FMSync.ui.choix(\'cloud\')" style="margin:6px 0 8px">Garder le cloud (recommandé)</button>'+
+      '<div style="font-size:0.72rem;color:var(--text3);margin:-2px 2px 12px;line-height:1.5">Une copie des données de cet appareil est téléchargée avant, par sécurité.</div>'+
+      '<button class="btn btn-outline btn-full" onclick="FMSync.ui.choix(\'local\')" style="margin-bottom:8px">Garder cet appareil et remplacer le cloud</button>'+
+      '<button class="btn btn-ghost btn-full" onclick="FMSync.ui.choix(null)" style="font-size:0.75rem">Décider plus tard</button>';
+    if(typeof openModal==='function')openModal('m-sync-choix');
+  });
+}
+
+/* ---------- actions de l'interface ---------- */
+var ui={
+  ouvrir:function(){
+    if(typeof openModal==='function')openModal('m-sync');
+    majUi();
+    if(!S.fb)loadFirebase().then(function(){majUi();}).catch(function(){majUi('Impossible de joindre le cloud (pas de réseau ?).');});
+    if(S.ready)chargerListeBk();
+  },
+  connecter:function(){
+    var em=(document.getElementById('sync-email')||{}).value||'',pw=(document.getElementById('sync-pwd')||{}).value||'';
+    var msg=document.getElementById('sync-msg'),btn=document.getElementById('sync-btn-login');
+    if(!em||!pw){if(msg)msg.textContent='Indique ton adresse mail et ton mot de passe.';return;}
+    if(btn){btn.disabled=true;btn.textContent='Connexion…';}
+    S.err='';
+    connecter(em,pw).then(function(){lsSet(LS_PROMPT,'1');}).catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='Se connecter';}
+      if(msg)msg.textContent=messageErreur(e);
+    });
+  },
+  oubli:function(){
+    var em=((document.getElementById('sync-email')||{}).value||'').trim(),msg=document.getElementById('sync-msg');
+    if(!em){if(msg)msg.textContent='Écris d\'abord ton adresse mail ci-dessus.';return;}
+    loadFirebase().then(function(fb){return fb.sendPasswordResetEmail(S.auth,em);})
+      .then(function(){if(msg){msg.style.color='#3ecf8e';msg.textContent='Un lien pour changer le mot de passe a été envoyé à '+em+'.';}})
+      .catch(function(e){if(msg)msg.textContent=messageErreur(e);});
+  },
+  maintenant:function(){
+    if(!S.user)return;
+    if(!S.ready){demarrer();return;}
+    setState('sync');majUi('Synchronisation…');
+    pushNow().then(function(){majEtat();chargerListeBk();}).catch(function(){});
+  },
+  sauverMaintenant:function(){
+    if(!S.ready)return;
+    majUi('Sauvegarde en cours…');
+    creerSauvegarde().then(function(){majEtat();chargerListeBk();}).catch(function(e){S.err=messageErreur(e);majUi('Sauvegarde impossible : '+S.err);});
+  },
+  restaurer:function(ix){
+    var m=(S.bk||[])[ix];if(!m)return;
+    restaurerSauvegarde(m).catch(function(e){majUi('Restauration impossible : '+messageErreur(e));});
+  },
+  deconnecter:function(){
+    if(!confirm('Se déconnecter du cloud sur cet appareil ?\n\nLes données restent dans l\'appareil et dans le cloud, mais elles ne seront plus synchronisées ici.'))return;
+    deconnecter();
+  },
+  choix:function(c){
+    if(typeof closeModal==='function')closeModal('m-sync-choix');
+    var r=choixResolve;choixResolve=null;if(r)r(c);
+  }
+};
+
+/* ---------- réseau, arrière-plan ---------- */
+window.addEventListener('online',function(){
+  S.online=true;
+  if(!S.fb){loadFirebase().catch(function(){});return;}
+  if(S.user&&!S.ready&&!S.linking)demarrer();else{pushNow().catch(function(){});majEtat();}
+});
+window.addEventListener('offline',function(){S.online=false;majEtat();});
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='hidden')flushPush().catch(function(){});
+  else if(S.ready){pushNow().catch(function(){});}
+});
+
+/* Réinitialiser l'application : on se déconnecte d'abord pour que le cloud ne remplisse pas à nouveau l'appareil */
+var resetOrig=window.resetApp;
+if(typeof resetOrig==='function'){
+  window.resetApp=function(){
+    if(!S.user)return resetOrig();
+    if(!confirm("Effacer toutes les données DE CET APPAREIL ?\n\nLes données du cloud ne sont pas touchées : cet appareil sera simplement déconnecté."))return;
+    if(!confirm("Dernière confirmation — tout sera supprimé sur cet appareil."))return;
+    deconnecter().catch(function(){}).then(function(){origClear.call(localStorage);location.reload();});
+  };
+}
+
+/* ---------- lancement ---------- */
+function lancer(){
+  majUi();
+  loadFirebase().then(function(){
+    /* première fois : proposer la connexion une seule fois, après le code PIN */
+    setTimeout(function attendre(){
+      if(S.user||lsGet(LS_PROMPT))return;
+      var pin=document.getElementById('pin-screen');
+      if(pin&&getComputedStyle(pin).display!=='none'){setTimeout(attendre,1500);return;}
+      lsSet(LS_PROMPT,'1');ui.ouvrir();
+    },2500);
+  }).catch(function(){});
+}
+
+window.FMSync={ui:ui,etat:function(){return {state:S.state,ready:S.ready,user:S.user&&S.user.email,pending:S.pending,shadow:Object.keys(S.shadow).length};},
+  _t:{S:S,localEntries:localEntries,pushNow:pushNow,flushPush:flushPush,hash:hash,stable:stable,creerSauvegarde:creerSauvegarde,listerSauvegardes:listerSauvegardes,restaurerSauvegarde:restaurerSauvegarde,sauvegardeHebdo:sauvegardeHebdo,demarrer:demarrer}};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',lancer);else lancer();
+})();
 </script>
 </body>
 </html>
