@@ -762,8 +762,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="fr">
       <div class="fg"><label class="fl">🧳 Grandes valises</label><input type="number" class="fi" id="r-grandes-valises" value="0" min="0" max="12" oninput="checkCapaciteApp()"></div>
       <div class="fg"><label class="fl">🎒 Petites / trolleys</label><input type="number" class="fi" id="r-petites-valises" value="0" min="0" max="12" oninput="checkCapaciteApp()"></div>
-      <div class="fg"><label class="fl">👶 Sièges bébé</label><input type="number" class="fi" id="r-sieges-bebe" value="0" min="0" max="3" oninput="checkCapaciteApp()"></div>
     </div>
+    <label class="fl" style="margin-top:4px">👶 Sièges enfants</label>
+    <div class="fr" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fg"><label class="fl" style="text-transform:none;letter-spacing:0;line-height:1.25">Siège bébé<br><span style="font-weight:400;color:var(--text3);font-size:0.9em">0–15 mois</span></label><input type="number" class="fi" id="r-siege-coque" value="0" min="0" max="4" oninput="majSiegesTotal()"></div>
+      <div class="fg"><label class="fl" style="text-transform:none;letter-spacing:0;line-height:1.25">Siège auto<br><span style="font-weight:400;color:var(--text3);font-size:0.9em">1–4 ans</span></label><input type="number" class="fi" id="r-siege-auto" value="0" min="0" max="4" oninput="majSiegesTotal()"></div>
+      <div class="fg"><label class="fl" style="text-transform:none;letter-spacing:0;line-height:1.25">Rehausseur<br><span style="font-weight:400;color:var(--text3);font-size:0.9em">4–12 ans</span></label><input type="number" class="fi" id="r-siege-rehausseur" value="0" min="0" max="4" oninput="majSiegesTotal()"></div>
+    </div>
+    <input type="hidden" id="r-sieges-bebe" value="0"><input type="hidden" id="r-sieges-legacy" value="0">
+    <div id="r-sieges-legacy-note" style="display:none;font-size:0.78rem;margin:-6px 0 12px;padding:8px 10px;border-radius:8px;background:rgba(240,165,0,0.12);color:var(--gold2)"></div>
     <div id="r-vehicule-hint" style="display:none;margin-top:6px" class="alert alert-orange">🚐 <span class="veh-nom-1">Talento</span> recommandé pour les bagages importants</div>
   </div>
 
@@ -1710,6 +1717,7 @@ function renderRes(){
     if(kmC>0)html+='<span class="badge badge-gray">📍'+kmC.toFixed(0)+'km</span>';
     if(kmR>kmC)html+='<span class="badge badge-purple">🚗'+kmR.toFixed(0)+'km</span>';
     if(isP)html+='<span class="badge badge-orange">🤝 '+r.source+'</span>';
+    if(siegesTotal(r))html+='<span class="badge badge-purple">👶 '+siegesTotal(r)+'</span>';
     if(r.vol)html+='<span class="badge badge-gold">✈ '+escH(r.vol)+'</span>';
     if(r.volRetour)html+='<span class="badge badge-blue">✈ '+escH(r.volRetour)+' (ret.)</span>';
     if(aVirementEnAttente(r))html+='<span class="badge badge-red">💸 ⏳</span>';
@@ -2287,7 +2295,7 @@ function resetResForm(){
   ['r-client-nom','r-client-tel','r-depart','r-dep-lat','r-dep-lon','r-arrivee','r-arr-lat','r-arr-lon','r-distance','r-vol','r-notes','r-date-retour','r-heure-retour','r-commission','r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','r-distance-retour','r-km-pickup','r-km-pickup-retour','r-km-vide-aller','r-km-vide-retour','r-distance-retour-jour','r-heure-retour-jour','r-stop-nom','r-stop-tel','r-stop-adresse','r-stop-lat','r-stop-lon'].forEach(id=>{const el=g(id);if(el)el.value='';});
   const stopBox=g('r-stop-box');if(stopBox)stopBox.style.display='none';const addStopBtn=g('btn-add-stop');if(addStopBtn){addStopBtn.textContent='➕ Arrêt intermédiaire';}
   ['r-peages','r-parking','r-acompte'].forEach(id=>{const el=g(id);if(el)el.value='0';});
-  const rp=g('r-passagers');if(rp)rp.value=1;['r-grandes-valises','r-petites-valises','r-sieges-bebe'].forEach(function(id){var e=g(id);if(e)e.value='0';});var hc=g('r-capacite-hint');if(hc)hc.style.display='none';const rv=g('r-vehicule');if(rv)rv.value='0';const rm=g('r-vmt-recu');if(rm)rm.checked=false;
+  const rp=g('r-passagers');if(rp)rp.value=1;['r-grandes-valises','r-petites-valises','r-sieges-bebe','r-siege-coque','r-siege-auto','r-siege-rehausseur','r-sieges-legacy'].forEach(function(id){var e=g(id);if(e)e.value='0';});var sln=g('r-sieges-legacy-note');if(sln)sln.style.display='none';var hc=g('r-capacite-hint');if(hc)hc.style.display='none';const rv=g('r-vehicule');if(rv)rv.value='0';const rm=g('r-vmt-recu');if(rm)rm.checked=false;
   ['r-solde-hint','dist-ok','dist-loading','dist-ret-ok','dist-ret-loading','r-vmt-section','r-partner-opts','r-devis-box'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
   const rcb=g('r-commission-box');if(rcb)rcb.style.display='block';const rpb=g('r-prepaye-box');if(rpb)rpb.style.display='none';
   const rph=g('r-prix-hint');if(rph)rph.textContent='';
@@ -2536,6 +2544,42 @@ function computeDevisPour(type){
   if(isAR&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
   return ps;
 }
+/* ---- Sièges enfants : siège bébé (coque), siège auto, rehausseur ----
+   siegesBebe reste le TOTAL (utilisé pour la capacité du véhicule et compatible avec les anciennes courses).
+   Les anciennes courses n'ont que le total, sans le type : on les affiche comme « siège(s) enfant ». */
+function siegesDetail(r){
+  r=r||{};var c=parseInt(r.siegesCoque)||0,a=parseInt(r.siegesAuto)||0,h=parseInt(r.siegesRehausseur)||0,t=c+a+h;
+  var legacy=(!t&&parseInt(r.siegesBebe)>0)?parseInt(r.siegesBebe):0;
+  return {coque:c,auto:a,rehausseur:h,legacy:legacy,total:t||legacy};
+}
+function siegesTotal(r){return siegesDetail(r).total;}
+function siegesTexte(r,lang){
+  var d=siegesDetail(r),L={
+    fr:[['siège bébé','sièges bébé'],['siège auto','sièges auto'],['rehausseur','rehausseurs'],['siège enfant','sièges enfant']],
+    en:[['baby seat','baby seats'],['child seat','child seats'],['booster seat','booster seats'],['child seat','child seats']],
+    nl:[['babyzitje','babyzitjes'],['autostoeltje','autostoeltjes'],['zittingverhoger','zittingverhogers'],['kinderzitje','kinderzitjes']]
+  };L=L[lang]||L.fr;
+  var out=[];[[d.coque,0],[d.auto,1],[d.rehausseur,2],[d.legacy,3]].forEach(function(x){if(x[0]>0)out.push(x[0]+' '+L[x[1]][x[0]>1?1:0]);});
+  return out.join(', ');
+}
+function siegesTitre(r){var t=siegesTotal(r);return t?' 👶'+(t>1?'×'+t:''):'';}
+function majSiegesTotal(){
+  var v=function(id){return Math.max(0,parseInt((g(id)||{}).value||0)||0);};
+  var t=v('r-siege-coque')+v('r-siege-auto')+v('r-siege-rehausseur'),legacy=v('r-sieges-legacy');
+  var note=g('r-sieges-legacy-note');
+  if(t>0&&legacy){var l=g('r-sieges-legacy');if(l)l.value='0';legacy=0;}
+  if(note)note.style.display=legacy?'block':'none';
+  var tot=g('r-sieges-bebe');if(tot)tot.value=String(t||legacy);
+  try{checkCapaciteApp();}catch(e){}
+  try{if(typeof genResSummary==='function'&&g('res-summary'))genResSummary();}catch(e){}
+}
+function chargerSieges(r){
+  var d=siegesDetail(r);
+  [['r-siege-coque',d.coque],['r-siege-auto',d.auto],['r-siege-rehausseur',d.rehausseur],['r-sieges-legacy',d.legacy]].forEach(function(x){var e=g(x[0]);if(e)e.value=String(x[1]);});
+  var note=g('r-sieges-legacy-note');
+  if(note){note.textContent='Saisie ancienne : '+d.legacy+' siège'+(d.legacy>1?'s':'')+' enfant, type non précisé. Indique le type ci-dessus si tu le connais.';note.style.display=d.legacy?'block':'none';}
+  var tot=g('r-sieges-bebe');if(tot)tot.value=String(d.total);
+}
 /* Capacite reelle de la Seat Leon, mesuree sur le terrain :
    - 3 passagers maximum
    - 2 grandes valises + 1 trolley (2 trolleys a la limite)
@@ -2543,7 +2587,7 @@ function computeDevisPour(type){
 function evaluerCapaciteSeat(pax,grandes,petites,bebes){
   var msg=null;
   if(pax>3) return {ok:false,raison:pax+' passagers'};
-  if(bebes>=2) return {ok:false,raison:bebes+' sieges bebe'};
+  if(bebes>=2) return {ok:false,raison:bebes+' sièges enfants'};
   /* place disponible pour les bagages : coffre + siege avant si moins de 3 passagers */
   var siegeAvantLibre = pax<3;
   var maxGrandes = siegeAvantLibre ? 3 : 2;
@@ -2682,7 +2726,7 @@ function saveReservationCore(){
     facturePaye:existingR.facturePaye||false,
     commissionPayee:existingR.commissionPayee||false,
     statut:existingR.statut||'',
-    bagages:parseInt(g('r-bagages')?.value||0),siegesBebe:parseInt(g('r-sieges-bebe')?.value||0),type,service:g('r-service').value,
+    bagages:parseInt(g('r-bagages')?.value||0),siegesBebe:parseInt(g('r-sieges-bebe')?.value||0)||0,siegesCoque:parseInt(g('r-siege-coque')?.value||0)||0,siegesAuto:parseInt(g('r-siege-auto')?.value||0)||0,siegesRehausseur:parseInt(g('r-siege-rehausseur')?.value||0)||0,type,service:g('r-service').value,
     dateAller:g('r-date-aller').value,heure:g('r-heure-aller').value,
     dateRetour:type==='ar-diff'?g('r-date-retour').value:'',
     heureRetour:type==='ar-diff'?g('r-heure-retour').value:(g('r-heure-retour-jour')?.value||''),
@@ -2771,7 +2815,7 @@ function saveReservationCore(){
   const saveBtnClose=g('res-btn-save');if(saveBtnClose){saveBtnClose.disabled=false;saveBtnClose.textContent='✓ Fermer';saveBtnClose.onclick=function(){closeModal('m-res');saveBtnClose.textContent='✓ Enregistrer';saveBtnClose.onclick=saveReservation;};}
   /* Course existante confiée à un partenaire (ou date changée) : on propose tout de suite le rappel de la veille */
   if(editId&&!estVehiculeSecondaire(r)&&estConfiee(r)){const _pl=progMsgsListe(r).filter(x=>x.dest==='partenaire'&&!x.tard&&!(r.progMsgs&&r.progMsgs[x.cle]));if(_pl.length&&(_confChange||r.dateAller!==existingR.dateAller||r.dateRetour!==existingR.dateRetour))setTimeout(()=>{try{openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},600);}
-  if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier Samsung ?"))exportICS(r);setTimeout(()=>{try{if(!estVehiculeSecondaire(r))openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},700);},600);}
+  if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier ?"))exportICS(r);setTimeout(()=>{try{if(!estVehiculeSecondaire(r))openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},700);},600);}
 }
 function genResSummary(){
   const vipC=isVip(g('r-client-nom')?.value?.trim()||'');
@@ -2813,6 +2857,7 @@ function genResSummary(){
   if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n'+legEmoji+' '+legLabelEN+'\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr+volA_EN;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2EN+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' To: '+arrRet+(volRetour?'\n✈️ '+volR_EN+': '+volRetour:'');msg+='\n\n💶 Total: '+fmt(prix)+(type==='ar-diff'?'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR):'');}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
   else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n'+legEmoji+' '+legLabelNL+'\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr+volA_NL;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2NL+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Naar: '+arrRet+(volRetour?'\n✈️ '+volR_NL+': '+volRetour:'');msg+='\n\n💶 Totaal: '+fmt(prix)+(type==='ar-diff'?'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR):'');}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
   else{const stopInfo=acC['r-stop-adresse']&&g('r-stop-adresse')?.value?'\n📍 Arrêt : '+g('r-stop-adresse').value+(g('r-stop-nom')?.value?' ('+g('r-stop-nom').value+')':''):'';msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n'+legEmoji+' '+legLabelFR+'\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+stopInfo+'\n📍 Arrivée : '+arr+volA_FR;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2FR+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Arrivée : '+arrRet+(volRetour?'\n✈️ '+volR_FR+' : '+volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+(type==='ar-diff'?'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR):'');}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
+  {const _sg=siegesTexte({siegesCoque:g('r-siege-coque')?.value,siegesAuto:g('r-siege-auto')?.value,siegesRehausseur:g('r-siege-rehausseur')?.value,siegesBebe:g('r-sieges-legacy')?.value},lang);if(_sg){const _lab=lang==='en'?'Child seats provided: ':(lang==='nl'?'Kinderzitjes voorzien: ':'Sièges enfants prévus : ');msg=msg.replace('\n\n💶','\n\n👶 '+_lab+_sg+'\n💶');}}
   sv('wa-preview',msg);acC['wa-msg']=msg;acC['wa-tel']=(g('r-client-tel').value||'').replace(/[^+\d]/g,'');
 }
 function sendWA(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
@@ -2852,7 +2897,7 @@ function showDetailRes(id){
     h+='<div class="dr"><span class="dr-label">Client</span><span class="dr-val">'+escH(r.clientNom);
     if(r.clientTel)h+=' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">'+escH(r.clientTel)+'</a>';
     h+='</span></div>';
-    h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';
+    h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';if(siegesTexte(r,'fr'))h+='<div class="dr"><span class="dr-label">👶 Sièges enfants</span><span class="dr-val">'+siegesTexte(r,'fr')+'</span></div>';
     {var _gr=groupeCourse(r);if(_gr.length>1)h+='<div class="dr"><span class="dr-label">🚐 Groupe</span><span class="dr-val">'+_gr.length+' véhicules · total '+fmt(_gr.reduce(function(s,x){return s+(parseFloat(x.prix)||0);},0))+' · '+_gr.reduce(function(s,x){return s+(parseInt(x.passagers)||0);},0)+' pers.</span></div>';}
     if(estConfiee(r)){var _d=confDu(r);h+='<div class="dr" style="border:1px dashed var(--gold);border-radius:8px;padding:6px 8px"><span class="dr-label">🤝 Confiée à</span><span class="dr-val">'+escH(r.confieA)+(confTrajet(r)?' · '+confTrajet(r)+' seulement ('+fmt(prixConfie(r))+')':'')+' · commission '+fmt(confComm(r))+'<br><span style="font-size:0.72rem;color:var(--text3)">'+(r.confieEncaisse==='moi'?'Payé sur ton compte':'Il encaisse le client')+' · '+(_d===0?'✓ réglé':(_d>0?'il te doit '+fmt(_d):'tu lui dois '+fmt(-_d)))+'</span></span></div>';}
     if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
@@ -3052,6 +3097,7 @@ function editRes(id){
   if(g('r-passagers'))g('r-passagers').value=r.passagers||1;if(g('r-grandes-valises'))g('r-grandes-valises').value=r.grandesValises||0;if(g('r-petites-valises'))g('r-petites-valises').value=r.petitesValises||0;if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;try{checkCapaciteApp();}catch(e){}
   if(g('r-bagages'))g('r-bagages').value=r.bagages||0;
   if(g('r-sieges-bebe'))g('r-sieges-bebe').value=r.siegesBebe||0;
+  try{chargerSieges(r);checkCapaciteApp();}catch(e){}
   if(g('r-vol'))g('r-vol').value=r.vol||'';
   if(g('r-vol-retour'))g('r-vol-retour').value=r.volRetour||'';
   setTimeout(showClientAddrBtns,200);
@@ -3222,7 +3268,7 @@ function msgPartenaire(r,sens){
   if(r.type==='ar-jour'&&r.heureRetour&&!ret&&!confTrajet(r))m+='🔁 Retour le même jour : '+r.heureRetour+(r.volRetour?' (vol '+r.volRetour+')':'')+'\n';
   var pax=parseInt(r.passagers)||1;m+='👥 '+pax+' passager'+(pax>1?'s':'');
   var gv=parseInt(r.grandesValises)||0,pv=parseInt(r.petitesValises)||0;if(gv||pv)m+=' · 🧳 '+(gv?gv+' grande'+(gv>1?'s':''):'')+(gv&&pv?' + ':'')+(pv?pv+' petite'+(pv>1?'s':''):'');
-  if(parseInt(r.siegesBebe)>0)m+=' · 👶 '+r.siegesBebe+' siège(s) bébé';
+  var _st=siegesTexte(r,'fr');if(_st)m+=' · 👶 '+_st;
   m+='\n';
   if(r.stopAdresse)m+='📍 Arrêt : '+r.stopAdresse+(r.stopNom?' ('+r.stopNom+(r.stopTel?' — '+r.stopTel:'')+')':'')+'\n';
   m+='\n';
@@ -4331,7 +4377,7 @@ function exportICS(r){
     r.stopAdresse?('📍 Arrêt: '+escH(r.stopAdresse)+(r.stopNom?' ('+escH(r.stopNom)+')'+(r.stopTel?' — '+r.stopTel:''):'')):'',
     depoLabelAller,
     r.passagers?'👥 Passagers: '+r.passagers:'',
-    r.siegesBebe?'👶 Sièges bébé: '+r.siegesBebe:'',
+    siegesTexte(r,'fr')?'👶 Sièges enfants : '+siegesTexte(r,'fr'):'',
     r.vol?'🛩️ Vol: '+escH(r.vol):'',
     isAR?('💰 Prix aller: '+fmt(prixTrajet)+' (A/R total '+fmt(r.prix)+') — '+payLabel):('💰 Prix: '+fmt(r.prix)+' — '+payLabel),
     parseFloat(r.acompte||0)>0?('💳 Acompte: '+fmt(r.acompte)+' — Solde: '+fmt(parseFloat(r.prix||0)-parseFloat(r.acompte||0))):'',
@@ -4339,7 +4385,7 @@ function exportICS(r){
   ].filter(Boolean);
   const descAller=escDesc(linesAller.join('\n'));
   // Titre : 🛫 HH:MM - Zaventem - NomClient  OU  🛬 HH:MM - Zaventem - NomClient
-  const summaryAller=(confieSens(r,'aller')?'🤝 '+r.confieA+' · ':'')+emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+escH(r.clientNom);
+  const summaryAller=(confieSens(r,'aller')?'🤝 '+r.confieA+' · ':'')+emojiAller+' '+(r.heure||'')+' - '+aeroAller+' - '+escH(r.clientNom)+siegesTitre(r);
   const start=fmtDT(r.dateAller,r.heure);
   const dEnd=new Date(r.dateAller+'T'+(r.heure||'08:00')+':00');
   dEnd.setMinutes(dEnd.getMinutes()+(parseInt(r.duree)||90));
@@ -4363,7 +4409,7 @@ function exportICS(r){
       '🛬 Prise en charge: '+shortAero(depRet),
       arrRet?'🏠 Dépose: '+arrRet:'',
       r.passagers?'👥 Passagers: '+r.passagers:'',
-      r.siegesBebe?'👶 Sièges bébé: '+r.siegesBebe:'',
+      siegesTexte(r,'fr')?'👶 Sièges enfants : '+siegesTexte(r,'fr'):'',
       r.vol?'🛩️ Vol aller: '+escH(r.vol):'',
       r.volRetour?'🛩️ Vol retour: '+escH(r.volRetour):'',
       '💰 Prix retour: '+fmt(prixTrajet)+' (A/R total '+fmt(r.prix)+') — '+payLabel,
@@ -4372,7 +4418,7 @@ function exportICS(r){
     ].filter(Boolean);
     const descRetour=escDesc(linesRetour.join('\n'));
     // Titre RETOUR : 🛬 HH:MM - Zaventem - NomClient
-    const summaryRetour=(confieSens(r,'retour')?'🤝 '+r.confieA+' · ':'')+'🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+escH(r.clientNom);
+    const summaryRetour=(confieSens(r,'retour')?'🤝 '+r.confieA+' · ':'')+'🛬 '+r.heureRetour+' - '+shortAero(depRet)+' - '+escH(r.clientNom)+siegesTitre(r);
     events+='\r\nBEGIN:VEVENT\r\nUID:fm-'+r.id+'-retour@facciolini\r\nSUMMARY:'+summaryRetour+'\r\nDESCRIPTION:'+descRetour+'\r\nDTSTART:'+startR+'\r\nDTEND:'+endR+'\r\nLOCATION:'+esc(depRet)+'\r\nEND:VEVENT';
   }
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Facciolini Mobility//FR\r\n'+events+'\r\nEND:VCALENDAR';
