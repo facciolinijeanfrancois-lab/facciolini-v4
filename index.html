@@ -240,7 +240,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   .nav-btn{flex:none;flex-direction:row;justify-content:flex-start;gap:14px;padding:12px 16px;border-radius:12px;
     font-size:0.86rem;letter-spacing:0.02em;text-transform:none;height:auto;transition:background .15s,color .15s}
   .nav-btn .nav-icon{width:20px;height:20px;flex:none}
-  .nav-btn:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+  .nav-btn:hover{background:rgba(255,255,255,0.07);color:#fff}
+  .nav-btn.active:hover{color:var(--gold)}
   .nav-btn.active{background:rgba(201,168,76,0.12)}
   .nav-btn.active::before{top:10px;bottom:10px;left:0;transform:none;width:3px;height:auto;border-radius:0 4px 4px 0}
 
@@ -284,6 +285,37 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   #res-list,#clients-list{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
 }
 </style>
+<script id="wa-mac-fix">
+/* WhatsApp sur ordinateur (Mac/PC) : l'application WhatsApp abîme les émojis reçus par lien
+   (ils deviennent des « ◆? »). Sur ordinateur uniquement, on remplace les émojis de début de ligne
+   par une puce « • » et on retire les autres. Sur téléphone, le message part tel quel. */
+(function(){
+  var ua=navigator.userAgent||'';
+  var mobile=/Android|iPhone|iPad|iPod|Mobile/i.test(ua)||(navigator.maxTouchPoints||0)>1;
+  if(mobile)return;
+  var EMO=/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:\uFE0F|\u20E3|\u200D(?:\p{Extended_Pictographic}|\p{Regional_Indicator})|\p{Emoji_Modifier}|\p{Regional_Indicator})*/gu;
+  function nettoyer(t){
+    return t.split('\n').map(function(l){
+      var m=l.match(/^(\s*)((?:(?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:\uFE0F|\u20E3|\u200D\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator})*\s*)+)/u);
+      if(m) l=m[1]+'\u2022 '+l.slice(m[0].length);
+      l=l.replace(EMO,'').replace(/[\uFE0F\u200D]/g,'').replace(/[ \t]{2,}/g,' ');
+      return l.replace(/\s+$/,'');
+    }).join('\n');
+  }
+  window.fmTexteWhatsAppOrdi=nettoyer;
+  var orig=window.open;
+  window.open=function(url){
+    try{
+      if(typeof url==='string'&&/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(url)&&url.indexOf('text=')>=0){
+        var i=url.indexOf('text=')+5,j=url.indexOf('&',i);if(j<0)j=url.length;
+        var txt=decodeURIComponent(url.slice(i,j).replace(/\+/g,'%20'));
+        arguments[0]=url.slice(0,i)+encodeURIComponent(nettoyer(txt))+url.slice(j);
+      }
+    }catch(e){}
+    return orig.apply(window,arguments);
+  };
+})();
+</script>
 </head>
 <body>
 
