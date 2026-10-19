@@ -2587,7 +2587,8 @@ function chargerSieges(r){
 function evaluerCapaciteSeat(pax,grandes,petites,bebes){
   var msg=null;
   if(pax>3) return {ok:false,raison:pax+' passagers'};
-  if(bebes>=2) return {ok:false,raison:bebes+' sièges enfants'};
+  /* 3 Isofix dans la Seat : 2 à l'arrière + 1 sur le siège passager avant */
+  if(bebes>3) return {ok:false,raison:bebes+' sièges enfants (la Seat a 3 Isofix)'};
   /* place disponible pour les bagages : coffre + siege avant si moins de 3 passagers */
   var siegeAvantLibre = pax<3;
   var maxGrandes = siegeAvantLibre ? 3 : 2;
@@ -2625,6 +2626,17 @@ function checkCapaciteApp(){
     hint.style.background='rgba(240,165,0,0.10)';
     hint.style.color='var(--gold2)';
     hint.textContent='⚠️ '+cap.note;
+    return;
+  }
+  const coque=parseInt(g('r-siege-coque')?.value||0)||0;
+  if(bebes>passagers){
+    hint.style.display='block';hint.style.background='rgba(45,125,210,0.10)';hint.style.color='var(--blue2)';
+    hint.textContent='👥 '+bebes+' sièges enfants pour '+passagers+' passager'+(passagers>1?'s':'')+' : pense à compter les enfants dans les passagers.';
+    return;
+  }
+  if(bebes===3&&passagers<=3&&vehEl.value==='0'){
+    hint.style.display='block';hint.style.background='rgba(45,125,210,0.10)';hint.style.color='var(--blue2)';
+    hint.textContent='👶 3 sièges dans la Seat : 2 Isofix à l\'arrière + 1 sur le siège passager avant.'+(coque?' Si le siège bébé va à l\'avant (dos à la route), désactive l\'airbag passager.':'');
     return;
   }
   if(passagers>=4&&vehEl.value==='0'){
@@ -3450,7 +3462,7 @@ function updVehiculeAuto(){
   const bag=parseInt(g('r-bagages')?.value||0);
   const bebe=parseInt(g('r-sieges-bebe')?.value||0);
   const hint=g('r-vehicule-hint');
-  if(bag>=4||bebe>=2){
+  if(bag>=4||bebe>3){
     if(hint)hint.style.display='block';
     const veh=g('r-vehicule');if(veh&&veh.value==='0'){veh.value='1';}
   }else{
