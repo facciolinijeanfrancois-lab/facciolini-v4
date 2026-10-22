@@ -532,6 +532,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="stitle">Application</div>
   <button class="btn btn-outline btn-full" id="btn-check-update" onclick="checkForUpdateNow()" style="margin-bottom:8px">&#x1f504; V&#xe9;rifier les mises &#xe0; jour</button>
 
+  <div class="stitle">&#x1f4b3; Paiement par QR code</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Compte qui reçoit les virements</div><div class="sitem-sub" id="p-qr-sub">Pas encore configuré</div></div><button class="btn btn-outline btn-sm" onclick="openQrReglages()">Modifier</button></div>
+
   <div class="stitle">TVA</div>
   <div class="sitem"><div class="sitem-left"><div class="sitem-label">Assujetti &#xe0; la TVA</div><div class="sitem-sub">&#xc0; activer seulement quand Adam te le dit. Les prix encaiss&#xe9;s sont alors TVAC : l'app compte le HT comme recette et affiche la TVA &#xe0; reverser.</div></div><label class="toggle"><input type="checkbox" id="p-tva-on" onchange="majTvaReglages()"><span class="tslider"></span></label></div>
   <div class="fr" id="p-tva-details" style="display:none"><div class="fg"><label class="fl">Depuis le</label><input type="date" class="fi" id="p-tva-depuis" onchange="majTvaReglages()"></div><div class="fg"><label class="fl">Taux (%)</label><input type="number" class="fi" id="p-tva-taux" value="6" step="0.5" onchange="majTvaReglages()"></div></div>
@@ -684,7 +687,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
           <label class="fl">Adresse arrêt intermédiaire</label>
           <div class="ac-wrap"><input type="text" class="fi" id="r-stop-adresse" placeholder="Adresse du 2ème client..." autocomplete="off" oninput="acSearch(this,'ac-r-stop','r-stop-adresse')"><input type="hidden" id="r-stop-lat"><input type="hidden" id="r-stop-lon"><div class="ac-drop" id="ac-r-stop"></div></div>
         </div>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">📐 La distance sera recalculée automatiquement via les 3 points</div>
+        <div id="r-arrets-sup"></div>
+        <button type="button" class="btn btn-outline btn-xs" id="btn-arret-sup" onclick="ajouterArretSup()" style="margin-top:6px">➕ Autre arrêt</button>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:6px">📐 La distance est recalculée automatiquement en passant par tous les arrêts</div>
         <button type="button" class="btn btn-red btn-xs" onclick="removeStop()" style="margin-top:8px">✕ Supprimer l'arrêt</button>
       </div>
     </div>
@@ -1039,6 +1044,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-outline btn-sm" id="dr-avis-sms-btn" style="display:none">&#x1f4f1; Avis SMS</button>
   <button class="btn btn-outline btn-sm" id="dr-stop-wa-btn" style="display:none">&#x1f4ac; WA 2ème passager</button>
   <button class="btn btn-outline btn-sm" id="dr-stop-sms-btn" style="display:none">&#x1f4f1; SMS 2ème passager</button>
+  <button class="btn btn-gold btn-sm" id="dr-qr-btn" style="display:none">&#x1f4f2; QR paiement</button>
   <button class="btn btn-outline btn-sm" id="dr-edit-btn">Modifier</button>
   <button class="btn btn-outline btn-sm" id="dr-veh2-btn" onclick="ajouterVehicule(currentDetailId)">➕ 2e véhicule</button>
   <button class="btn btn-red btn-sm" id="dr-del-btn">Supprimer</button>
@@ -1240,6 +1246,21 @@ function getPrixFixeZone(depTxt,arrTxt,isTalento){
   if(isCarnieres&&isCharleroi)return isTalento?80:60;
   if(isCarnieres&&isZaventem)return isTalento?120:95;
   return null;
+}
+/* Prix au kilomètre (même formule que le site) : minimum par trajet, supplément minivan, sans arrondi */
+function prixKmBrut(km,isAR,isTalento,kmRet){
+  var t=db.settings.tarifs,tarif=km>t.rayon?t.long:t.court;
+  var pb=Math.max(t.min,km*tarif)+(isAR?Math.max(t.min,(kmRet||km)*tarif):0);
+  if(isTalento)pb+=t.camion*(isAR?2:1);
+  return pb;
+}
+/* Tarif fixe (Carnières → aéroport) quand il y a des arrêts en plus : on facture le trajet complet
+   au kilomètre, mais jamais moins que le tarif fixe. Renvoie le prix avant arrondi + ce qui a été appliqué. */
+function prixFixeAvecArrets(fixe,km,isAR,isTalento,kmRet){
+  var f=isAR?fixe*2:fixe;
+  if(!(km>0))return {pb:f,km:false};
+  var k=prixKmBrut(km,isAR,isTalento,kmRet);
+  return k>f?{pb:k,km:true}:{pb:f,km:false};
 }
 function g(id){return document.getElementById(id);}
 function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!==undefined)el.className=cls;}
@@ -2218,7 +2239,7 @@ function reafficherMoisPartenaire(p){
   db.partnerMoisMasques[p]=[];
   save();renderAll();
 }
-function renderParams(){try{afficherTvaReglages();}catch(e){}
+function renderParams(){try{afficherTvaReglages();}catch(e){}try{majQrReglagesSub();}catch(e){}
   var s=db.settings;
   renderUsageStats();
   loadNotifSettings();
@@ -2310,7 +2331,7 @@ function resetResForm(){
   });
   const niElR=g('r-notes-interne');if(niElR)niElR.value='';
   ['r-client-nom','r-client-tel','r-depart','r-dep-lat','r-dep-lon','r-arrivee','r-arr-lat','r-arr-lon','r-distance','r-vol','r-notes','r-date-retour','r-heure-retour','r-commission','r-depart-retour','r-dep-ret-lat','r-dep-ret-lon','r-arrivee-retour','r-arr-ret-lat','r-arr-ret-lon','r-distance-retour','r-km-pickup','r-km-pickup-retour','r-km-vide-aller','r-km-vide-retour','r-distance-retour-jour','r-heure-retour-jour','r-stop-nom','r-stop-tel','r-stop-adresse','r-stop-lat','r-stop-lon'].forEach(id=>{const el=g(id);if(el)el.value='';});
-  const stopBox=g('r-stop-box');if(stopBox)stopBox.style.display='none';const addStopBtn=g('btn-add-stop');if(addStopBtn){addStopBtn.textContent='➕ Arrêt intermédiaire';}
+  const stopBox=g('r-stop-box');if(stopBox)stopBox.style.display='none';const addStopBtn=g('btn-add-stop');if(addStopBtn){addStopBtn.textContent='➕ Arrêt intermédiaire';}acC['r-stop-adresse']=null;try{viderArretsSup();}catch(e){}
   ['r-peages','r-parking','r-acompte'].forEach(id=>{const el=g(id);if(el)el.value='0';});
   const rp=g('r-passagers');if(rp)rp.value=1;['r-grandes-valises','r-petites-valises','r-sieges-bebe','r-siege-coque','r-siege-auto','r-siege-rehausseur','r-sieges-legacy'].forEach(function(id){var e=g(id);if(e)e.value='0';});var sln=g('r-sieges-legacy-note');if(sln)sln.style.display='none';var hc=g('r-capacite-hint');if(hc)hc.style.display='none';const rv=g('r-vehicule');if(rv)rv.value='0';const rm=g('r-vmt-recu');if(rm)rm.checked=false;
   ['r-solde-hint','dist-ok','dist-loading','dist-ret-ok','dist-ret-loading','r-vmt-section','r-partner-opts','r-devis-box'].forEach(id=>{const el=g(id);if(el)el.style.display='none';});
@@ -2574,7 +2595,7 @@ function computeDevisPour(type){
   const t=db.settings.tarifs,tarif=dist>t.rayon?t.long:t.court;
   const distR2=type==='ar-diff'?parseFloat(g('r-distance-retour')?.value||dist):type==='ar-jour'?parseFloat(g('r-distance-retour-jour')?.value||dist):0;
   let pb;
-  if(prixFixe!==null){pb=isAR?prixFixe*2:prixFixe;}
+  if(prixFixe!==null){pb=nbArretsForm()>0?prixFixeAvecArrets(prixFixe,dist,isAR,isTalento,distR2).pb:(isAR?prixFixe*2:prixFixe);}
   else{const pA=Math.max(t.min,dist*tarif);const pR=isAR?Math.max(t.min,(distR2||dist)*tarif):0;pb=pA+pR;if(isTalento)pb+=t.camion*(isAR?2:1);}
   const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
   let ps=roundTo(pb,t.round);if(vipApp)ps=roundTo(ps*(1-db.settings.vip.reduc/100),t.round);
@@ -2721,7 +2742,10 @@ function updCalc(){try{if((g('r-confie')||{}).value&&(g('r-confie-veh')||{}).val
     const db2=g('r-devis-box');if(db2)db2.style.display='block';
     sv('r-devis-price',ps+' €');
     const nom=g('r-client-nom')?.value.trim()||'';const vipApp=nom&&isVip(nom);
-    if(prixFixe2!==null){
+    if(prixFixe2!==null&&nbArretsForm()>0){
+      const _pa=prixFixeAvecArrets(prixFixe2,dist,(type2==='ar-diff'||type2==='ar-jour'),isTalento,distR2),_na=nbArretsForm();
+      sv('r-devis-detail',(_pa.km?dist+'km via '+_na+' arrêt'+(_na>1?'s':'')+' × '+tarif.toFixed(2)+'€/km (plus que le tarif fixe de '+prixFixe2+'€)':'Tarif fixe Carnières '+prixFixe2+'€ (l\'arrêt ne change rien : '+dist+'km)')+((type2==='ar-diff'||type2==='ar-jour')?' × 2 (A/R)':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+' · Arrondi '+t.round+'€');
+    }else if(prixFixe2!==null){
       sv('r-devis-detail','Tarif fixe Carnières'+(prixFixe2>=95?' → Zaventem':' → Charleroi')+' · '+prixFixe2+'€'+((type2==='ar-diff'||type2==='ar-jour')?' × 2 (A/R)':'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+((type2==='ar-diff'||type2==='ar-jour')&&t.remiseAR?' · Remise A/R -'+t.remiseAR+'€':''));
     }else{
       sv('r-devis-detail',dist+'km × '+tarif.toFixed(2)+'€/km'+(distR2>0?' + '+distR2+'km retour':'')+(isTalento?' +'+(t.camion*((type2==='ar-diff'||type2==='ar-jour')?2:1))+'€'+((type2==='ar-diff'||type2==='ar-jour')?' (Talento ×2)':''):'')+(vipApp?' VIP -'+db.settings.vip.reduc+'%':'')+((type2==='ar-diff'||type2==='ar-jour')&&t.remiseAR?' · Remise A/R -'+t.remiseAR+'€':'')+' · Arrondi '+t.round+'€');
@@ -2796,6 +2820,7 @@ function saveReservationCore(){
     stopNom:g('r-stop-nom')?.value.trim()||'',stopTel:g('r-stop-tel')?.value.trim()||'',
     stopAdresse:g('r-stop-adresse')?.value.trim()||'',
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
+    arretsSup:(g('r-stop-box')&&g('r-stop-box').style.display!=='none')?arretsSup().filter(function(x){return (x.adresse||'').trim();}).map(function(x){return {adresse:x.adresse.trim(),lat:x.lat||null,lon:x.lon||null};}):[],
     duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90),
     confieA:(g('r-confie')?.value||''),confieVehicule:(g('r-confie')?.value?(g('r-confie-veh')?.value==='mien'?'mien':'sien'):''),confiePaye:((g('r-confie')?.value&&g('r-confie-veh')?.value==='mien')?(parseFloat(g('r-confie-paye')?.value||0)||0):0),confieCommission:((g('r-confie')?.value&&g('r-confie-veh')?.value!=='mien')?(parseFloat(g('r-confie-comm')?.value||0)||0):0),confieEncaisse:(g('r-confie')?.value?(g('r-confie-enc')?.value||'partenaire'):''),
     confieTrajet:(g('r-confie')?.value?confieTrajetForm():''),confiePart:''
@@ -2905,7 +2930,7 @@ function genResSummary(){
   let msg='';
   if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n'+legEmoji+' '+legLabelEN+'\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr+volA_EN;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2EN+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' To: '+arrRet+(volRetour?'\n✈️ '+volR_EN+': '+volRetour:'');msg+='\n\n💶 Total: '+fmt(prix)+(type==='ar-diff'?'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR):'');}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
   else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n'+legEmoji+' '+legLabelNL+'\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr+volA_NL;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2NL+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Naar: '+arrRet+(volRetour?'\n✈️ '+volR_NL+': '+volRetour:'');msg+='\n\n💶 Totaal: '+fmt(prix)+(type==='ar-diff'?'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR):'');}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
-  else{const stopInfo=acC['r-stop-adresse']&&g('r-stop-adresse')?.value?'\n📍 Arrêt : '+g('r-stop-adresse').value+(g('r-stop-nom')?.value?' ('+g('r-stop-nom').value+')':''):'';msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n'+legEmoji+' '+legLabelFR+'\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+stopInfo+'\n📍 Arrivée : '+arr+volA_FR;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2FR+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Arrivée : '+arrRet+(volRetour?'\n✈️ '+volR_FR+' : '+volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+(type==='ar-diff'?'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR):'');}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
+  else{const stopInfo=(acC['r-stop-adresse']&&g('r-stop-adresse')?.value?'\n📍 Arrêt : '+g('r-stop-adresse').value+(g('r-stop-nom')?.value?' ('+g('r-stop-nom').value+')':''):'')+arretsSupValides().map(function(x){return '\n📍 Arrêt : '+x.adresse;}).join('');msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n'+legEmoji+' '+legLabelFR+'\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+stopInfo+'\n📍 Arrivée : '+arr+volA_FR;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2FR+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Arrivée : '+arrRet+(volRetour?'\n✈️ '+volR_FR+' : '+volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+(type==='ar-diff'?'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR):'');}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
   {const _sg=siegesTexte({siegesCoque:g('r-siege-coque')?.value,siegesAuto:g('r-siege-auto')?.value,siegesRehausseur:g('r-siege-rehausseur')?.value,siegesBebe:g('r-sieges-legacy')?.value},lang);if(_sg){const _lab=lang==='en'?'Child seats provided: ':(lang==='nl'?'Kinderzitjes voorzien: ':'Sièges enfants prévus : ');msg=msg.replace('\n\n💶','\n\n👶 '+_lab+_sg+'\n💶');}}
   sv('wa-preview',msg);acC['wa-msg']=msg;acC['wa-tel']=(g('r-client-tel').value||'').replace(/[^+\d]/g,'');
 }
@@ -2955,6 +2980,7 @@ function showDetailRes(id){
     if(r.type==='ar-jour'&&r.heureRetour)h+='<div class="dr"><span class="dr-label">Retour même jour</span><span class="dr-val">'+r.heure+' → '+r.heureRetour+'</span></div>';
     h+='<div class="dr"><span class="dr-label">Trajet</span><span class="dr-val">'+(r.depart||'—').substring(0,22)+' → '+(r.arrivee||'—').substring(0,22)+'</span></div>';
     if(r.stopAdresse)h+='<div class="dr"><span class="dr-label" style="color:var(--blue2)">📍 Arrêt intermédiaire</span><span class="dr-val" style="color:var(--blue2)">'+escH(r.stopAdresse).substring(0,30)+(r.stopNom?' · '+escH(r.stopNom):'')+'</span></div>';
+    texteArretsSup(r).forEach(function(a,i){h+='<div class="dr"><span class="dr-label" style="color:var(--blue2)">📍 Arrêt '+(i+2)+'</span><span class="dr-val" style="color:var(--blue2)">'+escH(a).substring(0,30)+'</span></div>';});
     if(r.type==='ar-diff'&&r.arriveeRetour)h+='<div class="dr"><span class="dr-label">Retour</span><span class="dr-val">'+(r.departRetour||r.arrivee||'—').substring(0,22)+' → '+escH(r.arriveeRetour).substring(0,22)+'</span></div>';
     if(r.vol){
       h+='<div class="dr"><span class="dr-label">Vol aller</span><span class="dr-val" style="color:var(--blue2)">✈ '+escH(r.vol)+'</span></div>';
@@ -3000,6 +3026,7 @@ function showDetailRes(id){
     dc.innerHTML=h;
   }
   var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
+  var dqb=g('dr-qr-btn');if(dqb){dqb.onclick=function(){openQrPaiement(id);};dqb.style.display=(r&&parseFloat(r.prix)>0&&r.statut!=='annule'&&!(estConfiee(r)&&r.confieEncaisse!=='moi'&&!confMien(r)))?'':'none';}
   var ddb=g('dr-del-btn');if(ddb)ddb.onclick=function(){if(confirm("Supprimer cette course ?\n(Elle reste 30 jours dans la corbeille.)")){supprimerCourses([id]);save();closeModal('m-detail-res');renderAll();}};
   // Highlight statut actuel
   ['confirme','enroute','termine','annule'].forEach(function(s){
@@ -3132,6 +3159,8 @@ function editRes(id){
     const sa=g('r-stop-adresse');if(sa)sa.value=r.stopAdresse||'';
     if(r.stopLat&&r.stopLon)acC['r-stop-adresse']={lat:r.stopLat,lon:r.stopLon};
   }
+  acC['r-arrets-sup']=(r.stopAdresse&&Array.isArray(r.arretsSup))?r.arretsSup.map(function(x){return {adresse:x.adresse||'',lat:x.lat||null,lon:x.lon||null};}):[];
+  try{renderArretsSup();}catch(e){}
   g('r-vmt-recu').checked=r.vmtRecu||false;g('r-peages').value=r.peages||0;g('r-parking').value=r.parking||0;g('r-acompte').value=r.acompte||0;g('r-notes').value=r.notes||'';const niEl=g('r-notes-interne');if(niEl)niEl.value=r.notesInternes||'';
   let kmC=parseFloat(r.distance||0);if(r.type!=='aller')kmC+=parseFloat(r.distanceRetour||r.distance||0);
   let kmR=parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);
@@ -3320,6 +3349,7 @@ function msgPartenaire(r,sens){
   var _st=siegesTexte(r,'fr');if(_st)m+=' · 👶 '+_st;
   m+='\n';
   if(r.stopAdresse)m+='📍 Arrêt : '+r.stopAdresse+(r.stopNom?' ('+r.stopNom+(r.stopTel?' — '+r.stopTel:'')+')':'')+'\n';
+  texteArretsSup(r).forEach(function(a){m+='📍 Arrêt : '+a+'\n';});
   m+='\n';
   if(r.confieEncaisse==='moi')m+='💶 Déjà payé par le client — rien à encaisser.\n';
   else{m+='💶 À encaisser auprès du client : '+fmt(aEnc)+(r.type==='ar-diff'||confTrajet(r)?' (pour ce trajet)':'')+'\n';if(!confMien(r)&&c>0)m+='🤝 Commission convenue : '+fmt(c)+'\n';}
@@ -4293,6 +4323,20 @@ async function acSearch(input,dropId,role,forcerOsm){
 }
 function acSel(role,display,lat,lon){
   acC[role]={lat:parseFloat(lat),lon:parseFloat(lon)};
+  // Devis rapide : arrêts
+  if(/^dv-stop-\d+$/.test(role)){
+    const i=parseInt(role.slice(8)),a=dvArrets();if(a[i])a[i]={adresse:display,lat:parseFloat(lat),lon:parseFloat(lon)};
+    const inp=g(role);if(inp)inp.value=display;const drop=g('ac-'+role);if(drop)drop.style.display='none';
+    if(acC['dv-depart']&&acC['dv-arrivee'])calcDevis();
+    return;
+  }
+  // Réservation : arrêts supplémentaires
+  if(/^r-sup-\d+$/.test(role)){
+    const i=parseInt(role.slice(6)),a=arretsSup();if(a[i])a[i]={adresse:display,lat:parseFloat(lat),lon:parseFloat(lon)};
+    const inp=g(role);if(inp)inp.value=display;const drop=g('ac-'+role);if(drop)drop.style.display='none';
+    renderArretsSup();if(acC['r-depart']&&acC['r-arrivee'])calcDist();
+    return;
+  }
   // Devis rapide
   if(role==='dv-depart'||role==='dv-arrivee'){
     const inp=g(role);if(inp)inp.value=display;
@@ -4311,19 +4355,16 @@ async function _calcDist(){
   const ld=g('dist-loading'),okEl=g('dist-ok');
   if(ld)ld.style.display='flex';if(okEl)okEl.style.display='none';
   try{
-    let url;
-    if(hasStop){
-      // 3 segments : départ → arrêt → arrivée
-      url='https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+stop.lon+','+stop.lat+';'+arr.lon+','+arr.lat+'?overview=false';
-    } else {
-      url='https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false';
-    }
+    // départ → arrêt (2ème passager) → autres arrêts → arrivée
+    const pts=[dep];if(hasStop)pts.push(stop);arretsSupValides().forEach(function(x){pts.push(x);});pts.push(arr);
+    const nbA=pts.length-2;
+    const url='https://router.project-osrm.org/route/v1/driving/'+pts.map(function(p){return p.lon+','+p.lat;}).join(';')+'?overview=false';
     const r=await fetch(url);const d=await r.json();
     if(ld)ld.style.display='none';
     if(d.routes?.[0]){
       const km=(d.routes[0].distance/1000).toFixed(1),mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;
       const de=g('r-distance');if(de)de.value=km;
-      sv('dist-km',km+' km'+(hasStop?' (via arrêt)':''));
+      sv('dist-km',km+' km'+(nbA>0?' (via '+nbA+' arrêt'+(nbA>1?'s':'')+')':''));
       sv('dist-time','⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min'));
       if(okEl)okEl.style.display='flex';
       acC['dist-mins']=mins;
@@ -4331,6 +4372,21 @@ async function _calcDist(){
     }
   }catch(e){const ld=g('dist-loading');if(ld)ld.style.display='none';}
 }
+/* Arrêts supplémentaires (au-delà du 2ème passager) : adresse seule, dans l'ordre du trajet */
+function arretsSup(){if(!Array.isArray(acC['r-arrets-sup']))acC['r-arrets-sup']=[];return acC['r-arrets-sup'];}
+function renderArretsSup(){
+  var box=g('r-arrets-sup');if(!box)return;var a=arretsSup();
+  box.innerHTML=a.map(function(x,i){return '<div class="fg" style="margin:8px 0 0"><label class="fl">Arrêt '+(i+2)+'</label><div style="display:flex;gap:6px;align-items:flex-start"><div class="ac-wrap" style="flex:1"><input type="text" class="fi" id="r-sup-'+i+'" value="'+escH(x.adresse||'')+'" placeholder="Adresse de l\'arrêt..." autocomplete="off" oninput="arretSupTexte('+i+',this.value);acSearch(this,\'ac-r-sup-'+i+'\',\'r-sup-'+i+'\')"><div class="ac-drop" id="ac-r-sup-'+i+'"></div></div><button type="button" class="btn btn-ghost btn-xs" onclick="supprimerArretSup('+i+')" aria-label="Supprimer">✕</button></div>'+((x.adresse&&!(x.lat&&x.lon))?'<div style="font-size:0.7rem;color:var(--orange2);margin-top:3px">Choisis l\'adresse dans la liste pour qu\'elle compte dans la distance</div>':'')+'</div>';}).join('');
+  var b=g('btn-arret-sup');if(b)b.style.display=a.length>=3?'none':'';
+}
+function ajouterArretSup(){var a=arretsSup();if(a.length>=3)return;a.push({adresse:'',lat:null,lon:null});renderArretsSup();setTimeout(function(){var e=g('r-sup-'+(a.length-1));if(e)e.focus();},50);}
+function arretSupTexte(i,v){var a=arretsSup();if(!a[i])return;var avait=!!(a[i].lat&&a[i].lon);a[i]={adresse:v,lat:null,lon:null};if(avait&&acC['r-depart']&&acC['r-arrivee'])calcDist();}
+function supprimerArretSup(i){var a=arretsSup();a.splice(i,1);renderArretsSup();if(acC['r-depart']&&acC['r-arrivee'])calcDist();}
+function viderArretsSup(){acC['r-arrets-sup']=[];renderArretsSup();}
+function arretsSupValides(){var b=g('r-stop-box');if(!b||b.style.display==='none')return [];return arretsSup().filter(function(x){return x.lat&&x.lon;});}
+/* Nombre d'arrêts réellement pris en compte dans la distance du formulaire */
+function nbArretsForm(){var b=g('r-stop-box');if(!b||b.style.display==='none')return 0;var st=acC['r-stop-adresse'];return ((st&&st.lat&&st.lon)?1:0)+arretsSupValides().length;}
+function texteArretsSup(r){return (r&&Array.isArray(r.arretsSup)?r.arretsSup:[]).map(function(x){return x.adresse;}).filter(Boolean);}
 function toggleStop(){
   trackUsage('arret-intermediaire');
   const box=g('r-stop-box');
@@ -4348,7 +4404,7 @@ function removeStop(){
   const box=g('r-stop-box');if(box)box.style.display='none';
   const btn=g('btn-add-stop');if(btn)btn.textContent='➕ Arrêt intermédiaire';
   ['r-stop-nom','r-stop-tel','r-stop-adresse','r-stop-lat','r-stop-lon'].forEach(id=>{const el=g(id);if(el)el.value='';});
-  acC['r-stop-adresse']=null;
+  acC['r-stop-adresse']=null;viderArretsSup();
   // Recalculer sans arrêt
   if(acC['r-depart']&&acC['r-arrivee'])calcDist();
 }
@@ -4425,6 +4481,7 @@ function exportICS(r){
     '🕐 Prise en charge: '+(r.heure||''),
     isRec?('🛬 Récupération: '+aeroAller):('🏠 Adresse: '+r.depart),
     r.stopAdresse?('📍 Arrêt: '+escH(r.stopAdresse)+(r.stopNom?' ('+escH(r.stopNom)+')'+(r.stopTel?' — '+r.stopTel:''):'')):'',
+    texteArretsSup(r).map(function(a){return '📍 Arrêt: '+escH(a);}).join('\n'),
     depoLabelAller,
     r.passagers?'👥 Passagers: '+r.passagers:'',
     siegesTexte(r,'fr')?'👶 Sièges enfants : '+siegesTexte(r,'fr'):'',
@@ -4751,7 +4808,18 @@ function copyStoryLegende(){
     alert('Voici la légende à copier :\n\n'+legende);
   }
 }
+/* ---- Devis : arrêts entre le départ et l'arrivée (jusqu'à 4), dans l'ordre du trajet ---- */
+function dvArrets(){if(!Array.isArray(acC['dv-stops']))acC['dv-stops']=[];return acC['dv-stops'];}
+function dvRenderArrets(){
+  var box=g('dv-stops');if(!box)return;var a=dvArrets();
+  box.innerHTML=a.map(function(x,i){return '<div class="fg"><label class="fl">Arrêt '+(i+1)+'</label><div style="display:flex;gap:6px;align-items:flex-start"><div class="ac-wrap" style="flex:1"><input type="text" class="fi" id="dv-stop-'+i+'" value="'+escH(x.adresse||'')+'" placeholder="Adresse de l\'arrêt..." autocomplete="off" oninput="dvArretTexte('+i+',this.value);acSearch(this,\'ac-dv-stop-'+i+'\',\'dv-stop-'+i+'\')"><div class="ac-drop" id="ac-dv-stop-'+i+'"></div></div><button type="button" class="btn btn-ghost btn-xs" onclick="dvSupprimerArret('+i+')" aria-label="Supprimer">✕</button></div></div>';}).join('');
+  var b=g('dv-btn-arret');if(b)b.style.display=a.length>=4?'none':'';
+}
+function dvAjouterArret(){var a=dvArrets();if(a.length>=4)return;a.push({adresse:'',lat:null,lon:null});dvRenderArrets();setTimeout(function(){var e=g('dv-stop-'+(a.length-1));if(e)e.focus();},50);}
+function dvArretTexte(i,v){var a=dvArrets();if(!a[i])return;var avait=!!(a[i].lat&&a[i].lon);a[i]={adresse:v,lat:null,lon:null};if(avait&&acC['dv-depart']&&acC['dv-arrivee'])calcDevis();}
+function dvSupprimerArret(i){dvArrets().splice(i,1);dvRenderArrets();if(acC['dv-depart']&&acC['dv-arrivee'])calcDevis();}
 function openDevisRapide(){
+  acC['dv-stops']=[];dvRenderArrets();
   g('dv-depart').value='';g('dv-arrivee').value='';
   g('dv-dist-box').style.display='none';g('dv-result').style.display='none';
   acC['dv-depart']=null;acC['dv-arrivee']=null;
@@ -4766,18 +4834,33 @@ async function calcDevis(){
   if(!dep||!arr)return;
   const dbox=g('dv-dist-box');if(dbox)dbox.style.display='flex';
   const dkm=g('dv-dist-km');if(dkm)dkm.textContent='...';
+  const dvLegs=g('dv-legs');if(dvLegs)dvLegs.innerHTML='';
+  const arretsTous=dvArrets().filter(function(x){return (x.adresse||'').trim();});
+  const arretsOk=arretsTous.filter(function(x){return x.lat&&x.lon;});
+  const nbArr=arretsOk.length;
+  if(arretsOk.length<arretsTous.length){
+    const res0=g('dv-result');if(res0)res0.style.display='block';
+    if(dkm)dkm.textContent='—';const p0=g('dv-price');if(p0)p0.textContent='—';
+    const d0=g('dv-detail');if(d0)d0.textContent='Choisis l\'adresse de chaque arrêt dans la liste proposée.';
+    acC['dv-prix']=null;acC['dv-km']=null;return;
+  }
   const dt0=g('dv-dist-time');if(dt0)dt0.textContent='';
   // Afficher tout le bloc résultat dès le départ (avec placeholders), pour éviter le saut visuel en 2 temps
   const res=g('dv-result');if(res)res.style.display='block';
   const pr0=g('dv-price');if(pr0)pr0.textContent='…';
   const dd0=g('dv-detail');if(dd0)dd0.textContent='Calcul en cours...';
   try{
-    const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+dep.lon+','+dep.lat+';'+arr.lon+','+arr.lat+'?overview=false');
+    const pts=[dep].concat(arretsOk,[arr]);
+    const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+pts.map(function(p){return p.lon+','+p.lat;}).join(';')+'?overview=false');
     const d=await r.json();
     if(d.routes?.[0]){
       const km=parseFloat((d.routes[0].distance/1000).toFixed(1));
+      if(nbArr>0&&dvLegs&&Array.isArray(d.routes[0].legs)){
+        const noms=['Départ'].concat(arretsOk.map(function(x,i){return 'Arrêt '+(i+1);}),['Arrivée']);
+        dvLegs.innerHTML=d.routes[0].legs.map(function(l,i){return escH(noms[i])+' → '+escH(noms[i+1])+' : '+(l.distance/1000).toFixed(1).replace('.',',')+' km';}).join('<br>');
+      }
       const mins=Math.round(d.routes[0].duration/60),h=Math.floor(mins/60),m=mins%60;
-      if(dkm)dkm.textContent=km+' km';
+      if(dkm)dkm.textContent=km+' km'+(nbArr>0?' (via '+nbArr+' arrêt'+(nbArr>1?'s':'')+')':'');
       const dt=g('dv-dist-time');if(dt)dt.textContent='⏱ '+(h>0?h+'h'+(m<10?'0':'')+m:m+' min');
       const type=g('dv-type').value,vidx=parseInt(g('dv-veh').value||0);
       const t=db.settings.tarifs,isTalento=vidx===1;
@@ -4802,6 +4885,11 @@ async function calcDevis(){
           acC['dv-prix']=ps;
         }
         acC['dv-km']=km;
+      } else if(prixFixe!==null&&nbArr>0){
+        const pa=prixFixeAvecArrets(prixFixe,km,type==='ar',isTalento);
+        ps=roundTo(pa.pb,t.round);
+        if(pr)pr.textContent=ps+' €';
+        if(dd)dd.textContent=pa.km?(km+'km via '+nbArr+' arrêt'+(nbArr>1?'s':'')+(type==='ar'?' × 2 (A/R)':'')+' × '+tarif.toFixed(2)+'€/km'+(isTalento?' +'+(t.camion*(type==='ar'?2:1))+'€ '+nomVeh(1):'')+' · plus que le tarif fixe de '+prixFixe+'€ · arrondi '+t.round+'€'):('Tarif fixe Carnières '+prixFixe+'€'+(type==='ar'?' × 2 (A/R)':'')+' · l\'arrêt ne change rien ('+km+'km)');
       } else if(prixFixe!==null){
         ps=type==='ar'?prixFixe*2:prixFixe;
         if(type==='ar'&&t.remiseAR)ps=Math.max(0,ps-t.remiseAR);
@@ -4821,14 +4909,14 @@ async function calcDevis(){
       if(dkm)dkm.textContent='—';
       const pr=g('dv-price');
       const dd=g('dv-detail');
-      if(prixFixeF!==null){
+      if(prixFixeF!==null&&nbArr===0){
         let psF=typeF==='ar'?prixFixeF*2:prixFixeF;
         const t2=db.settings.tarifs;if(typeF==='ar'&&t2.remiseAR)psF=Math.max(0,psF-t2.remiseAR);
         if(pr)pr.textContent=psF+' €';
         if(dd)dd.textContent='Tarif fixe Carnières'+(prixFixeF>=95?' → Zaventem':' → Charleroi')+' · '+prixFixeF+'€'+(typeF==='ar'?' × 2 (A/R)':'')+((typeF==='ar'&&t2.remiseAR)?' · Remise A/R -'+t2.remiseAR+'€':'')+' (distance non calculée)';
         acC['dv-prix']=psF;
       }else{
-        if(pr)pr.textContent='—';
+        if(pr)pr.textContent='—';acC['dv-prix']=null;
         if(dd)dd.textContent='Itinéraire introuvable, réessayez.';
       }
     }
@@ -4837,7 +4925,7 @@ async function calcDevis(){
     const prixFixeF=getPrixFixeZone(g('dv-depart')?.value||'',g('dv-arrivee')?.value||'',isTalentoF);
     const pr=g('dv-price');
     const dd=g('dv-detail');
-    if(prixFixeF!==null){
+    if(prixFixeF!==null&&nbArr===0){
       let psF=typeF==='ar'?prixFixeF*2:prixFixeF;
       const t2=db.settings.tarifs;if(typeF==='ar'&&t2.remiseAR)psF=Math.max(0,psF-t2.remiseAR);
       if(dkm)dkm.textContent='—';
@@ -4846,12 +4934,14 @@ async function calcDevis(){
       acC['dv-prix']=psF;
     }else{
       if(dkm)dkm.textContent='Erreur calcul';
-      if(pr)pr.textContent='—';
+      if(pr)pr.textContent='—';acC['dv-prix']=null;
       if(dd)dd.textContent='Erreur réseau, réessayez.';
     }
   }
 }
 function devisToRes(){
+  /* openNewRes() vide le cache (acC) : on garde d'abord ce que le devis a calculé */
+  const _dv={dep:acC['dv-depart'],arr:acC['dv-arrivee'],km:acC['dv-km'],prix:acC['dv-prix'],stops:dvArrets().filter(function(x){return x.lat&&x.lon;}).map(function(x){return Object.assign({},x);})};
   closeModal('m-devis-rapide');
   openNewRes();
   setTimeout(()=>{
@@ -4859,11 +4949,18 @@ function devisToRes(){
     const depF=g('r-depart'),arrF=g('r-arrivee');
     if(depF)depF.value=g('dv-depart')?.value||'';
     if(arrF)arrF.value=g('dv-arrivee')?.value||'';
-    if(acC['dv-depart']){acC['r-depart']=acC['dv-depart'];const el=g('r-dep-lat');if(el)el.value=acC['dv-depart'].lat;const el2=g('r-dep-lon');if(el2)el2.value=acC['dv-depart'].lon;}
-    if(acC['dv-arrivee']){acC['r-arrivee']=acC['dv-arrivee'];const el=g('r-arr-lat');if(el)el.value=acC['dv-arrivee'].lat;const el2=g('r-arr-lon');if(el2)el2.value=acC['dv-arrivee'].lon;}
+    if(_dv.dep){acC['r-depart']=_dv.dep;const el=g('r-dep-lat');if(el)el.value=_dv.dep.lat;const el2=g('r-dep-lon');if(el2)el2.value=_dv.dep.lon;}
+    if(_dv.arr){acC['r-arrivee']=_dv.arr;const el=g('r-arr-lat');if(el)el.value=_dv.arr.lat;const el2=g('r-arr-lon');if(el2)el2.value=_dv.arr.lon;}
     const vidx=g('dv-veh')?.value||'0';if(g('r-vehicule'))g('r-vehicule').value=vidx;
-    if(acC['dv-km']){const el=g('r-distance');if(el)el.value=acC['dv-km'];}
-    if(acC['dv-prix']){const el=g('r-prix');if(el)el.value=acC['dv-prix'];}
+    const _arr=_dv.stops;
+    if(_arr.length){
+      const sb=g('r-stop-box');if(sb)sb.style.display='block';const ab=g('btn-add-stop');if(ab)ab.textContent='📍 Arrêt intermédiaire actif';
+      const sa=g('r-stop-adresse');if(sa)sa.value=_arr[0].adresse;const sl=g('r-stop-lat');if(sl)sl.value=_arr[0].lat;const so=g('r-stop-lon');if(so)so.value=_arr[0].lon;
+      acC['r-stop-adresse']={lat:_arr[0].lat,lon:_arr[0].lon};
+      acC['r-arrets-sup']=_arr.slice(1).map(function(x){return {adresse:x.adresse,lat:x.lat,lon:x.lon};});renderArretsSup();
+    }
+    if(_dv.km){const el=g('r-distance');if(el)el.value=_dv.km;}
+    if(_dv.prix){const el=g('r-prix');if(el)el.value=_dv.prix;}
     const dvType=g('dv-type')?.value||'aller';
     if(dvType==='ar'){const chipsWrap=g('r-type-chips');if(chipsWrap){const chip=chipsWrap.querySelector('[onclick*="ar-jour"]');if(chip)selectChip(chip,'r-type','ar-jour');}updResType();}
     else{updKmRecap();updCalc();}
@@ -4873,7 +4970,8 @@ function shareDevis(){
   const dep=g('dv-depart')?.value||'',arr=g('dv-arrivee')?.value||'';
   const prix=g('dv-price')?.textContent||'';
   const detail=g('dv-detail')?.textContent||'';
-  const msg='🚗 Facciolini Mobility\n\nDevis transport :\n📍 '+dep+'\n🏁 '+arr+'\n\n💰 Prix estimé : '+prix+'\n('+detail+')\n\n📞 '+MOI.tel;
+  const arrets=dvArrets().filter(function(x){return x.lat&&x.lon;}).map(function(x){return '\n➡️ '+x.adresse;}).join('');
+  const msg='🚗 Facciolini Mobility\n\nDevis transport :\n📍 '+dep+arrets+'\n🏁 '+arr+'\n\n💰 Prix estimé : '+prix+'\n('+detail+')\n\n📞 '+MOI.tel;
   if(navigator.share){navigator.share({text:msg});}else if(navigator.clipboard){navigator.clipboard.writeText(msg).then(()=>alert('Devis copié !'));}
 }
 
@@ -5082,6 +5180,8 @@ setTimeout(checkBackupReminder,3000);
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="fav-chips-dv-dep"></div>
     </div>
+    <div id="dv-stops"></div>
+    <button type="button" class="btn btn-outline btn-sm" id="dv-btn-arret" onclick="dvAjouterArret()" style="margin:-4px 0 12px;font-size:0.75rem">➕ Ajouter un arrêt</button>
     <div class="fg">
       <label class="fl">Arrivée</label>
       <div class="ac-wrap">
@@ -5126,6 +5226,7 @@ setTimeout(checkBackupReminder,3000);
         <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Prix estimé</div>
         <div class="devis-price" id="dv-price">—</div>
         <div class="devis-detail" id="dv-detail"></div>
+        <div id="dv-legs" style="font-size:0.72rem;color:var(--text3);margin-top:6px;line-height:1.5"></div>
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn btn-gold btn-full" onclick="devisToRes()">➕ Créer la réservation</button>
         </div>
@@ -6774,6 +6875,103 @@ window.FMSync={ui:ui,etat:function(){return {state:S.state,ready:S.ready,user:S.
   _t:{S:S,localEntries:localEntries,pushNow:pushNow,flushPush:flushPush,hash:hash,stable:stable,creerSauvegarde:creerSauvegarde,listerSauvegardes:listerSauvegardes,restaurerSauvegarde:restaurerSauvegarde,sauvegardeHebdo:sauvegardeHebdo,demarrer:demarrer}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',lancer);else lancer();
 })();
+</script>
+
+<!-- QR CODE DE PAIEMENT -->
+<div class="overlay" id="m-qr-reglages"><div class="modal">
+<div class="modal-handle"></div><div class="modal-title">&#x1f4b3; Paiement par QR code</div>
+<div class="modal-subtitle">Le client scanne le QR avec l'appli de sa banque : le virement est déjà rempli (ton compte, le montant et le trajet). Il n'a plus qu'à valider.</div>
+<div class="fg"><label class="fl">Ton IBAN (compte professionnel)</label><input type="text" class="fi" id="qr-iban" placeholder="BE.. .... .... ...." autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+<div class="fg"><label class="fl">Nom du titulaire du compte</label><input type="text" class="fi" id="qr-nom" placeholder="Exactement comme sur le compte" autocomplete="off"><div style="font-size:0.72rem;color:var(--text3);margin-top:4px;line-height:1.4">Mets le nom exactement comme ta banque l'a enregistré : la banque du client vérifie que le nom correspond à l'IBAN avant le virement.</div></div>
+<div id="qr-reglages-err" style="font-size:0.78rem;color:var(--red2);min-height:1em"></div>
+<div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-qr-reglages')">Annuler</button><button class="btn btn-gold btn-full" onclick="saveQrReglages()">Enregistrer</button></div>
+</div></div>
+<div class="overlay" id="m-qr-pay"><div class="modal">
+<div class="modal-handle"></div><div class="modal-title">&#x1f4f2; Paiement par QR code</div>
+<div id="qr-pay-chips" class="chips" style="margin-bottom:8px"></div>
+<div class="fr"><div class="fg"><label class="fl">Montant (€)</label><input type="number" class="fi" id="qr-montant" step="0.01" min="0.01" oninput="majQrPaiement()"></div></div>
+<div class="fg"><label class="fl">Communication</label><input type="text" class="fi" id="qr-comm" maxlength="140" oninput="majQrPaiement()"></div>
+<div id="qr-zone" style="background:#fff;border-radius:16px;padding:14px;max-width:300px;margin:6px auto 8px"></div>
+<div id="qr-legende" style="text-align:center;font-size:0.8rem;color:var(--text2);line-height:1.5"></div>
+<div style="text-align:center;font-size:0.72rem;color:var(--text3);margin-top:6px;line-height:1.5">Le client ouvre l'appli de sa banque (KBC, Belfius, BNP, ING, Argenta…), choisit « scanner » et confirme le virement.</div>
+<div class="modal-actions" style="margin-top:14px"><button class="btn btn-outline btn-full" onclick="closeModal('m-qr-pay')">Fermer</button></div>
+</div></div>
+<script id="qrcode-lib">
+/* QR Code Generator for JavaScript — Copyright (c) 2009 Kazuhiko Arase — MIT license (qrcode-generator 1.4.4) */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,(function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1}))},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(t,r){var e=n("友");if(2!=e.length||38726!=(e[0]<<8|e[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}((function(){return qrcode}));
+</script>
+<script>
+/* ===== QR CODE DE PAIEMENT (norme EPC / SEPA, gratuit, sans prestataire) ===== */
+function ibanNorm(v){return String(v||'').replace(/\s+/g,'').toUpperCase();}
+function ibanOk(v){
+  var i=ibanNorm(v);if(!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(i))return false;
+  if(i.slice(0,2)==='BE'&&i.length!==16)return false;
+  var r=i.slice(4)+i.slice(0,4),n='';for(var k=0;k<r.length;k++){var c=r.charCodeAt(k);n+=(c>=65&&c<=90)?String(c-55):r[k];}
+  var m=0;for(var j=0;j<n.length;j+=7){m=parseInt(String(m)+n.substr(j,7),10)%97;}return m===1;
+}
+function ibanJoli(v){return ibanNorm(v).replace(/(.{4})/g,'$1 ').trim();}
+function qrCfg(){var q=(db.settings&&db.settings.qr)||{};return {iban:ibanNorm(q.iban||''),nom:(q.nom||'').trim()};}
+function majQrReglagesSub(){var c=qrCfg(),el=g('p-qr-sub');if(el)el.textContent=c.iban?(ibanJoli(c.iban)+' · '+c.nom):'Pas encore configuré';}
+function openQrReglages(apres){
+  var c=qrCfg();g('qr-iban').value=c.iban?ibanJoli(c.iban):'';g('qr-nom').value=c.nom||MOI.nom;sv('qr-reglages-err','');
+  window._qrApres=apres||null;openModal('m-qr-reglages');
+}
+function saveQrReglages(){
+  var iban=ibanNorm(g('qr-iban').value),nom=g('qr-nom').value.trim();
+  if(!ibanOk(iban)){sv('qr-reglages-err','Cet IBAN n\'est pas valide. Vérifie les chiffres (un IBAN belge fait 16 caractères : BE + 14 chiffres).');return;}
+  if(nom.length<2){sv('qr-reglages-err','Indique le nom du titulaire du compte.');return;}
+  db.settings.qr={iban:iban,nom:nom.slice(0,70)};save();majQrReglagesSub();closeModal('m-qr-reglages');
+  if(typeof showToast==='function')showToast('✅ Compte enregistré pour les QR codes');
+  var a=window._qrApres;window._qrApres=null;if(a)a();
+}
+/* Contenu EPC069-12 (version 002 : BIC facultatif dans l'EEE) */
+function epcTexte(nom,iban,montant,comm){
+  return ['BCD','002','1','SCT','',String(nom).slice(0,70),ibanNorm(iban),'EUR'+(Math.round(montant*100)/100).toFixed(2),'','',String(comm||'').replace(/[\r\n]+/g,' ').slice(0,140)].join('\n');
+}
+function qrSvg(texte){
+  var q=qrcode(0,'M');qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];q.addData(texte,'Byte');q.make();
+  return q.createSvgTag({cellSize:6,margin:2,scalable:true});
+}
+function lieuCourt(a){
+  a=String(a||'').trim();if(!a)return '';
+  var l=a.toLowerCase();if(/a[ée]roport|airport|luchthaven|terminal|zaventem|\bcrl\b|\bbru\b/.test(l)){if(/charleroi|gosselies|\bcrl\b|brussels south/.test(l))return 'Aéroport de Charleroi';if(/zaventem|brussels airport|\bbru\b|nationa/.test(l))return 'Brussels Airport';}
+  var p=a.split(',').map(function(x){return x.trim();}).filter(Boolean);
+  var ville=p.length>1?p[p.length-1].replace(/^\d{4}\s*/,''):p[0];
+  if(/^(belgique|belgium|belgië|france)$/i.test(ville)&&p.length>2)ville=p[p.length-2].replace(/^\d{4}\s*/,'');
+  return ville;
+}
+var _qrRes=null;
+function openQrPaiement(id){
+  var r=(db.reservations||[]).find(function(x){return x.id===id;});if(!r)return;
+  if(!qrCfg().iban){openQrReglages(function(){openQrPaiement(id);});return;}
+  _qrRes=r;var prix=Math.round((parseFloat(r.prix)||0)*100)/100,opts=[];
+  if(r.type==='ar-diff'){
+    var ac=parseFloat(r.acompte)||0,a=ac>0?Math.min(ac,prix):Math.round(prix/2*100)/100,b=Math.round((prix-a)*100)/100;
+    opts=[['Aller',a,'aller'],['Retour',b,'retour'],['Total A/R',prix,'tout']];
+  }else opts=[['Total',prix,'tout']];
+  var c=g('qr-pay-chips');
+  c.innerHTML=opts.map(function(o,i){return '<div class="chip'+(i===opts.length-1?' active':'')+'" data-m="'+o[1]+'" data-s="'+o[2]+'" onclick="choisirQrMontant(this)">'+o[0]+' · '+fmt(o[1])+'</div>';}).join('');
+  c.style.display=opts.length>1?'':'none';
+  g('qr-montant').value=prix.toFixed(2);g('qr-comm').value=qrCommunication(r,'tout');
+  openModal('m-qr-pay');majQrPaiement();
+}
+function qrCommunication(r,sens){
+  var d=r.dateAller?new Date(r.dateAller).toLocaleDateString('fr-BE'):'';
+  var dep=lieuCourt(r.depart),arr=lieuCourt(r.arrivee);
+  var t=(sens==='retour'&&r.dateRetour)?('Retour '+lieuCourt(r.departRetour||r.arrivee)+' - '+lieuCourt(r.arriveeRetour||r.depart)+' '+new Date(r.dateRetour).toLocaleDateString('fr-BE')):((sens==='aller'?'Aller ':'Trajet ')+dep+' - '+arr+(d?' '+d:''));
+  return ('Facciolini Mobility - '+t+(r.clientNom?' - '+r.clientNom:'')).slice(0,140);
+}
+function choisirQrMontant(el){
+  document.querySelectorAll('#qr-pay-chips .chip').forEach(function(x){x.classList.remove('active');});el.classList.add('active');
+  g('qr-montant').value=parseFloat(el.dataset.m).toFixed(2);if(_qrRes)g('qr-comm').value=qrCommunication(_qrRes,el.dataset.s);majQrPaiement();
+}
+function majQrPaiement(){
+  var c=qrCfg(),m=parseFloat(g('qr-montant').value),z=g('qr-zone'),l=g('qr-legende');
+  if(!(m>0)||m>999999){z.innerHTML='';l.textContent='Indique un montant.';return;}
+  try{z.innerHTML=qrSvg(epcTexte(c.nom,c.iban,m,g('qr-comm').value));var sv0=z.querySelector('svg');if(sv0){sv0.style.width='100%';sv0.style.height='auto';sv0.style.display='block';}}
+  catch(e){z.innerHTML='';l.textContent='Impossible de créer le QR code : '+e.message;return;}
+  l.innerHTML='<b style="font-size:1.25rem;color:var(--text)">'+fmt(m)+'</b><br>vers '+escH(c.nom)+' · '+escH(ibanJoli(c.iban));
+}
 </script>
 </body>
 </html>
