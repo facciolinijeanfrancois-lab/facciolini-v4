@@ -602,11 +602,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
         </div><input type="hidden" id="r-confie-trajet" value=""></div>
         <div class="fg" id="r-confie-part-box" style="display:none"><label class="fl">Prix de son trajet (€)</label><input type="number" class="fi" id="r-confie-part" step="0.01" min="0" oninput="majConfieHint()" onfocus="majConfieUI()"></div>
       </div>
-      <div class="fg"><label class="fl">Ta commission (€) — 0 si rien</label><input type="number" class="fi" id="r-confie-comm" placeholder="0" step="0.01" min="0" oninput="majConfieHint()"></div>
+      <div class="fg"><label class="fl">Avec quel véhicule ?</label>
+        <div class="chips" id="r-confie-veh-chips">
+          <div class="chip active" onclick="selectChip(this,'r-confie-veh','sien');majConfieUI()">🚗 Le sien — tu prends une commission</div>
+          <div class="chip" onclick="selectChip(this,'r-confie-veh','mien');majConfieUI()">🚐 Le tien — tu le paies</div>
+        </div><input type="hidden" id="r-confie-veh" value="sien">
+      </div>
+      <div class="fg" id="r-confie-paye-box" style="display:none"><label class="fl">Tu lui donnes (€)</label><input type="number" class="fi" id="r-confie-paye" step="0.01" min="0" oninput="this.dataset.auto='0';majConfieHint()"><div id="r-confie-paye-aide" style="font-size:0.72rem;color:var(--text3);margin-top:4px"></div></div>
+      <div class="fg" id="r-confie-comm-box"><label class="fl">Ta commission (€) — 0 si rien</label><input type="number" class="fi" id="r-confie-comm" placeholder="0" step="0.01" min="0" oninput="majConfieHint()"></div>
       <div class="fg"><label class="fl">Qui encaisse le client ?</label>
         <div class="chips" id="r-confie-enc-chips">
-          <div class="chip active" onclick="selectChip(this,'r-confie-enc','partenaire');majConfieHint()">Le partenaire (jour même)</div>
-          <div class="chip" onclick="selectChip(this,'r-confie-enc','moi');majConfieHint()">Moi (prépayé sur mon compte)</div>
+          <div class="chip active" id="r-confie-enc-lui" onclick="selectChip(this,'r-confie-enc','partenaire');majConfieHint()">Le partenaire (jour même)</div>
+          <div class="chip" id="r-confie-enc-moi" onclick="selectChip(this,'r-confie-enc','moi');majConfieHint()">Moi (prépayé sur mon compte)</div>
         </div><input type="hidden" id="r-confie-enc" value="partenaire">
       </div>
       <div id="r-confie-hint" style="font-size:0.8rem;font-weight:600;background:var(--bg3);border-radius:var(--radius-xs);padding:8px 10px;line-height:1.5"></div>
@@ -1000,6 +1007,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 <div class="fg"><label class="fl">T&#xe9;l&#xe9;phone</label><input type="tel" class="fi" id="p-tel" placeholder="+32 ..."></div>
 <div class="fg"><label class="fl">Adresse</label><input type="text" class="fi" id="p-adresse" placeholder="Rue, Ville..."></div>
 <div class="fg"><label class="fl">Num&#xe9;ro TVA</label><input type="text" class="fi" id="p-tva" placeholder="BE0123456789"></div>
+<div style="font-size:0.75rem;color:var(--text2);margin:4px 2px 8px">🚐 S'il roule avec <b>ton</b> véhicule, tu lui donnes (par trajet) :</div>
+<div class="fr"><div class="fg"><label class="fl">Vers Charleroi (€)</label><input type="number" class="fi" id="p-paye-crl" step="0.01" min="0" placeholder="ex. 20"></div><div class="fg"><label class="fl">Vers Zaventem (€)</label><input type="number" class="fi" id="p-paye-bru" step="0.01" min="0" placeholder="ex. 30"></div></div>
 <div class="modal-actions"><button class="btn btn-outline btn-full" onclick="closeModal('m-partner')">Annuler</button><button class="btn btn-gold btn-full" onclick="savePartner()">Enregistrer</button></div>
 </div></div>
 
@@ -1239,23 +1248,28 @@ function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!=
    Encaissement : 'partenaire' = il encaisse le client et me doit ma commission ;
                   'moi'        = le client m'a payé (prépayé) et je dois verser prix − commission. */
 function estConfiee(r){return !!(r&&r.confieA);}
+/* Chauffeur qui roule avec MON véhicule : la course reste la mienne (prix complet, km, carburant, péages),
+   je lui verse un montant (confiePaye). 'sien' (défaut) = il roule avec son véhicule et je prends une commission. */
+function confMien(r){return estConfiee(r)&&r.confieVehicule==='mien';}
+function confPaye(r){return confMien(r)?(parseFloat(r.confiePaye)||0):0;}
+function confTrajetKm(r){return confMien(r)?'':confTrajet(r);}
 /* Trajet confié sur un aller-retour : '' = toute la course, 'aller' ou 'retour' = un seul trajet */
 function confTrajet(r){return (r&&r.confieA&&(r.type==='ar-diff'||r.type==='ar-jour')&&(r.confieTrajet==='aller'||r.confieTrajet==='retour'))?r.confieTrajet:'';}
 function estConfieeTout(r){return estConfiee(r)&&!confTrajet(r);}
 function confieSens(r,sens){if(!estConfiee(r))return false;var t=confTrajet(r);return !t||t===sens;}
 /* Prix de ce que roule le partenaire (moitié du prix par défaut quand il ne fait qu'un trajet) */
 function prixConfie(r){var p=parseFloat(r&&r.prix)||0;if(!confTrajet(r))return p;var x=parseFloat(r.confiePart);return (r.confiePart!==''&&r.confiePart!=null&&isFinite(x)&&x>=0)?Math.min(x,p):Math.round(p/2*100)/100;}
-function prixMoi(r){var p=parseFloat(r&&r.prix||0)||0;return estConfiee(r)?Math.max(0,p-prixConfie(r))+(parseFloat(r.confieCommission)||0):p;}
+function prixMoi(r){var p=parseFloat(r&&r.prix||0)||0;if(confMien(r))return p;return estConfiee(r)?Math.max(0,p-prixConfie(r))+(parseFloat(r.confieCommission)||0):p;}
 function confComm(r){return parseFloat(r&&r.confieCommission)||0;}
 /* Solde de la course confiée, vu de moi : + il me doit, − je lui dois (0 si réglé) */
-function confDu(r){if(!estConfiee(r)||r.confieRegle||r.statut==='annule')return 0;var c=confComm(r);return r.confieEncaisse==='moi'?-(Math.max(0,prixConfie(r)-c)):c;}
+function confDu(r){if(!estConfiee(r)||r.confieRegle||r.statut==='annule')return 0;if(confMien(r))return r.confieEncaisse==='partenaire'?Math.max(0,prixConfie(r)-confPaye(r)):-confPaye(r);var c=confComm(r);return r.confieEncaisse==='moi'?-(Math.max(0,prixConfie(r)-c)):c;}
 /* Titre des notifications : on voit tout de suite quand c'est le partenaire qui roule */
 function notifTitre(r,sens,base){if(!estConfiee(r))return base;var t=confTrajet(r);if(r.type==='ar-jour'&&t)return base+' (🤝 '+r.confieA+' fait '+(t==='aller'?"l'aller":'le retour')+')';return confieSens(r,sens)?'🤝 '+r.confieA+' — '+base.replace(/^\S+\s/,''):base;}
 function telPartenaire(nom){var p=(db.partners||[]).find(function(x){return x.nom===nom;});return p&&p.tel?p.tel:'';}
-function getKmClient(r){if(estConfieeTout(r))return 0;var t=confTrajet(r);let km=t==='aller'?0:parseFloat(r.distance||0);if((r.type==='ar-jour'||r.type==='ar-diff')&&t!=='retour')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
-function getKmReels(r){if(estConfieeTout(r))return 0;var t=confTrajet(r);let km=t==='aller'?0:parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(t!=='retour'){if(r.type==='ar-jour'){km+=(t==='aller'?parseFloat(r.kmPickupRetour||0):0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}}return km;}
-function getBenef(r){const v=getV(r.vehicule);return prixMoi(r)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
-function getBenefReel(r){const v=getV(r.vehicule);return prixMoi(r)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
+function getKmClient(r){if(estConfieeTout(r)&&!confMien(r))return 0;var t=confTrajetKm(r);let km=t==='aller'?0:parseFloat(r.distance||0);if((r.type==='ar-jour'||r.type==='ar-diff')&&t!=='retour')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
+function getKmReels(r){if(estConfieeTout(r)&&!confMien(r))return 0;var t=confTrajetKm(r);let km=t==='aller'?0:parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(t!=='retour'){if(r.type==='ar-jour'){km+=(t==='aller'?parseFloat(r.kmPickupRetour||0):0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}}return km;}
+function getBenef(r){const v=getV(r.vehicule);return prixMoi(r)-confPaye(r)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
+function getBenefReel(r){const v=getV(r.vehicule);return prixMoi(r)-confPaye(r)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
 function getV(idx){return db.settings.vehicles[parseInt(idx||0)]||db.settings.vehicles[0];}
 function getMonthRes(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);if(da.getMonth()===m&&da.getFullYear()===y)return true;if(r.type==='ar-diff'&&r.dateRetour){const dr=new Date(r.dateRetour);if(dr.getMonth()===m&&dr.getFullYear()===y)return true;}return false;});}
 // getMonthResAller : uniquement les courses dont l'ALLER est ce mois
@@ -1309,13 +1323,14 @@ function completerKmAuto(r){
   }else if(r.type==='ar-jour'){
     if(n(r.kmVideRetour)===0&&(r.kmVideRetourType||'maison')==='maison'&&dep)set('kmVideRetour',kmRoute(dep,H));
     /* trajet partagé : je fais l'aller seul → je rentre à vide ; je fais le retour seul → je vais d'abord le chercher */
-    if(confTrajet(r)==='retour'&&n(r.kmVideAller)===0&&arr)set('kmVideAller',kmRoute(arr,H));
-    if(confTrajet(r)==='aller'&&n(r.kmPickupRetour)===0&&arr)set('kmPickupRetour',kmRoute(H,arr));
+    if(confTrajetKm(r)==='retour'&&n(r.kmVideAller)===0&&arr)set('kmVideAller',kmRoute(arr,H));
+    if(confTrajetKm(r)==='aller'&&n(r.kmPickupRetour)===0&&arr)set('kmPickupRetour',kmRoute(H,arr));
   }
   if(auto.length)r.kmAuto=auto;
   return r;
 }
-function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfieeTout(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
+function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!(estConfieeTout(r)&&!confMien(r))).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
+function getChauffeurMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&confMien(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+confPaye(r)*k:s;},0);}
 function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+prixHT(r)*k:s;},0);}
 function moisActif(m,y){
   // Un mois compte dans l'année dès que l'activité a commencé (1re course, plein ou frais)
@@ -1328,9 +1343,10 @@ function getResultatMois(m,y){
   const frais=getMonthFrais(m,y).reduce((s,f)=>s+(parseFloat(f.montant)||0),0);
   const charges=moisActif(m,y)?db.charges.reduce((s,c)=>s+(parseFloat(c.montant)||0),0):0;
   const pp=getPeagesParkingMois(m,y);
-  const depenses=carbu+frais+charges+pp,benef=recettes-depenses;
+  const chauffeur=getChauffeurMois(m,y);
+  const depenses=carbu+frais+charges+pp+chauffeur,benef=recettes-depenses;
   const pct=(db.settings.provisionPct||40)/100;
-  return {recettes,carbu,frais,charges,pp,depenses,benef,pct,provision:Math.max(0,benef)*pct,caBrut:getCABrutMois(m,y)};
+  return {recettes,carbu,frais,charges,pp,chauffeur,depenses,benef,pct,provision:Math.max(0,benef)*pct,caBrut:getCABrutMois(m,y)};
 }
 function getResultatAnnee(y,mMax){
   const t={recettes:0,depenses:0,benef:0,caBrut:0,pct:(db.settings.provisionPct||40)/100};
@@ -1377,6 +1393,7 @@ function renderResultat(cible,detail){
     h+=ligne('− Frais (entretien, pneus…)',fmt(r.frais),';padding-left:8px;font-size:0.76rem');
     h+=ligne('− Charges fixes',fmt(r.charges),';padding-left:8px;font-size:0.76rem');
     h+=ligne('− Péages + parking',fmt(r.pp),';padding-left:8px;font-size:0.76rem');
+    if(r.chauffeur>0)h+=ligne('− Chauffeur (avec ton véhicule)',fmt(r.chauffeur),';padding-left:8px;font-size:0.76rem');
   }
   h+=ligne('− Dépenses réelles',fmt(r.depenses));
   h+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);margin-top:4px;font-size:0.95rem"><span style="font-weight:700">= Bénéfice du mois</span><b style="color:'+col(r.benef)+'">'+fmt(r.benef)+'</b></div>';
@@ -1407,7 +1424,7 @@ function compteurA(vIdx,t){const P=pleinsAvecKm(vIdx);const TOL=3*86400000;
 function getKmPleinsMois(m,y,vIdx){const d=compteurA(vIdx,new Date(y,m,1,0,0).getTime()),f=compteurA(vIdx,new Date(y,m+1,1,0,0).getTime());if(d==null||f==null||f<d)return null;return {debut:Math.round(d),fin:Math.round(f),km:Math.round(f-d)};}
 function dernierPlein(vIdx,avantDate){const P=(db.carburant||[]).filter(c=>parseInt(c.vehicule||0)===vIdx&&parseFloat(c.km)>0&&c.date&&(!avantDate||c.date<=avantDate)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));return P.length?P[P.length-1]:null;}
 /* Trajet partagé avec un partenaire : mon trajet rapporte son prix, le sien ma commission */
-function encPartage(r,sens){const t=confTrajet(r);if(!t)return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;const c=confComm(r),moi=Math.max(0,(parseFloat(r.prix)||0)-prixConfie(r)-comm);if(r.type==='ar-jour')return sens==='aller'?Math.round((moi+c)*100)/100:0;return Math.round((t===sens?c:moi)*100)/100;}
+function encPartage(r,sens){const t=confTrajet(r);if(!t)return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;const c=confMien(r)?prixConfie(r):confComm(r),moi=Math.max(0,(parseFloat(r.prix)||0)-prixConfie(r)-comm);if(r.type==='ar-jour')return sens==='aller'?Math.round((moi+c)*100)/100:0;return Math.round((t===sens?c:moi)*100)/100;}
 function getEncaisseAller(r){
   {const ep=encPartage(r,'aller');if(ep!==null)return ep;}
   const p=prixMoi(r),a=estConfiee(r)?0:parseFloat(r.acompte||0);
@@ -1708,7 +1725,7 @@ function renderRes(){
     html+='<div><div style="font-weight:700;font-size:0.95rem">'+escH(r.clientNom)+(vip?' ⭐':'');
     if(r.clientTel)html+=' <a href="tel:'+escH(r.clientTel)+'" onclick="event.stopPropagation()" style="color:var(--blue2);font-size:0.75rem">📞</a>';
     html+='</div><div style="font-size:0.73rem;color:var(--text3);margin-top:2px">'+dStr+' '+(r.heure||'')+'</div></div>';
-    html+='<div style="text-align:right"><div style="font-weight:800;font-size:1.1rem;color:var(--gold)">'+fmt(r.prix)+'</div>'+(estConfiee(r)?'<div style="font-size:0.7rem;color:var(--text3)">pour toi '+fmt(prixMoi(r))+'</div>':'')+'<div style="margin-top:3px">'+getStatusBadge(r)+'</div></div></div>';
+    html+='<div style="text-align:right"><div style="font-weight:800;font-size:1.1rem;color:var(--gold)">'+fmt(r.prix)+'</div>'+(estConfiee(r)?'<div style="font-size:0.7rem;color:var(--text3)">pour toi '+fmt(prixMoi(r)-confPaye(r))+'</div>':'')+'<div style="margin-top:3px">'+getStatusBadge(r)+'</div></div></div>';
     html+='<div style="font-size:0.79rem;color:var(--text2);margin-bottom:6px">'+(r.depart||'—').substring(0,26)+' → '+(r.arrivee||'—').substring(0,26)+'</div>';
     if(r.type==='ar-diff'&&r.arriveeRetour)html+='<div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">↩ '+(r.departRetour||r.arrivee||'').substring(0,22)+' → '+escH(r.arriveeRetour).substring(0,22)+'</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">';
@@ -2029,7 +2046,7 @@ function renderPartners(){
               html+='<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">📅 '+new Date(r.dateAller).toLocaleDateString("fr-BE")+(r.heure?" à "+r.heure:"")+' · '+(r.confieEncaisse==='moi'?'payé sur ton compte':'il encaisse le client')+'</div>';
               html+='</div><div style="text-align:right;min-width:90px">';
               html+='<div style="font-weight:800;color:var(--gold2);font-family:Playfair Display,serif">'+fmt(prixConfie(r))+'</div>';
-              html+='<div style="font-size:0.7rem;color:var(--text3)">Ta commission : '+fmt(_cc)+'</div>';
+              html+='<div style="font-size:0.7rem;color:var(--text3)">'+(confMien(r)?'🚐 Ton véhicule · tu le paies '+fmt(confPaye(r)):'Ta commission : '+fmt(_cc))+'</div>';
               html+='<div style="font-size:0.7rem;color:'+(r.confieRegle||_du===0?'var(--green2)':(_du>0?'var(--green2)':'var(--red2)'))+'">'+(r.confieRegle||_du===0?'✓ Réglé':(_du>0?'Il te doit '+fmt(_du):'Tu lui dois '+fmt(-_du)))+'</div>';
               html+='</div></div></div>';
               return;
@@ -2313,7 +2330,7 @@ function resetResForm(){
   const rha=g('r-heure-aller');const nowTime=new Date().toTimeString().slice(0,5);if(rha)rha.value=nowTime;updDtDisplay('r-heure-aller',nowTime);
   const sc=g('r-source-chips');if(sc){sc.innerHTML='<div class="chip active" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/\'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value='direct';}
   renderFavChips();updKmRecap();
-  try{renderConfieChips('');const cc=g('r-confie-comm');if(cc)cc.value='';setChips('r-confie-enc-chips','r-confie-enc','partenaire');setChips('r-confie-trajet-chips','r-confie-trajet','');const cp=g('r-confie-part');if(cp)cp.value='';majConfieUI();}catch(e){}
+  try{setChips('r-confie-veh-chips','r-confie-veh','sien');const _cp=g('r-confie-paye');if(_cp){_cp.value='';_cp.dataset.auto='1';}renderConfieChips('');const cc=g('r-confie-comm');if(cc)cc.value='';setChips('r-confie-enc-chips','r-confie-enc','partenaire');setChips('r-confie-trajet-chips','r-confie-trajet','');const cp=g('r-confie-part');if(cp)cp.value='';majConfieUI();}catch(e){}
   // Reset nouveau formulaire
   const adv=g('res-advanced');if(adv)adv.style.display='none';
   const btnAdv=g('btn-adv-toggle');if(btnAdv)btnAdv.textContent='⚙️ Options avancées';
@@ -2361,12 +2378,28 @@ function renderConfieChips(sel){
   var h=g('r-confie');if(h)h.value=sel;majConfieUI();
 }
 function confieTrajetForm(){var ty=(g('r-type')||{}).value||'aller';if(ty!=='ar-diff'&&ty!=='ar-jour')return '';return (g('r-confie-trajet')||{}).value||'';}
+/* Montant habituel du chauffeur quand il roule avec mon véhicule (fiche partenaire), par trajet */
+function payeChauffeurAuto(){
+  var v=(g('r-confie')||{}).value||'';var p=(db.partners||[]).find(function(x){return x.nom===v;});if(!p)return null;
+  var txt=(((g('r-depart')||{}).value||'')+' '+((g('r-arrivee')||{}).value||'')).toLowerCase();
+  var crl=/charleroi|gosselies|\bcrl\b/.test(txt)&&/a[ée]roport|airport|\bcrl\b|gosselies/.test(txt),bru=/zaventem|brussels airport|bruxelles-national|luchthaven|\bbru\b/.test(txt);
+  var tarif=bru?parseFloat(p.payeBRU):(crl?parseFloat(p.payeCRL):NaN);if(!isFinite(tarif)||tarif<=0)return null;
+  var ty=(g('r-type')||{}).value||'aller',nb=(ty==='ar-diff'||ty==='ar-jour')&&!confieTrajetForm()?2:1;
+  return {montant:tarif*nb,texte:'Tarif habituel de '+v+' : '+fmt(tarif)+' par trajet vers '+(bru?'Zaventem':'Charleroi')+(nb>1?' × 2 trajets':'')};
+}
 function majConfieUI(){var v=(g('r-confie')||{}).value||'';var o=g('r-confie-opts');if(o)o.style.display=v?'block':'none';
+  var mien=v&&((g('r-confie-veh')||{}).value==='mien');
+  var pbx=g('r-confie-paye-box');if(pbx)pbx.style.display=mien?'block':'none';
+  var cbx=g('r-confie-comm-box');if(cbx)cbx.style.display=mien?'none':'block';
+  var el1=g('r-confie-enc-lui'),el2=g('r-confie-enc-moi');if(el1)el1.textContent=mien?'Le chauffeur (il te rend le reste)':'Le partenaire (jour même)';if(el2)el2.textContent=mien?'Moi (le client me paie)':'Moi (prépayé sur mon compte)';
+  if(mien){var pi=g('r-confie-paye'),aide=g('r-confie-paye-aide'),a=payeChauffeurAuto();
+    if(pi&&a&&(pi.value===''||pi.dataset.auto==='1')){pi.value=String(a.montant);pi.dataset.auto='1';}
+    if(aide)aide.textContent=a?a.texte:'Astuce : indique ses tarifs Charleroi / Zaventem dans sa fiche (Partenaires) pour que le montant se remplisse tout seul.';}
   var ty=(g('r-type')||{}).value||'aller',ar=ty==='ar-diff'||ty==='ar-jour',t=confieTrajetForm();
   var tb=g('r-confie-trajet-box');if(tb)tb.style.display=ar?'block':'none';
   var pb=g('r-confie-part-box');if(pb)pb.style.display=t?'block':'none';
   var pi=g('r-confie-part');if(pi){var prix=parseFloat((g('r-prix')||{}).value||0)||0;pi.placeholder=prix?String(Math.round(prix/2*100)/100).replace('.',',')+' € (la moitié, si tu laisses vide)':'la moitié du prix, si tu laisses vide';}
-  var inf=g('r-confie-info');if(inf)inf.textContent=t?((t==='aller'?"🤝 Il fait l'aller, tu fais le retour.":"🤝 Il fait le retour, tu fais l'aller.")+' Tes chiffres, tes km et tes horaires ne gardent que ton trajet (+ ta commission).'):"🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.";
+  var inf=g('r-confie-info');if(inf&&mien){inf.textContent='🚐 Il roule avec ton véhicule : la course reste la tienne (prix, km, carburant, péages). Tu lui verses son montant, compté dans tes dépenses. Ton agenda reste libre, mais le véhicule est pris.';}else if(inf)inf.textContent=t?((t==='aller'?"🤝 Il fait l'aller, tu fais le retour.":"🤝 Il fait le retour, tu fais l'aller.")+' Tes chiffres, tes km et tes horaires ne gardent que ton trajet (+ ta commission).'):"🤝 Course confiée : seule ta commission compte dans tes chiffres. Pas de km, pas de carburant, pas de conflit d'horaire.";
   majConfieHint();}
 function majConfieHint(){
   var el=g('r-confie-hint');if(!el)return;var v=(g('r-confie')||{}).value||'';if(!v){el.textContent='';return;}
@@ -2375,6 +2408,10 @@ function majConfieHint(){
   if(t){var pv=(g('r-confie-part')||{}).value;var px=parseFloat(pv);prix=(pv!==''&&isFinite(px)&&px>=0)?Math.min(px,total):Math.round(total/2*100)/100;}
   var pre=t?('🚗 Toi ('+(t==='aller'?'retour':'aller')+') : '+fmt(Math.max(0,total-prix))+'\n🤝 '+v+' ('+t+') : '+fmt(prix)+'\n'):'';
   el.style.whiteSpace='pre-line';
+  if((g('r-confie-veh')||{}).value==='mien'){var py=parseFloat((g('r-confie-paye')||{}).value||0)||0;
+    if(enc==='moi'){el.style.color='var(--red2)';el.textContent=pre+'→ Tu verses '+fmt(py)+' à '+v+'. Il te reste '+fmt(Math.max(0,total-py))+' (avant carburant).';}
+    else{el.style.color='var(--green2)';el.textContent=pre+'→ '+v+' encaisse '+fmt(prix)+', garde '+fmt(py)+' et te rend '+fmt(Math.max(0,prix-py))+'.';}
+    return;}
   if(enc==='moi'){el.style.color='var(--red2)';el.textContent=pre+'→ Tu devras verser '+fmt(Math.max(0,prix-c))+' à '+v+(c>0?' (tu gardes '+fmt(c)+')':'');}
   else{el.style.color='var(--green2)';el.textContent=pre+(c>0?('→ '+v+' encaisse '+fmt(prix)+' et te doit '+fmt(c)):('→ '+v+' encaisse '+fmt(prix)+', rien pour toi'));}
 
@@ -2404,7 +2441,7 @@ function debutCourse(r){const d=new Date((r.dateAller||'')+'T'+(r.heure||'00:00'
 function courseCommencee(r){const d=debutCourse(r);return !!d&&d.getTime()<=Date.now();}
 const SEUIL_RENTA=0.50;
 function rentaKm(r){const km=getKmReels(r);if(!(km>0))return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return (prixHT(r)-comm-(parseFloat(r.peages)||0)-(parseFloat(r.parking)||0))/km;}
-function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&!estConfieeTout(r)&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
+function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&!(estConfieeTout(r)&&!confMien(r))&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
 function confirmerPaiement(id,mode){
   const r=db.reservations.find(x=>x.id===id);if(!r)return;
   if(mode==='mixte'){editRes(id);setTimeout(()=>{const c=[...(g('r-paiement-chips')?.children||[])].find(x=>(x.getAttribute('onclick')||'').includes("'mixte'"));if(c)c.click();},150);return;}
@@ -2657,7 +2694,7 @@ function checkCapaciteApp(){
   }
 }
 function setPeage(v){const el=g('r-peages');if(el){el.value=v;updCalc();}}
-function updCalc(){try{updVolFieldLeger();}catch(e){}
+function updCalc(){try{if((g('r-confie')||{}).value&&(g('r-confie-veh')||{}).value==='mien')majConfieUI();}catch(e){}try{updVolFieldLeger();}catch(e){}
   const dist=parseFloat(g('r-distance')?.value||0);
   const type=g('r-type')?.value||'aller';
   const prix=parseFloat(g('r-prix')?.value||0);
@@ -2760,7 +2797,7 @@ function saveReservationCore(){
     stopAdresse:g('r-stop-adresse')?.value.trim()||'',
     stopLat:parseFloat(g('r-stop-lat')?.value)||null,stopLon:parseFloat(g('r-stop-lon')?.value)||null,
     duree:acC['dist-mins']?Math.round(acC['dist-mins'])+30:(dist>0?Math.round(dist)+30:90),
-    confieA:(g('r-confie')?.value||''),confieCommission:(g('r-confie')?.value?(parseFloat(g('r-confie-comm')?.value||0)||0):0),confieEncaisse:(g('r-confie')?.value?(g('r-confie-enc')?.value||'partenaire'):''),
+    confieA:(g('r-confie')?.value||''),confieVehicule:(g('r-confie')?.value?(g('r-confie-veh')?.value==='mien'?'mien':'sien'):''),confiePaye:((g('r-confie')?.value&&g('r-confie-veh')?.value==='mien')?(parseFloat(g('r-confie-paye')?.value||0)||0):0),confieCommission:((g('r-confie')?.value&&g('r-confie-veh')?.value!=='mien')?(parseFloat(g('r-confie-comm')?.value||0)||0):0),confieEncaisse:(g('r-confie')?.value?(g('r-confie-enc')?.value||'partenaire'):''),
     confieTrajet:(g('r-confie')?.value?confieTrajetForm():''),confiePart:''
   };
   if(r.confieTrajet){const _pv=g('r-confie-part')?.value;const _px=parseFloat(_pv);r.confiePart=(_pv!==''&&_pv!=null&&isFinite(_px)&&_px>=0)?_px:'';}
@@ -2786,7 +2823,7 @@ function saveReservationCore(){
   if(editId&&Array.isArray(existingR.kmAuto)&&(r.depart!==existingR.depart||r.arrivee!==existingR.arrivee||r.departRetour!==existingR.departRetour||r.arriveeRetour!==existingR.arriveeRetour||r.type!==existingR.type)){
     existingR.kmAuto.forEach(k=>{if(parseFloat(r[k]||0)===parseFloat(existingR[k]||0))r[k]=0;});r.kmAuto=[];
   }
-  if(!estConfieeTout(r)){try{completerKmAuto(r);}catch(e){console.error('km auto',e);}}
+  if(!estConfieeTout(r)||confMien(r)){try{completerKmAuto(r);}catch(e){console.error('km auto',e);}}
   try{
     if(!(r.clientTel||'').trim()){
       if(!confirm('📱 AUCUN NUMÉRO DE TÉLÉPHONE\n\nSans numéro, vous ne pourrez envoyer ni rappel J-7, ni rappel J-1, ni confirmation à ce client.\n\nEnregistrer quand même ?')){
@@ -2911,7 +2948,7 @@ function showDetailRes(id){
     h+='</span></div>';
     h+='<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div>';if(siegesTexte(r,'fr'))h+='<div class="dr"><span class="dr-label">👶 Sièges enfants</span><span class="dr-val">'+siegesTexte(r,'fr')+'</span></div>';
     {var _gr=groupeCourse(r);if(_gr.length>1)h+='<div class="dr"><span class="dr-label">🚐 Groupe</span><span class="dr-val">'+_gr.length+' véhicules · total '+fmt(_gr.reduce(function(s,x){return s+(parseFloat(x.prix)||0);},0))+' · '+_gr.reduce(function(s,x){return s+(parseInt(x.passagers)||0);},0)+' pers.</span></div>';}
-    if(estConfiee(r)){var _d=confDu(r);h+='<div class="dr" style="border:1px dashed var(--gold);border-radius:8px;padding:6px 8px"><span class="dr-label">🤝 Confiée à</span><span class="dr-val">'+escH(r.confieA)+(confTrajet(r)?' · '+confTrajet(r)+' seulement ('+fmt(prixConfie(r))+')':'')+' · commission '+fmt(confComm(r))+'<br><span style="font-size:0.72rem;color:var(--text3)">'+(r.confieEncaisse==='moi'?'Payé sur ton compte':'Il encaisse le client')+' · '+(_d===0?'✓ réglé':(_d>0?'il te doit '+fmt(_d):'tu lui dois '+fmt(-_d)))+'</span></span></div>';}
+    if(estConfiee(r)){var _d=confDu(r);h+='<div class="dr" style="border:1px dashed var(--gold);border-radius:8px;padding:6px 8px"><span class="dr-label">🤝 Confiée à</span><span class="dr-val">'+escH(r.confieA)+(confTrajet(r)?' · '+confTrajet(r)+' seulement ('+fmt(prixConfie(r))+')':'')+(confMien(r)?' · 🚐 ton véhicule · tu le paies '+fmt(confPaye(r)):' · commission '+fmt(confComm(r)))+'<br><span style="font-size:0.72rem;color:var(--text3)">'+(r.confieEncaisse==='moi'?'Payé sur ton compte':'Il encaisse le client')+' · '+(_d===0?'✓ réglé':(_d>0?'il te doit '+fmt(_d):'tu lui dois '+fmt(-_d)))+'</span></span></div>';}
     if(r.source!=='direct')h+='<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">🤝 '+r.source+' · '+(r.partnerType==='commission'?'Comm. -'+fmt(r.commission):'Prépayé')+'</span></div>';
     h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'🛬 Récupération':'Aller')+'</span><span class="dr-val">'+new Date(r.dateAller).toLocaleDateString('fr-BE')+' '+r.heure+'</span></div>';
     if(r.type==='ar-diff'&&r.dateRetour)h+='<div class="dr"><span class="dr-label">'+(r.service==='recuperation'?'✈️ Dépose':'Retour')+'</span><span class="dr-val">'+new Date(r.dateRetour).toLocaleDateString('fr-BE')+' '+(r.heureRetour||'')+'</span></div>';
@@ -3073,7 +3110,7 @@ function editRes(id){
   if(sc){sc.innerHTML='<div class="chip'+(r.source==='direct'?' active':'')+'" onclick="selectChip(this,\'r-source\',\'direct\');updSourceUI()">Direct</div>'+db.partners.map(p=>'<div class="chip'+(r.source===p.nom?' active':'')+'" onclick="selectChip(this,\'r-source\',\''+escH(p.nom).replace(/'/g,"\\'")+'\');updSourceUI()">'+escH(p.nom)+'</div>').join('');g('r-source').value=r.source||'direct';}
   updSourceUI();
   if(r.source!=='direct'){setChips('r-partner-type-chips','r-partner-type',r.partnerType||'commission');updPartnerType();const ce=g('r-commission');if(ce)ce.value=r.commission||'';}
-  try{renderConfieChips(r.confieA||'');const cc=g('r-confie-comm');if(cc)cc.value=r.confieA?(r.confieCommission||''):'';setChips('r-confie-enc-chips','r-confie-enc',r.confieEncaisse||'partenaire');setChips('r-confie-trajet-chips','r-confie-trajet',r.confieA?(r.confieTrajet||''):'');const cp=g('r-confie-part');if(cp)cp.value=(r.confieA&&r.confieTrajet&&r.confiePart!=null)?r.confiePart:'';majConfieUI();}catch(e){}
+  try{setChips('r-confie-veh-chips','r-confie-veh',(r.confieA&&r.confieVehicule==='mien')?'mien':'sien');const _cp=g('r-confie-paye');if(_cp){_cp.value=(r.confieA&&r.confieVehicule==='mien')?String(r.confiePaye||''):'';_cp.dataset.auto=_cp.value?'0':'1';}renderConfieChips(r.confieA||'');const cc=g('r-confie-comm');if(cc)cc.value=r.confieA?(r.confieCommission||''):'';setChips('r-confie-enc-chips','r-confie-enc',r.confieEncaisse||'partenaire');setChips('r-confie-trajet-chips','r-confie-trajet',r.confieA?(r.confieTrajet||''):'');const cp=g('r-confie-part');if(cp)cp.value=(r.confieA&&r.confieTrajet&&r.confiePart!=null)?r.confiePart:'';majConfieUI();}catch(e){}
   setChips('r-type-chips','r-type',r.type||'aller');acC['_lastType']=r.type||'aller';try{majConfieUI();}catch(e){}setChips('r-service-chips','r-service',r.service||'depose');
   g('r-vehicule').value=r.vehicule||0;g('r-date-aller').value=r.dateAller||'';updDtDisplay('r-date-aller',r.dateAller||'');g('r-heure-aller').value=r.heure||'';updDtDisplay('r-heure-aller',r.heure||'');
   g('r-depart').value=r.depart||'';g('r-arrivee').value=r.arrivee||'';
@@ -3285,7 +3322,8 @@ function msgPartenaire(r,sens){
   if(r.stopAdresse)m+='📍 Arrêt : '+r.stopAdresse+(r.stopNom?' ('+r.stopNom+(r.stopTel?' — '+r.stopTel:'')+')':'')+'\n';
   m+='\n';
   if(r.confieEncaisse==='moi')m+='💶 Déjà payé par le client — rien à encaisser.\n';
-  else{m+='💶 À encaisser auprès du client : '+fmt(aEnc)+(r.type==='ar-diff'||confTrajet(r)?' (pour ce trajet)':'')+'\n';if(c>0)m+='🤝 Commission convenue : '+fmt(c)+'\n';}
+  else{m+='💶 À encaisser auprès du client : '+fmt(aEnc)+(r.type==='ar-diff'||confTrajet(r)?' (pour ce trajet)':'')+'\n';if(!confMien(r)&&c>0)m+='🤝 Commission convenue : '+fmt(c)+'\n';}
+  if(confMien(r))m+='🚐 Avec la '+getV(r.vehicule).nom+' · pour toi : '+fmt(confPaye(r))+'\n';
   if(r.notes)m+='📋 '+r.notes+'\n';
   m+='\nMerci et bonne route !\nJean-François — Facciolini Mobility';
   return m;
@@ -4028,19 +4066,19 @@ function acClient(input){const q=input.value.toLowerCase(),drop=g('ac-client-dro
 function fillClient(id){const c=db.clients.find(x=>x.id===id);if(!c)return;g('r-client-nom').value=c.nom;g('r-client-tel').value=c.tel||'';setChips('r-langue-chips','r-langue',c.langue||'fr');g('ac-client-drop').style.display='none';const svc=g('r-service')?.value||'depose';const isRec=(svc==='recuperation');const addrField=isRec?'r-arrivee':'r-depart';const latField=isRec?'r-arr-lat':'r-dep-lat';const lonField=isRec?'r-arr-lon':'r-dep-lon';const acKey=isRec?'r-arrivee':'r-depart';const otherKey=isRec?'r-depart':'r-arrivee';if(c.adresse&&!g(addrField).value){g(addrField).value=c.adresse;if(c.lat&&c.lon){acC[acKey]={lat:c.lat,lon:c.lon};if(g(latField))g(latField).value=c.lat;if(g(lonField))g(lonField).value=c.lon;}assurerDistanceAller();}updCalc();setTimeout(showClientAddrBtns,100);}
 function openFraisModal(editId){sv('frais-modal-title',editId?'Modifier frais':'Nouveau frais');g('frais-edit-id').value=editId||'';const f=editId?db.frais.find(x=>x.id===editId):null;g('frais-desc').value=f?.desc||'';g('frais-date').value=f?.date||dateLocale();g('frais-montant').value=f?.montant||'';g('frais-fournisseur').value=f?.fournisseur||'';setChips('frais-type-chips','frais-type',f?.type||'entretien');openModal('m-frais');}
 function saveFrais(){const editId=g('frais-edit-id').value;const f={id:editId||genId(),type:g('frais-type').value,desc:g('frais-desc').value.trim(),date:g('frais-date').value,montant:parseFloat(g('frais-montant').value)||0,fournisseur:g('frais-fournisseur').value.trim(),paiement:(g('frais-paiement')&&g('frais-paiement').value)||'bancontact'};if(!f.montant||!f.date){alert('Date et montant requis');return;}if(editId){const i=db.frais.findIndex(x=>x.id===editId);if(i!==-1)db.frais[i]=f;}else db.frais.push(f);save();closeModal('m-frais');renderFin();}
-function openPartnerModal(editId){sv('partner-modal-title',editId?'Modifier partenaire':'Nouveau partenaire');g('partner-edit-id').value=editId||'';const p=editId?db.partners.find(x=>x.id===editId):null;g('p-nom').value=p?.nom||'';g('p-email').value=p?.email||'';g('p-tel').value=p?.tel||'';g('p-adresse').value=p?.adresse||'';g('p-tva').value=p?.tva||'';openModal('m-partner');}
+function openPartnerModal(editId){sv('partner-modal-title',editId?'Modifier partenaire':'Nouveau partenaire');g('partner-edit-id').value=editId||'';const p=editId?db.partners.find(x=>x.id===editId):null;g('p-nom').value=p?.nom||'';g('p-email').value=p?.email||'';g('p-tel').value=p?.tel||'';g('p-adresse').value=p?.adresse||'';g('p-tva').value=p?.tva||'';g('p-paye-crl').value=(p&&p.payeCRL!=null)?p.payeCRL:'';g('p-paye-bru').value=(p&&p.payeBRU!=null)?p.payeBRU:'';openModal('m-partner');}
 function savePartner(){
   const editId=g('partner-edit-id').value;
   const oldPartner=editId?db.partners.find(x=>x.id===editId):null;
   const oldNom=oldPartner?oldPartner.nom:'';
-  const p={id:editId||genId(),nom:g('p-nom').value.trim(),email:g('p-email').value.trim(),tel:g('p-tel').value.trim(),adresse:g('p-adresse').value.trim(),tva:g('p-tva').value.trim()};
+  const p={id:editId||genId(),nom:g('p-nom').value.trim(),email:g('p-email').value.trim(),tel:g('p-tel').value.trim(),adresse:g('p-adresse').value.trim(),tva:g('p-tva').value.trim(),payeCRL:(g('p-paye-crl').value===''?'':parseFloat(g('p-paye-crl').value)||0),payeBRU:(g('p-paye-bru').value===''?'':parseFloat(g('p-paye-bru').value)||0)};
   if(!p.nom){alert('Nom requis');return;}
   if(editId){
     const i=db.partners.findIndex(x=>x.id===editId);if(i!==-1)db.partners[i]=Object.assign({},oldPartner,p); /* garde la remise à zéro */
     // Propager le nouveau nom dans les réservations liées
     if(oldNom&&oldNom!==p.nom){
       var nbSync=0;
-      db.reservations.forEach(function(r){if(r.source===oldNom){r.source=p.nom;nbSync++;}});
+      db.reservations.forEach(function(r){if(r.source===oldNom){r.source=p.nom;nbSync++;}if(r.confieA===oldNom){r.confieA=p.nom;nbSync++;}});
       if(nbSync>0)console.log('[FM] '+nbSync+' réservation(s) mises à jour pour partenaire renommé.');
       (db.partnerSoldes||[]).forEach(function(h){if(h.partenaire===oldNom)h.partenaire=p.nom;});
       if(db.partnerMoisMasques&&db.partnerMoisMasques[oldNom]){db.partnerMoisMasques[p.nom]=db.partnerMoisMasques[oldNom];delete db.partnerMoisMasques[oldNom];}
@@ -5516,9 +5554,30 @@ function _creneaux(r){
   return out;
 }
 
+/* Créneaux où le véhicule de la course est utilisé (par moi ou par le chauffeur qui roule avec mon véhicule) */
+function _creneauxVeh(r){
+  if(!confMien(r))return _creneaux(r);
+  var out=[];
+  function push(dateStr,heure,sens){if(!dateStr||!heure)return;var parts=String(heure).split(':');if(parts.length<2)return;var d=new Date(dateStr);d.setHours(parseInt(parts[0],10),parseInt(parts[1],10),0,0);var dur=_dureeEstimee(r,sens);out.push({debut:d.getTime(),fin:d.getTime()+dur*60000,sens:sens});}
+  push(r.dateAller,r.heure,'aller');
+  if(r.type==='ar-jour'&&r.heureRetour)push(r.dateAller,r.heureRetour,'retour');
+  if(r.type==='ar-diff'&&r.dateRetour&&r.heureRetour)push(r.dateRetour,r.heureRetour,'retour');
+  return out;
+}
 function detecterConflits(cible,ignoreId){
   var conflits=[];
   var cc=_creneaux(cible);
+  /* Véhicule prêté à un chauffeur : je ne peux pas le prendre en même temps */
+  var cv=_creneauxVeh(cible);
+  if(cv.length)db.reservations.forEach(function(o){
+    if(o.statut==='annule'||(ignoreId&&o.id===ignoreId)||o.id===cible.id)return;
+    if(!(confMien(cible)||confMien(o)))return;
+    if(parseInt(o.vehicule||0)!==parseInt(cible.vehicule||0))return;
+    _creneauxVeh(o).forEach(function(oc){cv.forEach(function(x){
+      var ecart=Math.min(Math.abs(x.debut-oc.fin),Math.abs(oc.debut-x.fin)),chevauche=(x.debut<oc.fin)&&(oc.debut<x.fin);
+      if(chevauche||ecart<MARGE_MIN*60000)conflits.push({res:o,sensAutre:oc.sens,sensCible:x.sens,type:chevauche?'chevauchement':'serre',minutes:Math.round(ecart/60000),vehicule:getV(cible.vehicule).nom});
+    });});
+  });
   if(!cc.length) return conflits;
   var vCible=cible.vehicule;
   db.reservations.forEach(function(o){
@@ -5552,7 +5611,7 @@ function messageConflits(conflits){
     var d=new Date(cf.sensAutre==='retour'&&r.type==='ar-diff'?r.dateRetour:r.dateAller);
     var h=cf.sensAutre==='retour'?(r.heureRetour||''):(r.heure||'');
     m+='\n• '+(r.clientNom||'—')+' — '+d.toLocaleDateString('fr-BE',{day:'numeric',month:'short'})+' '+h
-      +(cf.type==='chevauchement'?'  (CHEVAUCHEMENT)':'  (seulement '+cf.minutes+' min d\'écart)');
+      +(cf.type==='chevauchement'?'  (CHEVAUCHEMENT)':'  (seulement '+cf.minutes+' min d\'écart)')+(cf.vehicule?' — même véhicule ('+cf.vehicule+')':'');
   });
   if(conflits.length>4) m+='\n• … et '+(conflits.length-4)+' autre(s)';
   return m;
