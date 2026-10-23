@@ -17,8 +17,9 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;-webkit-font-smoothing:antialiased}
 #app-wrapper{max-width:480px;margin:0 auto;height:100%;position:relative}
 .topbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--top-h);background:rgba(4,7,16,0.95);backdrop-filter:blur(24px) saturate(1.5);border-bottom:1px solid rgba(22,36,56,0.8);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:100}
-.topbar-name{font-family:Playfair Display,serif;font-weight:900;font-size:1.15rem;color:var(--gold)}
-.topbar-sub{font-size:0.6rem;color:var(--text3);font-weight:500;letter-spacing:0.12em;text-transform:uppercase;margin-top:2px}
+.topbar-name{font-family:Playfair Display,serif;font-weight:900;font-size:1.12rem;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-devis{border:1px solid var(--gold)!important;color:var(--gold2)!important;border-radius:20px!important;padding:7px 13px!important;font-size:0.78rem!important;font-weight:700!important;white-space:nowrap}
+.topbar-sub{font-size:0.72rem;color:#b5b0a8;font-weight:500;margin-top:2px;white-space:nowrap}
 .topbar-right{display:flex;align-items:center;gap:8px}
 .topbar-date{font-size:0.72rem;color:var(--text2)}
 .topbar-badge{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:5px 10px;font-size:0.72rem;color:var(--gold2);font-weight:600}
@@ -214,6 +215,60 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .fab:active{transform:scale(0.92)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style id="nav5-css">@media (max-width:1023px){.navbar .nav-desk{display:none!important}}@media (min-width:1024px){.navbar .nav-mob{display:none!important}}
+.plus-list{background:var(--card);border-radius:18px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+.plus-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:none;background:transparent;width:100%;text-align:left;cursor:pointer;color:var(--text);font-family:inherit;min-height:60px}
+.plus-row+.plus-row{border-top:1px solid var(--border)}
+.plus-ico{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.plus-ico svg{width:20px;height:20px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.plus-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.plus-txt b{font-size:0.95rem}.plus-txt span{font-size:0.76rem;color:var(--text2)}
+.plus-label{font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin:6px 4px 8px}
+</style>
+<style id="reorg-css">
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:var(--bg3);border-radius:14px;padding:4px;margin-bottom:12px}
+.seg-btn{border:none;background:transparent;border-radius:10px;padding:10px 4px;font-family:inherit;font-size:0.85rem;font-weight:600;color:#57534e;cursor:pointer;min-height:42px}
+.seg-btn.active{background:var(--card);color:var(--text);font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.msg-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.msg-btn{border:none;border-radius:12px;padding:10px 4px;font-family:inherit;font-size:0.84rem;font-weight:800;cursor:pointer;min-height:44px}
+.res-jour{font-size:0.72rem;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin:14px 4px 8px}
+.acc-k{font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em}
+.acc-carte{padding:14px 16px}
+.acc-tete{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}.acc-tete b{font-size:1rem}.acc-tete span{font-size:0.78rem;color:var(--text2)}
+.acc-ligne{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}
+.acc-h{font-weight:800;font-size:0.92rem;width:46px;flex:none}
+.acc-c{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.acc-c b{font-size:0.92rem}.acc-c span{font-size:0.78rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-badge{font-size:0.7rem;font-weight:800;border-radius:10px;padding:4px 8px;white-space:nowrap}
+.acc-vide{font-size:0.82rem;color:var(--text2);padding:8px 0 2px;border-top:1px solid var(--border)}
+.acc-todo{display:flex;align-items:center;gap:10px;width:100%;padding:11px 0;border:none;border-top:1px solid var(--border);background:transparent;font-family:inherit;font-size:0.9rem;color:var(--text);text-align:left;cursor:pointer;min-height:44px}
+.acc-pt{width:9px;height:9px;border-radius:5px;flex:none}.acc-go{font-size:0.8rem;color:#8a6d1f;font-weight:700;white-space:nowrap}
+.acc-mois{background:#12141a!important;color:#fff;border:none!important;padding:16px}
+.acc-mois .acc-k{color:#b5b0a8}.acc-mois .prog{background:#2a2d36}
+.acc-mod{background:none;border:none;color:#e8c877;font-size:0.72rem;text-decoration:underline;cursor:pointer;padding:0 0 0 4px;text-transform:none;letter-spacing:0}
+.acc-big{font-family:Playfair Display,serif;font-size:1.6rem;font-weight:900;color:#e8c877;margin:4px 0 8px}
+.acc-sub{font-size:0.74rem;color:#b5b0a8;margin-top:6px}
+.acc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.acc-grid div{display:flex;flex-direction:column;gap:2px}.acc-grid b{font-size:1.02rem}.acc-grid span{font-size:0.7rem;color:#b5b0a8}.acc-grid .stat-val{font-size:1.02rem;line-height:1.2}
+.acc-lien{background:none;border:none;color:#e8c877;font-family:inherit;font-size:0.84rem;font-weight:700;padding:12px 0 0;cursor:pointer}
+</style>
+<style id="part-css">
+.part-ligne{display:flex;align-items:center;gap:12px;padding:12px 14px;border:none;background:transparent;width:100%;text-align:left;cursor:pointer;color:var(--text);font-family:inherit;min-height:60px}
+.part-ligne+.part-ligne{border-top:1px solid var(--border)}
+.part-ini{width:40px;height:40px;border-radius:20px;background:#f3ecd9;color:#8a6d1f;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;font-size:0.85rem}
+.pm-ligne{display:flex;gap:10px;align-items:center;padding:11px 0;cursor:pointer}
+.pm-ligne+.pm-ligne{border-top:1px solid var(--border)}
+</style>
+<style id="rg-css">
+.rg{background:var(--card);border-radius:18px;margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
+.rg>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;min-height:58px}
+.rg>summary::-webkit-details-marker{display:none}
+.rg-fl{color:var(--text2);transition:transform .2s}.rg[open] .rg-fl{transform:rotate(180deg)}
+.rg-corps{padding:0 14px 14px;border-top:1px solid var(--border)}
+.rg-corps .stitle:first-child{margin-top:12px}
+.rap-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+.rap-btn{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:10px 2px;font-size:0.74rem;font-weight:700;color:var(--text);text-decoration:none;cursor:pointer;font-family:inherit;min-height:60px;justify-content:center}
+.rap-btn svg{width:20px;height:20px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+<style id="nav7-css">@media (max-width:1023px){.navbar .nav-btn{min-width:0;font-size:0.56rem;letter-spacing:0;text-transform:none;gap:4px;padding-left:1px;padding-right:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.navbar .nav-btn .nav-icon{width:21px;height:21px}}</style>
 <style id="desktop-css">
 /* =====================================================================
    MODE ORDINATEUR (Mac, PC, tablette en paysage) — à partir de 1024 px
@@ -246,7 +301,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   .nav-btn.active::before{top:10px;bottom:10px;left:0;transform:none;width:3px;height:auto;border-radius:0 4px 4px 0}
 
   /* Nom de l'app : déjà dans le menu, on garde la barre du haut pour les actions */
-  .topbar-name,.topbar-sub{display:none}
+  .topbar-name{display:none}
 
   /* Zone de contenu */
   .content{left:var(--side-w);right:0;transform:none;width:auto;max-width:none;bottom:0}
@@ -269,6 +324,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   #page-fin{max-width:1080px}
   #page-fin .sg2{grid-template-columns:repeat(3,1fr)}
   #page-params{max-width:780px}
+  #page-encaisser{max-width:820px}
 
   /* Fenêtres au centre de l'écran */
   .overlay{align-items:center;justify-content:center;padding:24px}
@@ -342,56 +398,45 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 </div>
 <div id="app-wrapper"><div id="app" style="display:none">
 <div class="topbar">
-  <div><div class="topbar-name">Facciolini Mobility</div><div class="topbar-sub">Transport Priv&#xe9; &middot; Hainaut</div></div>
-  <div class="topbar-right"><div class="topbar-date" id="tb-date"></div><button class="btn btn-ghost btn-xs sync-pill" id="sync-pill" onclick="FMSync.ui.ouvrir()" title="Cloud">&#x2601;&#xfe0f;</button><button class="btn btn-ghost btn-xs" onclick="openDevisRapide()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2)">&#x1f4b0; Devis</button><button class="btn btn-ghost btn-xs" onclick="openStorySemaine()" style="padding:5px 10px;font-size:0.7rem;border-color:var(--border2);margin-left:6px">&#x1f4f8; Story</button><div class="topbar-badge" id="tb-month"></div></div>
+  <div style="min-width:0"><div class="topbar-name">Facciolini Mobility</div><div class="topbar-sub" id="tb-date"></div></div>
+  <div class="topbar-right"><button class="btn btn-ghost btn-xs sync-pill" id="sync-pill" onclick="FMSync.ui.ouvrir()" title="Synchronisation">&#x2601;&#xfe0f;</button><button class="btn btn-ghost btn-sm tb-devis" onclick="openDevisRapide()">Devis rapide</button><div class="topbar-badge" id="tb-month" style="display:none"></div></div>
 </div>
 <div class="content">
 <div class="page active" id="page-dash">
-  <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="dash-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
-  <div class="card card-gold">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em">Encaissé / Objectif mensuel</div><div style="font-family:Playfair Display,serif;font-size:1.8rem;font-weight:900;color:var(--gold);line-height:1;margin-top:2px" id="d-gains">0 &#x20ac;</div></div>
-      <div style="text-align:right"><div style="font-size:0.72rem;color:var(--text3)">/ <span id="d-obj-target" style="color:var(--text2);font-weight:600">2000</span> &#x20ac;</div><button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openObjModal()">Modifier</button></div>
-    </div>
-    <div class="prog"><div class="prog-fill" id="d-obj-prog" style="width:0%"></div></div>
-    <div style="font-size:0.7rem;color:var(--text3);margin-top:6px" id="d-obj-txt"></div>
-  </div>
-  <div id="d-aconfirmer"></div>
-  <div id="d-checklist"></div>
-  <div id="d-resultat"></div>
-  <div class="sg2">
-    <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice du mois</div><div class="stat-val c-green" id="d-benef">0 &#x20ac;</div><div class="stat-sub" id="d-marge">Marge 0%</div><div class="stat-sub" id="d-benef-reel" style="margin-top:4px;font-size:0.68rem">R&#xe9;el: —</div><div class="stat-sub" id="d-comp-prev" style="margin-top:3px;font-size:0.68rem;font-weight:700"></div></div>
-    <div class="stat"><div class="stat-label">Courses</div><div class="stat-val c-blue" id="d-nb-res">0</div><div class="stat-sub" id="d-nb-sub">ce mois</div></div>
-    <div class="stat"><div class="stat-label">Km clients</div><div class="stat-val c-blue" id="d-km">0</div><div class="stat-sub">facturables</div></div>
-    <div class="stat"><div class="stat-label">Km r&#xe9;els</div><div class="stat-val c-purple" id="d-km-reel">&#x2014;</div><div class="stat-sub">compteur</div></div>
-  </div>
-  <div class="sg3">
-    <div class="stat"><div class="stat-label">Diesel</div><div class="stat-val c-orange" id="d-diesel">0 &#x20ac;</div><div class="stat-sub" id="d-litres">0 L</div></div>
-    <div class="stat"><div class="stat-label">Charges</div><div class="stat-val c-red" id="d-charges">0 &#x20ac;</div><div class="stat-sub">fixes</div></div>
-    <div class="stat"><div class="stat-label">Frais</div><div class="stat-val c-red" id="d-frais">0 &#x20ac;</div><div class="stat-sub">exceptionnels</div></div>
-  </div>
+  <div id="acc-jour"></div>
+  <div id="acc-afaire"></div>
   <div id="d-alerts"></div>
-  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em">Gains &#x2014; 6 mois</div><div style="font-size:0.7rem;color:var(--text3)" id="d-chart-total"></div></div><div style="display:flex;align-items:flex-end;gap:6px;height:100px" id="d-chart"></div></div>
-  <div class="card"><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Top clients</div><div id="d-top"></div></div>
-  <div id="d-inasti"></div><div id="d-partner-soldes"></div><div id="d-virements"></div><div id="d-soldes"></div>
+  <div id="d-checklist"></div>
+  <div class="card acc-mois">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="acc-k" id="dash-month"></span><span class="acc-k">objectif <span id="d-obj-target">2000</span> &#x20ac; <button class="acc-mod" onclick="openObjModal()">modifier</button></span></div>
+    <div class="acc-big"><span id="d-gains">0 &#x20ac;</span> encaissés</div>
+    <div class="prog"><div class="prog-fill" id="d-obj-prog" style="width:0%"></div></div>
+    <div class="acc-sub" id="d-obj-txt"></div>
+    <div class="acc-grid">
+      <div><b id="d-benef" class="c-green">0 &#x20ac;</b><span>bénéfice</span></div>
+      <div><b id="d-nb-res">0</b><span>courses</span></div>
+      <div><b id="acc-prov" style="color:var(--gold2)">0 &#x20ac;</b><span>à mettre de côté</span></div>
+    </div>
+    <button class="acc-lien" onclick="showPage('fin')">Voir tous les chiffres &#x203a;</button>
+  </div>
 </div>
 <div class="page" id="page-res">
-  <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="res-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div class="sec"><span class="sec-title">Courses</span><button class="btn btn-gold btn-sm" onclick="openNewRes()">+ Nouvelle</button></div>
-  <div id="res-aconfirmer"></div>
-  <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
-    <div class="chip active" onclick="setResFilter('tous',this)">Tous</div>
-    <div class="chip" onclick="setResFilter('semaine',this)">&#x1f4c6; Cette semaine</div>
-    <div class="chip" onclick="setResFilter('today',this)">Aujourd&#x27;hui</div>
-    <div class="chip" onclick="setResFilter('veille',this)">&#x1f514; Veille J-1</div>
-    <div class="chip" onclick="setResFilter('j7',this)">&#x1f4e8; 7 prochains jours</div>
+  <div class="seg" id="res-seg">
+    <button class="seg-btn active" data-f="avenir" onclick="setResTab('avenir')">À venir <span id="res-n-avenir"></span></button>
+    <button class="seg-btn" data-f="passees" onclick="setResTab('passees')">Passées</button>
+    <button class="seg-btn" data-f="annule" onclick="setResTab('annule')">Annulées</button>
   </div>
-  <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
-    <div class="chip" onclick="openRelanceJ7()" style="background:var(--gold);color:#000;font-weight:700">&#x1f4e8; Relances J-7 <span id="chip-relance-count"></span></div>
-    <div class="chip" onclick="openDemandeAvis()" style="background:#4285F4;color:#fff;font-weight:700">&#11088; Demander avis <span id="chip-avis-count"></span></div>
-    <div class="chip" onclick="setResFilter('mois',this)">&#x1f5d3;&#xfe0f; Ce mois</div>
-    <div class="chip" onclick="setResFilter('annule',this)" style="color:var(--red2)">&#x274c; Annul&#xe9;es</div>
+  <div class="card card-sm" style="padding:10px 12px">
+    <div class="acc-k" style="margin-bottom:8px">Messages à envoyer</div>
+    <div class="msg-grid">
+      <button class="msg-btn" id="res-msg-veille" style="background:#e3f5e8;color:#15803d" onclick="setResTab('veille')">Veille <span id="chip-veille-count"></span></button>
+      <button class="msg-btn" style="background:#e6eefc;color:#1d4ed8" onclick="openRelanceJ7()">J-7 <span id="chip-relance-count"></span></button>
+      <button class="msg-btn" style="background:#fdf0dc;color:#92400e" onclick="openDemandeAvis()">Avis <span id="chip-avis-count"></span></button>
+    </div>
   </div>
+  <div id="res-passees-tools" style="display:none">
+    <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="res-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div id="pay-filter-bar" style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
     <div class="chip chip-pay active" onclick="setPayFilter('tous',this)">&#x1f4b0; Tous</div>
     <div class="chip chip-pay" onclick="setPayFilter('aconfirmer',this)">&#x23f3; &#xc0; confirmer</div>
@@ -400,21 +445,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="chip chip-pay" onclick="setPayFilter('prepaye',this)">&#x1f91d; Pr&#xe9;pay&#xe9;</div>
     <button id="btn-del-pay-filter" onclick="delPayFiltered()" style="display:none;margin-left:4px;background:var(--red2);color:#fff;border:none;border-radius:20px;padding:5px 12px;font-size:0.78rem;font-weight:700;cursor:pointer">&#x1f5d1; Supprimer</button>
   </div>
+  </div>
   <div style="margin-bottom:10px"><input type="text" class="fi" id="res-search" placeholder="&#x1f50d; Rechercher client, adresse..." oninput="renderRes()" style="padding:11px 14px"></div>
   <div id="res-list"></div>
 </div>
 <div class="page" id="page-fin">
   <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="fin-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div class="sec"><span class="sec-title">Finances</span><button class="btn btn-outline btn-sm" onclick="genNoteFrais()">&#x1f4c4; Note frais</button></div>
-  <div id="f-resultat"></div>
-  <div class="km-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; calcul&#xe9;s depuis les pleins</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openKmModal(0)">&#x1f697; <span class="veh-nom-0">Seat Leon</span></button><button class="btn btn-ghost btn-xs" onclick="openKmModal(1)">&#x1f690; <span class="veh-nom-1">Talento</span></button></div></div>
-    <div class="fr">
-      <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">D&#xe9;but du mois</div><div style="font-weight:700;color:var(--text)" id="km-debut-display">&#x2014;</div></div>
-      <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">Fin du mois</div><div style="font-weight:700;color:var(--text)" id="km-fin-display">&#x2014;</div></div>
-    </div>
-    <div style="margin-top:8px;font-size:0.78rem;color:var(--text2)">Km r&#xe9;els : <span style="font-weight:700;color:var(--blue2)" id="km-reel-display">&#x2014;</span> &middot; Taux : <span style="font-weight:700;color:var(--purple2)" id="km-taux-display">&#x2014;</span></div>
+  <div class="seg" id="fin-seg">
+    <button class="seg-btn active" data-t="res" onclick="setFinTab('res')">Résultat</button>
+    <button class="seg-btn" data-t="dep" onclick="setFinTab('dep')">Dépenses</button>
+    <button class="seg-btn" data-t="pay" onclick="setFinTab('pay')">Paiements</button>
   </div>
+  <div class="fin-pane" id="fin-pane-res">
+  <div id="f-resultat"></div>
+  <div id="d-inasti"></div>
+  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em">Gains &#x2014; 6 mois</div><div style="font-size:0.7rem;color:var(--text3)" id="d-chart-total"></div></div><div style="display:flex;align-items:flex-end;gap:6px;height:100px" id="d-chart"></div></div>
   <div class="sg2">
     <div class="stat"><div class="stat-label">Factur&#xe9;</div><div class="stat-val c-gold" id="f-recettes">0 &#x20ac;</div><div class="stat-sub" id="f-encaisse-sub">Encaiss&#xe9;: 0 &#x20ac;</div></div>
     <div class="stat"><div class="stat-label">B&#xe9;n&#xe9;fice net</div><div class="stat-val" id="f-benef">0 &#x20ac;</div><div class="stat-sub" id="f-benef-reel-sub">&#x2014;</div></div>
@@ -423,16 +469,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <div class="stat"><div class="stat-label">Commissions</div><div class="stat-val c-red" id="f-commissions">0 &#x20ac;</div></div>
     <div class="stat"><div class="stat-label">Frais excep.</div><div class="stat-val c-red" id="f-frais-stat">0 &#x20ac;</div></div>
   </div>
-  <div class="card card-sm">
-    <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Kilom&#xe8;tres d&#xe9;taill&#xe9;s</div>
-    <div class="dr"><span class="dr-label">Km clients facturables</span><span class="dr-val c-blue" id="f-km-c">0 km</span></div>
-    <div class="dr"><span class="dr-label">Km r&#xe9;els compteur</span><span class="dr-val c-purple" id="f-km-reel-det">&#x2014;</span></div>
-    <div class="dr"><span class="dr-label">Km &#xe0; vide estim&#xe9;s</span><span class="dr-val c-orange" id="f-km-vide">&#x2014;</span></div>
-    <div class="dr"><span class="dr-label">Taux de charge</span><span class="dr-val" id="f-taux-charge">&#x2014;</span></div>
-    <div class="dr" style="border-bottom:none"><span class="dr-label">Km annuels</span><span class="dr-val" id="f-km-a">0 km</span></div>
+  <div class="card"><div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Top clients</div><div id="d-top"></div></div>
   </div>
-  <div class="sec" style="padding-top:4px"><span class="sec-title">Répartition encaissements</span></div>
-  <div id="pay-repartition"></div>
+  <div class="fin-pane" id="fin-pane-dep" style="display:none">
   <div class="sec"><span class="sec-title">Carburant</span><button class="btn btn-outline btn-sm" onclick="openCarbModal()">+ Plein</button></div>
   <div style="display:flex;gap:7px;margin-bottom:10px">
     <div class="chip active" id="carb-f-tous" onclick="setCarbFilter('tous',this)">Tous</div>
@@ -449,23 +488,107 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <div class="sec"><span class="sec-title">Frais exceptionnels</span><button class="btn btn-gold btn-sm" onclick="openFraisModal(null)">+ Ajouter</button></div>
   <div class="alert alert-blue" style="font-size:0.78rem">Pneus, contr&#xf4;le technique, entretien, lavage... Tous d&#xe9;ductibles et inclus dans le co&#xfb;t de revient.</div>
   <div id="frais-list"></div>
+  <div class="km-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:0.8rem;font-weight:700;color:var(--blue2)">&#x1f4cd; Km r&#xe9;els &#x2014; calcul&#xe9;s depuis les pleins</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="openKmModal(0)">&#x1f697; <span class="veh-nom-0">Seat Leon</span></button><button class="btn btn-ghost btn-xs" onclick="openKmModal(1)">&#x1f690; <span class="veh-nom-1">Talento</span></button></div></div>
+    <div class="fr">
+      <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">D&#xe9;but du mois</div><div style="font-weight:700;color:var(--text)" id="km-debut-display">&#x2014;</div></div>
+      <div><div style="font-size:0.65rem;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em">Fin du mois</div><div style="font-weight:700;color:var(--text)" id="km-fin-display">&#x2014;</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:0.78rem;color:var(--text2)">Km r&#xe9;els : <span style="font-weight:700;color:var(--blue2)" id="km-reel-display">&#x2014;</span> &middot; Taux : <span style="font-weight:700;color:var(--purple2)" id="km-taux-display">&#x2014;</span></div>
+  </div>
+  <div class="card card-sm">
+    <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Kilom&#xe8;tres d&#xe9;taill&#xe9;s</div>
+    <div class="dr"><span class="dr-label">Km clients facturables</span><span class="dr-val c-blue" id="f-km-c">0 km</span></div>
+    <div class="dr"><span class="dr-label">Km r&#xe9;els compteur</span><span class="dr-val c-purple" id="f-km-reel-det">&#x2014;</span></div>
+    <div class="dr"><span class="dr-label">Km &#xe0; vide estim&#xe9;s</span><span class="dr-val c-orange" id="f-km-vide">&#x2014;</span></div>
+    <div class="dr"><span class="dr-label">Taux de charge</span><span class="dr-val" id="f-taux-charge">&#x2014;</span></div>
+    <div class="dr" style="border-bottom:none"><span class="dr-label">Km annuels</span><span class="dr-val" id="f-km-a">0 km</span></div>
+  </div>
+  </div>
+  <div class="fin-pane" id="fin-pane-pay" style="display:none">
+  <div class="sec" style="padding-top:4px"><span class="sec-title">Répartition encaissements</span></div>
+  <div id="pay-repartition"></div>
   <div id="bloc-paiements"></div>
+  <div id="d-virements"></div><div id="d-soldes"></div><div id="d-partner-soldes"></div>
+  </div>
 </div>
 <div class="page" id="page-clients">
   <div class="sec" style="padding-top:8px"><span class="sec-title">Clients</span><div style="display:flex;gap:6px"><button class="btn btn-sm" style="background:var(--border);color:var(--text)" onclick="openCampagne()">&#128227; Campagne</button><button class="btn btn-gold btn-sm" onclick="openClientModal(null)">+ Nouveau</button></div></div>
   <div style="margin-bottom:8px"><div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap"><div class="chip active chip-csort" onclick="setClientSort('alpha',this)">A&#x2192;Z</div><div class="chip chip-csort" onclick="setClientSort('courses',this)">+ Courses</div><div class="chip chip-csort" onclick="setClientSort('ca',this)">+ CA</div><div class="chip chip-csort" onclick="setClientSort('recent',this)">R&#xe9;cents</div></div><input type="text" class="fi" id="client-search" placeholder="&#x1f50d; Rechercher..." oninput="renderClients()" style="padding:11px 14px"></div>
   <div id="clients-list"></div>
 </div>
+<div class="page" id="page-plus">
+  <div class="sec" style="padding-top:8px"><span class="sec-title">Plus</span></div>
+  <div class="plus-label">Mon activité</div>
+  <div class="plus-list">
+    <button class="plus-row" onclick="showPage('fin')"><span class="plus-ico" style="background:#e3f5e8"><svg viewBox="0 0 24 24" stroke="#15803d"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="plus-txt"><b>Finances</b><span>Bénéfice, pleins, frais, TVA, graphiques</span></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
+    <button class="plus-row" onclick="showPage('partners')"><span class="plus-ico" style="background:#fdf0dc"><svg viewBox="0 0 24 24" stroke="#92400e"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 000-7.8z"/></svg></span><span class="plus-txt"><b>Partenaires &amp; chauffeur</b><span>Qui doit combien, mois par mois</span></span><span id="plus-part-badge"></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
+  </div>
+  <div class="plus-label">Outils</div>
+  <div class="plus-list">
+    <button class="plus-row" onclick="openCampagne()"><span class="plus-ico" style="background:#e6eefc"><svg viewBox="0 0 24 24" stroke="#1d4ed8"><path d="M3 11l18-8-8 18-2-8z"/></svg></span><span class="plus-txt"><b>Campagnes clients</b><span>Toussaint, Fêtes, Carnaval, merci</span></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
+  </div>
+  <div class="plus-label">Application</div>
+  <div class="plus-list">
+    <button class="plus-row" onclick="showPage('params')"><span class="plus-ico" style="background:var(--bg3)"><svg viewBox="0 0 24 24" stroke="#44403c"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span><span class="plus-txt"><b>Réglages</b><span>Véhicules, tarifs, QR, sauvegarde, synchro</span></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
+  </div>
+</div>
+<div class="page" id="page-encaisser">
+  <div class="sec" style="padding-top:8px"><span class="sec-title">Encaisser</span><button class="btn btn-gold btn-sm" onclick="openQrLibre()">&#x1f4f2; Montant libre</button></div>
+  <div id="enc-contenu"></div>
+</div>
 <div class="page" id="page-partners">
   <div class="sec" style="padding-top:8px"><span class="sec-title">Partenaires</span><button class="btn btn-gold btn-sm" onclick="openPartnerModal(null)">+ Ajouter</button></div>
-  <div class="alert alert-gold">&#x1f4bc; Commissions &#xe0; reverser et courses pr&#xe9;pay&#xe9;es &#x2192; Biltobox.</div>
+  <div class="mnav"><div class="mnav-btn" onclick="changeMonth(-1)">&#x2039;</div><div class="mnav-name" id="part-month"></div><div class="mnav-btn" onclick="changeMonth(1)">&#x203a;</div></div>
   <div id="partners-list"></div>
-  <div class="sec"><span class="sec-title">Historique</span></div>
-  <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap"><div class="chip active chip-phist" onclick="setPartnerHistFilter('tous',this)">Tous</div><div class="chip chip-phist" onclick="setPartnerHistFilter('mois',this)">Ce mois</div><div class="chip chip-phist" onclick="setPartnerHistFilter('3mois',this)">3 mois</div></div>
-  <div id="partner-history"></div>
+  <div id="partner-history" style="display:none"></div>
 </div>
 <div class="page" id="page-params">
   <div id="backup-alert" style="display:none;background:rgba(240,112,32,0.1);border:1px solid rgba(240,112,32,0.3);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:0.8rem;color:var(--orange2);font-weight:600"></div>
+  <div class="sec" style="padding-top:8px"><span class="sec-title">R&#xe9;glages</span></div>
+  <details class="rg"><summary><span class="plus-txt"><b>Mon entreprise</b><span>Adresse, véhicules, entretien, charges fixes</span></span><span class="rg-fl">&#x25be;</span></summary>
+  <div class="rg-corps">
+  <div class="stitle">Mon profil</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Adresse maison</div><div class="sitem-sub" id="p-home">Rue Saint-Eloi 173, Carni&#xe8;res</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-home')">Modifier</button></div>
+  <div class="stitle">V&#xe9;hicules</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v1-name">&#x1f697; <span class="veh-nom-0">Seat Leon</span></div><div class="sitem-sub" id="p-v1-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(0)">Modifier</button></div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v2-name">&#x1f690; <span class="veh-nom-1">Talento</span></div><div class="sitem-sub" id="p-v2-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(1)">Modifier</button></div>
+  <div class="stitle">Entretien v&#xe9;hicule</div>
+  <div id="entretien-list"></div>
+  <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-entretien')">+ Ajouter entretien</button>
+  <div class="stitle">Charges fixes mensuelles</div>
+  <div id="charges-list"></div>
+  <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-charge')">+ Ajouter charge</button>
+  <div class="stitle">Co&#xfb;t r&#xe9;el au km</div>
+  <div class="card card-sm">
+    <div class="dr"><span class="dr-label">Carburant/km</span><span class="dr-val" id="p-calc-carb">&#x2014;</span></div>
+    <div class="dr"><span class="dr-label">Charges fixes/km</span><span class="dr-val" id="p-calc-ch">&#x2014;</span></div>
+    <div class="dr" style="border-bottom:none"><span class="dr-label" style="color:var(--text);font-weight:700">Co&#xfb;t r&#xe9;el estim&#xe9;</span><span class="dr-val c-gold" id="p-calc-reel">&#x2014;</span></div>
+  </div>
+  </div></details>
+  <details class="rg"><summary><span class="plus-txt"><b>Tarifs &amp; clients</b><span>Prix au km, programme VIP, adresses favorites</span></span><span class="rg-fl">&#x25be;</span></summary>
+  <div class="rg-corps">
+  <div class="stitle">Tarification</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Tarif court</div><div class="sitem-sub" id="p-tarif1"></div></div><button class="btn btn-outline btn-sm" onclick="openTarifModal()">Modifier</button></div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Tarif long</div><div class="sitem-sub" id="p-tarif2"></div></div></div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Suppl&#xe9;ment camionnette</div><div class="sitem-sub" id="p-tarif3"></div></div></div>
+  <div class="stitle">Programme VIP</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Seuil VIP</div><div class="sitem-sub" id="p-vip"></div></div><button class="btn btn-outline btn-sm" onclick="openVipModal()">Modifier</button></div>
+  <div class="stitle">Adresses favorites</div>
+  <div id="fav-list"></div>
+  <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-fav')">+ Ajouter adresse</button>
+  </div></details>
+  <details class="rg"><summary><span class="plus-txt"><b>Paiements &amp; TVA</b><span>Compte du QR code, TVA</span></span><span class="rg-fl">&#x25be;</span></summary>
+  <div class="rg-corps">
+  <div class="stitle">&#x1f4b3; Paiement par QR code</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Compte qui reçoit les virements</div><div class="sitem-sub" id="p-qr-sub">Pas encore configuré</div></div><button class="btn btn-outline btn-sm" onclick="openQrReglages()">Modifier</button></div>
+
+  <div class="stitle">TVA</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Assujetti &#xe0; la TVA</div><div class="sitem-sub">&#xc0; activer seulement quand Adam te le dit. Les prix encaiss&#xe9;s sont alors TVAC : l'app compte le HT comme recette et affiche la TVA &#xe0; reverser.</div></div><label class="toggle"><input type="checkbox" id="p-tva-on" onchange="majTvaReglages()"><span class="tslider"></span></label></div>
+  <div class="fr" id="p-tva-details" style="display:none"><div class="fg"><label class="fl">Depuis le</label><input type="date" class="fi" id="p-tva-depuis" onchange="majTvaReglages()"></div><div class="fg"><label class="fl">Taux (%)</label><input type="number" class="fi" id="p-tva-taux" value="6" step="0.5" onchange="majTvaReglages()"></div></div>
+  </div></details>
+  <details class="rg"><summary><span class="plus-txt"><b>T&#xe9;l&#xe9;phone &amp; Mac</b><span>Notifications, synchronisation, mises à jour</span></span><span class="rg-fl">&#x25be;</span></summary>
+  <div class="rg-corps">
   <!-- SECTION NOTIFICATIONS -->
   <div class="card" id="notif-card" style="margin-bottom:10px">
     <div style="font-size:0.68rem;color:var(--gold2);font-weight:800;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">🔔 Notifications</div>
@@ -497,48 +620,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
       <button class="btn btn-outline btn-full btn-sm" onclick="testNotification()">🧪 Tester une notification</button>
     </div>
   </div>
-  <div class="sec" style="padding-top:8px"><span class="sec-title">Param&#xe8;tres</span></div>
-  <div class="stitle">Mon profil</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Adresse maison</div><div class="sitem-sub" id="p-home">Rue Saint-Eloi 173, Carni&#xe8;res</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-home')">Modifier</button></div>
-  <div class="stitle">V&#xe9;hicules</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v1-name">&#x1f697; <span class="veh-nom-0">Seat Leon</span></div><div class="sitem-sub" id="p-v1-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(0)">Modifier</button></div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label" id="p-v2-name">&#x1f690; <span class="veh-nom-1">Talento</span></div><div class="sitem-sub" id="p-v2-sub"></div></div><button class="btn btn-outline btn-sm" onclick="openVehicleModal(1)">Modifier</button></div>
-  <div class="stitle">Entretien v&#xe9;hicule</div>
-  <div id="entretien-list"></div>
-  <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-entretien')">+ Ajouter entretien</button>
-  <div class="stitle">Tarification</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Tarif court</div><div class="sitem-sub" id="p-tarif1"></div></div><button class="btn btn-outline btn-sm" onclick="openTarifModal()">Modifier</button></div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Tarif long</div><div class="sitem-sub" id="p-tarif2"></div></div></div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Suppl&#xe9;ment camionnette</div><div class="sitem-sub" id="p-tarif3"></div></div></div>
-  <div class="stitle">Charges fixes mensuelles</div>
-  <div id="charges-list"></div>
-  <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-charge')">+ Ajouter charge</button>
-  <div class="stitle">Co&#xfb;t r&#xe9;el au km</div>
-  <div class="card card-sm">
-    <div class="dr"><span class="dr-label">Carburant/km</span><span class="dr-val" id="p-calc-carb">&#x2014;</span></div>
-    <div class="dr"><span class="dr-label">Charges fixes/km</span><span class="dr-val" id="p-calc-ch">&#x2014;</span></div>
-    <div class="dr" style="border-bottom:none"><span class="dr-label" style="color:var(--text);font-weight:700">Co&#xfb;t r&#xe9;el estim&#xe9;</span><span class="dr-val c-gold" id="p-calc-reel">&#x2014;</span></div>
-  </div>
-  <div class="stitle">Programme VIP</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Seuil VIP</div><div class="sitem-sub" id="p-vip"></div></div><button class="btn btn-outline btn-sm" onclick="openVipModal()">Modifier</button></div>
-  <div class="stitle">Adresses favorites</div>
-  <div id="fav-list"></div>
-  <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="openModal('m-fav')">+ Ajouter adresse</button>
-  <div class="stitle">S&#xe9;curit&#xe9;</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Code PIN</div><div class="sitem-sub">Protection de l'application</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-pin')">Modifier</button></div>
-  <div class="stitle">📊 Statistiques d'utilisation</div>
-  <div id="usage-stats-list" style="margin-bottom:8px"></div>
-  <button class="btn btn-outline btn-full" style="margin-bottom:8px;color:var(--text3);border-color:var(--border)" onclick="resetUsageStats()">↺ Réinitialiser les statistiques</button>
+  <div class="stitle">&#x2601;&#xfe0f; Synchronisation</div><div class="sitem"><div class="sitem-left"><div class="sitem-label">T&#xe9;l&#xe9;phone &#x2194; Mac</div><div class="sitem-sub" id="sync-param-sub">Non activ&#xe9;e</div></div><button class="btn btn-outline btn-sm" onclick="FMSync.ui.ouvrir()">Ouvrir</button></div>
   <div class="stitle">Application</div>
   <button class="btn btn-outline btn-full" id="btn-check-update" onclick="checkForUpdateNow()" style="margin-bottom:8px">&#x1f504; V&#xe9;rifier les mises &#xe0; jour</button>
 
-  <div class="stitle">&#x1f4b3; Paiement par QR code</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Compte qui reçoit les virements</div><div class="sitem-sub" id="p-qr-sub">Pas encore configuré</div></div><button class="btn btn-outline btn-sm" onclick="openQrReglages()">Modifier</button></div>
-
-  <div class="stitle">TVA</div>
-  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Assujetti &#xe0; la TVA</div><div class="sitem-sub">&#xc0; activer seulement quand Adam te le dit. Les prix encaiss&#xe9;s sont alors TVAC : l'app compte le HT comme recette et affiche la TVA &#xe0; reverser.</div></div><label class="toggle"><input type="checkbox" id="p-tva-on" onchange="majTvaReglages()"><span class="tslider"></span></label></div>
-  <div class="fr" id="p-tva-details" style="display:none"><div class="fg"><label class="fl">Depuis le</label><input type="date" class="fi" id="p-tva-depuis" onchange="majTvaReglages()"></div><div class="fg"><label class="fl">Taux (%)</label><input type="number" class="fi" id="p-tva-taux" value="6" step="0.5" onchange="majTvaReglages()"></div></div>
-  <div class="stitle">&#x2601;&#xfe0f; Synchronisation</div><div class="sitem"><div class="sitem-left"><div class="sitem-label">T&#xe9;l&#xe9;phone &#x2194; Mac</div><div class="sitem-sub" id="sync-param-sub">Non activ&#xe9;e</div></div><button class="btn btn-outline btn-sm" onclick="FMSync.ui.ouvrir()">Ouvrir</button></div>
+  </div></details>
+  <details class="rg"><summary><span class="plus-txt"><b>Sauvegarde &amp; s&#xe9;curit&#xe9;</b><span>Sauvegarde, corbeille, export comptable, code PIN</span></span><span class="rg-fl">&#x25be;</span></summary>
+  <div class="rg-corps">
   <div class="stitle">Donn&#xe9;es</div>
   <button class="btn btn-outline btn-full" onclick="exportCSV()" style="margin-bottom:8px">&#x1f4ca; Exporter CSV comptable</button>
   <button class="btn btn-gold btn-full" onclick="partagerSauvegarde()" style="margin-bottom:8px">&#x1f4e4; Envoyer la sauvegarde (Drive, e-mail…)</button>
@@ -547,6 +635,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="btn btn-outline btn-full" onclick="document.getElementById('import-file').click()">&#x1f4c2; Restaurer donn&#xe9;es</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
   <button class="btn btn-red btn-full" style="margin-top:8px" onclick="resetApp()">&#x1f5d1; R&#xe9;initialiser l'application</button>
+  <div class="stitle">S&#xe9;curit&#xe9;</div>
+  <div class="sitem"><div class="sitem-left"><div class="sitem-label">Code PIN</div><div class="sitem-sub">Protection de l'application</div></div><button class="btn btn-outline btn-sm" onclick="openModal('m-pin')">Modifier</button></div>
+  <div class="stitle">📊 Statistiques d'utilisation</div>
+  <div id="usage-stats-list" style="margin-bottom:8px"></div>
+  <button class="btn btn-outline btn-full" style="margin-bottom:8px;color:var(--text3);border-color:var(--border)" onclick="resetUsageStats()">↺ Réinitialiser les statistiques</button>
+  </div></details>
   <div style="text-align:center;padding:28px;color:var(--text3);font-size:0.7rem;margin-top:8px;line-height:1.8">
     <div style="font-family:Playfair Display,serif;font-size:0.95rem;color:var(--text2);margin-bottom:4px">Facciolini Mobility</div>
     Version 6.0 &middot; Jean-Fran&#xe7;ois Facciolini<br>BCE 1033.793.336 &middot; Carni&#xe8;res, Belgique
@@ -555,12 +649,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 </div>
 <button class="fab" onclick="openNewRes()">+</button>
 <nav class="navbar">
-  <button class="nav-btn active" onclick="showPage('dash',this)"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</button>
+  <button class="nav-btn active" id="nav-dash" onclick="showPage('dash',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Accueil</button>
   <button class="nav-btn" onclick="showPage('res',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Courses</button>
-  <button class="nav-btn" onclick="showPage('fin',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Finances</button>
+  <button class="nav-btn" onclick="showPage('encaisser',this)"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg>Encaisser</button>
   <button class="nav-btn" onclick="showPage('clients',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Clients</button>
-  <button class="nav-btn" onclick="showPage('partners',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Partenaires</button>
-  <button class="nav-btn" onclick="showPage('params',this)"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>R&#xe9;glages</button>
+  <button class="nav-btn nav-desk" onclick="showPage('fin',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Finances</button>
+  <button class="nav-btn nav-desk" onclick="showPage('partners',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Partenaires</button>
+  <button class="nav-btn nav-desk" onclick="showPage('params',this)"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>R&#xe9;glages</button>
+  <button class="nav-btn nav-mob" id="nav-plus" onclick="showPage('plus',this)"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Plus</button>
 </nav>
 </div></div>
 
@@ -1092,7 +1188,7 @@ const FAV_DEFAULT=[{id:'f1',nom:'Zaventem BRU',adresse:'Brussels Airport, Zavent
 const ENTRETIEN_DEFAULT=[{id:'e1',type:'Vidange moteur',kmLast:0,intervalle:15000,date:'',notes:'Seat Leon 2.0 TDI'},{id:'e2',type:'Contrôle technique TL',kmLast:0,intervalle:0,date:'2026-12-01',notes:'Renouvellement annuel'},{id:'e3',type:'Pneus',kmLast:0,intervalle:40000,date:'',notes:'Vérifier tous les 20.000km'},{id:'e4',type:'Plaquettes freins',kmLast:0,intervalle:50000,date:'',notes:'Avant et arrière'},{id:'e5',type:'Recharge climatisation',kmLast:0,intervalle:0,date:'2027-06-01',notes:'Tous les 2-3 ans'}];
 const PARTNERS_DEFAULT=[{id:'p1',nom:'Taxi Sandro',email:'',tel:'',adresse:'',tva:''},{id:'p2',nom:'All Navettes',email:'',tel:'',adresse:'',tva:''},{id:'p3',nom:'Taxi Binche',email:'',tel:'',adresse:'',tva:''},{id:'p4',nom:'Navette Volovia',email:'',tel:'',adresse:'',tva:''}];
 let db={reservations:[],clients:[],carburant:[],charges:[],kmReels:[],frais:[],entretien:[],favAddresses:[],partners:[],usage:{},settings:{pin:null,objectif:2000,homeAddress:HOME_DEFAULT,vehicles:[{nom:'Seat Leon',cout:0.24,conso:4.3},{nom:'Talento',cout:0.45,conso:8.0}],tarifs:{rayon:30,court:1.50,long:1.50,min:60,round:5,camion:20},vip:{seuil:4,reduc:10}}};
-let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='tous',carbFilter='tous',payFilter='tous',clientSort='alpha',partnerHistFilter='tous';
+let curMonth=new Date().getMonth(),curYear=new Date().getFullYear(),curStep=1,resFilter='avenir',carbFilter='tous',payFilter='tous',clientSort='alpha',partnerHistFilter='tous';
 let acTimers={},acC={},calcTimers={};
 function save(){
   try{
@@ -1261,6 +1357,16 @@ function prixFixeAvecArrets(fixe,km,isAR,isTalento,kmRet){
   if(!(km>0))return {pb:f,km:false};
   var k=prixKmBrut(km,isAR,isTalento,kmRet);
   return k>f?{pb:k,km:true}:{pb:f,km:false};
+}
+function dateDuJour(){var t=new Date().toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'});return t.charAt(0).toUpperCase()+t.slice(1);}
+function jourISO(dec){var d=new Date();d.setDate(d.getDate()+(dec||0));return dateLocale(d);}
+function lieuCourt(a){
+  a=String(a||'').trim();if(!a)return '';
+  var l=a.toLowerCase();if(/a[ée]roport|airport|luchthaven|terminal|zaventem|\bcrl\b|\bbru\b/.test(l)){if(/charleroi|gosselies|\bcrl\b|brussels south/.test(l))return 'Aéroport de Charleroi';if(/zaventem|brussels airport|\bbru\b|nationa/.test(l))return 'Brussels Airport';}
+  var p=a.split(',').map(function(x){return x.trim();}).filter(Boolean);
+  var ville=p.length>1?p[p.length-1].replace(/^\d{4}\s*/,''):p[0];
+  if(/^(belgique|belgium|belgië|france)$/i.test(ville)&&p.length>2)ville=p[p.length-2].replace(/^\d{4}\s*/,'');
+  return ville;
 }
 function g(id){return document.getElementById(id);}
 function sv(id,val,cls){const el=g(id);if(!el)return;el.textContent=val;if(cls!==undefined)el.className=cls;}
@@ -1572,16 +1678,21 @@ function showPage(name,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(name!=='fin')window._payFilter=null;
   g('page-'+name).classList.add('active');
-  if(btn)btn.classList.add('active');
+  if(!btn){const nb=document.querySelector('.nav-btn[onclick*="\''+name+'\'"]');if(nb&&getComputedStyle(nb).display!=='none')btn=nb;}
+  if(btn&&getComputedStyle(btn).display!=='none')btn.classList.add('active');
+  else if(['fin','partners','params','plus'].indexOf(name)>=0){const pb=g('nav-plus');if(pb)pb.classList.add('active');}
+  try{const ct=document.querySelector('.content');if(ct)ct.scrollTop=0;window.scrollTo(0,0);}catch(e){}
   // Rendre uniquement la page ouverte + dash pour les stats
   const now=new Date();
-  sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
+  sv('tb-date',dateDuJour());
   sv('tb-month',MOIS_S[curMonth]+' '+curYear);
-  if(name==='dash')renderDash();
+  if(name==='dash'){const _n=new Date();curMonth=_n.getMonth();curYear=_n.getFullYear();renderDash();}
   else if(name==='res'){renderDash();renderRes();}
   else if(name==='fin'){renderDash();renderFin();}
   else if(name==='clients')renderClients();
-  else if(name==='partners')renderPartners();
+  else if(name==='partners'){renderPartners();}
+  else if(name==='encaisser')renderEncaisser();
+  else if(name==='plus')renderPlus();
   else if(name==='params')renderParams();
 }
 function changeMonth(d){
@@ -1592,18 +1703,18 @@ function changeMonth(d){
   window._payFilter=null;
   // Forcer re-render complet au changement de mois
   const now=new Date();
-  sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
+  sv('tb-date',dateDuJour());
   sv('tb-month',MOIS_S[curMonth]+' '+curYear);
-  renderDash();renderRes();renderFin();
+  renderDash();renderRes();renderFin();try{if(g('page-partners').classList.contains('active'))renderPartners();}catch(e){}
 }
 function nomVeh(i){const v=db.settings&&db.settings.vehicles&&db.settings.vehicles[i];return (v&&v.nom)||(i===0?'Berline':'Van');}
 function majNomsVehicules(){
   [0,1].forEach(i=>{document.querySelectorAll('.veh-nom-'+i).forEach(el=>{el.textContent=nomVeh(i);});});
   const sel=g('r-vehicule');if(sel&&sel.options.length>=2){sel.options[0].textContent='🚗 '+nomVeh(0);sel.options[1].textContent='🚐 '+nomVeh(1)+' (+'+((db.settings.tarifs&&db.settings.tarifs.camion)||20)+'€)';}
 }
-function renderAll(){try{majNomsVehicules();}catch(e){}
+function renderAll(){try{majNomsVehicules();}catch(e){}try{const _pe=g('page-encaisser');if(_pe&&_pe.classList.contains('active'))renderEncaisser();}catch(e){}try{const _pp=g('page-partners');if(_pp&&_pp.classList.contains('active'))renderPartners();const _pm=g('m-part-mois');if(_pm&&_pm.classList.contains('open'))renderPartMois();}catch(e){}
   const now=new Date();
-  sv('tb-date',now.toLocaleDateString('fr-BE',{day:'2-digit',month:'short'}));
+  sv('tb-date',dateDuJour());
   sv('tb-month',MOIS_S[curMonth]+' '+curYear);
   // Toujours rendre le dash et la page active
   renderDash();
@@ -1629,7 +1740,7 @@ function renderActive(){
 
 
 function renderDash(){
-  sv('dash-month',MOIS[curMonth]+' '+curYear);
+  sv('dash-month',MOIS[curMonth]+' '+curYear);try{renderAccueil();}catch(e){console.error(e);}
   const res=getMonthRes(curMonth,curYear),carbs=getMonthCarb(curMonth,curYear),frais=getMonthFrais(curMonth,curYear);
   const recettes=getCAMois(curMonth,curYear); // CA net proportionnel (option B)
   const totalKmC=getKmClientMois(curMonth,curYear),totalKmR=getKmReelsMoisCalc(curMonth,curYear);
@@ -1668,7 +1779,7 @@ function renderDash(){
   sv('d-charges',fmt(charges));sv('d-frais',fmt(fraisT));
   const alerts=[];const today2=new Date();
   const todayRes=db.reservations.filter(r=>r.statut!=='annule'&&new Date(r.dateAller).toDateString()===today2.toDateString());
-  if(todayRes.length>0){const tg=todayRes.reduce((s,r)=>s+(confTrajet(r)?getEncaisseAller(r):prixMoi(r)),0);alerts.push(`<div class="alert alert-green" style="flex-direction:column;align-items:stretch"><div style="font-weight:700;margin-bottom:4px">📅 Aujourd&#x27;hui : ${todayRes.length} course${todayRes.length>1?'s':''} · ${fmt(tg)}</div>${todayRes.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).map(r=>`<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:0.8rem">→ <b>${r.heure||'?'}</b> · ${r.clientNom||'Client'} · <span style="color:var(--green2)">${fmt(r.prix)}</span>${estConfiee(r)?' <span class="badge badge-gold">🤝 '+escH(r.confieA)+(confTrajet(r)?' ('+confTrajet(r)+')':'')+'</span>':''}${r.clientTel?' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">📞</a>':''}</div>`).join('')}</div>`);}
+  if(false&&todayRes.length>0){const tg=todayRes.reduce((s,r)=>s+(confTrajet(r)?getEncaisseAller(r):prixMoi(r)),0);alerts.push(`<div class="alert alert-green" style="flex-direction:column;align-items:stretch"><div style="font-weight:700;margin-bottom:4px">📅 Aujourd&#x27;hui : ${todayRes.length} course${todayRes.length>1?'s':''} · ${fmt(tg)}</div>${todayRes.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).map(r=>`<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:0.8rem">→ <b>${r.heure||'?'}</b> · ${r.clientNom||'Client'} · <span style="color:var(--green2)">${fmt(r.prix)}</span>${estConfiee(r)?' <span class="badge badge-gold">🤝 '+escH(r.confieA)+(confTrajet(r)?' ('+confTrajet(r)+')':'')+'</span>':''}${r.clientTel?' <a href="tel:'+escH(r.clientTel)+'" style="color:var(--blue2)">📞</a>':''}</div>`).join('')}</div>`);}
   const vmts=db.reservations.filter(aVirementEnAttente);
   if(vmts.length)alerts.push('<div class="alert alert-red">🏦 '+vmts.length+' virement'+(vmts.length>1?'s':'')+' en attente !</div>');
   if(kmReel===null)alerts.push('<div class="alert alert-blue" style="cursor:pointer" onclick="openKmModal()">📍 Relevé compteur non saisi pour '+MOIS[curMonth]+' — Cliquez ici</div>');
@@ -1709,14 +1820,16 @@ function renderDash(){
   else if(sEl)sEl.innerHTML='';
 }
 function renderRes(){
-  try{renderAConfirmer('res-aconfirmer');}catch(e){}
-  try{if(typeof majBadgeRelance==='function')majBadgeRelance();}catch(e){}
+  try{if(typeof majBadgeRelance==='function')majBadgeRelance();}catch(e){}try{majBadgeVeille();}catch(e){}
+  try{var _na=g('res-n-avenir');if(_na){var _t=new Date();_t.setHours(0,0,0,0);var _c=db.reservations.filter(function(r){if(r.statut==='annule')return false;var d=new Date(r.dateAller);d.setHours(0,0,0,0);if(d>=_t)return true;if(r.type==='ar-diff'&&r.dateRetour){var d2=new Date(r.dateRetour);d2.setHours(0,0,0,0);return d2>=_t;}return false;}).length;_na.textContent=_c?'· '+_c:'';}}catch(e){}
   try{if(typeof majBadgeAvis==='function')majBadgeAvis();}catch(e){}
   var sv2=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
   sv2('res-month',MOIS[curMonth]+' '+curYear);
   var today=new Date();today.setHours(0,0,0,0);
   var res;
-  if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}
+  if(resFilter==='avenir')res=db.reservations.filter(function(r){if(r.statut==='annule')return false;var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA>=today)return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR>=today;}return false;});
+  else if(resFilter==='passees')res=getMonthRes(curMonth,curYear).filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);return dA<today;});
+  else if(resFilter==='semaine'){var lun=new Date(today);var jourSem=(lun.getDay()+6)%7;var dim=new Date(today);dim.setDate(dim.getDate()+(6-jourSem));dim.setHours(23,59,59,999);res=db.reservations.filter(function(r){var d=new Date(r.dateAller);return d>=today&&d<=dim;});}
   else if(resFilter==='today')res=db.reservations.filter(function(r){return new Date(r.dateAller).toDateString()===today.toDateString();});
   else if(resFilter==='veille'){var demain=new Date(today);demain.setDate(demain.getDate()+1);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()===demain.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()===demain.getTime();}return false;});}
   else if(resFilter==='j7'){var dans7=new Date(today);dans7.setDate(dans7.getDate()+7);dans7.setHours(23,59,59,999);res=db.reservations.filter(function(r){var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA.getTime()>=today.getTime()&&dA.getTime()<=dans7.getTime())return true;if(r.type==='ar-diff'&&r.dateRetour){var dR=new Date(r.dateRetour);dR.setHours(0,0,0,0);return dR.getTime()>=today.getTime()&&dR.getTime()<=dans7.getTime();}return false;});}
@@ -1730,11 +1843,14 @@ function renderRes(){
   // Filtre paiement
   if(payFilter!=='tous'){res=res.filter(function(r){return payMatch(r,payFilter);});}
   var delBtn=document.getElementById('btn-del-pay-filter');if(delBtn)delBtn.style.display=payFilter!=='tous'&&res.length?'inline-block':'none';
-  res=res.sort(function(a,b){return new Date(b.dateAller)-new Date(a.dateAller);});
+  var _chrono=(resFilter==='avenir'||resFilter==='veille');
+  var _cle=function(r){var d=r.dateAller||'';if(resFilter==='avenir'&&r.type==='ar-diff'&&r.dateRetour){var t0=new Date();t0.setHours(0,0,0,0);var dA=new Date(r.dateAller);dA.setHours(0,0,0,0);if(dA<t0)return r.dateRetour+' '+(r.heureRetour||'');}return d+' '+(r.heure||'');};
+  res=res.sort(function(a,b){return _chrono?_cle(a).localeCompare(_cle(b)):_cle(b).localeCompare(_cle(a));});
   var el=document.getElementById('res-list');if(!el)return;
   if(!res.length){el.innerHTML='<div class="empty"><div class="empty-icon">🚗</div><div class="empty-title">Aucune course</div><div class="empty-text">Appuyez sur + pour ajouter</div></div>';return;}
-  var html='';
+  var html='',_jourPrec='';
   res.forEach(function(r){
+    if(_chrono){var _j=_cle(r).slice(0,10);if(_j!==_jourPrec){_jourPrec=_j;html+='<div class="res-jour">'+titreJour(_j)+'</div>';}}
     var benef=getBenef(r),kmC=getKmClient(r),kmR=getKmReels(r);
     var dStr=new Date(r.dateAller).toLocaleDateString('fr-BE',{day:'2-digit',month:'short'});
     var tLabel={aller:'Aller','ar-jour':'A/R jour','ar-diff':'A/R diff.'}[r.type]||r.type;if(r.type==='aller'&&r.service==='recuperation')tLabel='🛬 Retour';
@@ -1747,13 +1863,10 @@ function renderRes(){
     if(r.clientTel)html+=' <a href="tel:'+escH(r.clientTel)+'" onclick="event.stopPropagation()" style="color:var(--blue2);font-size:0.75rem">📞</a>';
     html+='</div><div style="font-size:0.73rem;color:var(--text3);margin-top:2px">'+dStr+' '+(r.heure||'')+'</div></div>';
     html+='<div style="text-align:right"><div style="font-weight:800;font-size:1.1rem;color:var(--gold)">'+fmt(r.prix)+'</div>'+(estConfiee(r)?'<div style="font-size:0.7rem;color:var(--text3)">pour toi '+fmt(prixMoi(r)-confPaye(r))+'</div>':'')+'<div style="margin-top:3px">'+getStatusBadge(r)+'</div></div></div>';
-    html+='<div style="font-size:0.79rem;color:var(--text2);margin-bottom:6px">'+(r.depart||'—').substring(0,26)+' → '+(r.arrivee||'—').substring(0,26)+'</div>';
+    html+='<div style="font-size:0.82rem;color:var(--text2);margin-bottom:6px">'+escH(lieuCourt(r.depart)||'—')+' → '+escH(lieuCourt(r.arrivee)||'—')+'</div>';
     if(r.type==='ar-diff'&&r.arriveeRetour)html+='<div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">↩ '+(r.departRetour||r.arrivee||'').substring(0,22)+' → '+escH(r.arriveeRetour).substring(0,22)+'</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">';
     html+='<span class="badge badge-blue">'+tLabel+'</span>';
-    html+='<span class="badge '+(benef>=0?'badge-green':'badge-red')+'">'+(benef>=0?'+':'')+fmt(benef)+'</span>';
-    if(kmC>0)html+='<span class="badge badge-gray">📍'+kmC.toFixed(0)+'km</span>';
-    if(kmR>kmC)html+='<span class="badge badge-purple">🚗'+kmR.toFixed(0)+'km</span>';
     if(isP)html+='<span class="badge badge-orange">🤝 '+r.source+'</span>';
     if(siegesTotal(r))html+='<span class="badge badge-purple">👶 '+siegesTotal(r)+'</span>';
     if(r.vol)html+='<span class="badge badge-gold">✈ '+escH(r.vol)+'</span>';
@@ -1761,7 +1874,6 @@ function renderRes(){
     if(aVirementEnAttente(r))html+='<span class="badge badge-red">💸 ⏳</span>';
     if(r.paiement==='aconfirmer'&&courseCommencee(r))html+='<span class="badge badge-orange">⏳ paiement ?</span>';
     {var _g=groupeCourse(r);if(_g.length>1)html+='<span class="badge badge-blue" title="Groupe sur plusieurs véhicules">🚐 '+(_g.indexOf(r)+1)+'/'+_g.length+'</span>';}
-    {var _rk=rentaKm(r);if(_rk!==null&&_rk<SEUIL_RENTA&&r.statut!=='annule')html+='<span class="badge badge-red" title="Gain par km roulé (approche et retour à vide compris)">⚠️ '+_rk.toFixed(2).replace('.',',')+' €/km</span>';}
     if(estConfiee(r))html+='<span class="badge badge-gold" title="Course confiée">🤝 '+escH(r.confieA)+(confTrajet(r)?' ('+confTrajet(r)+')':'')+'</span>';
     if(r.rappelJ7Envoye)html+='<span class="badge badge-gray" title="Rappel J-7 envoyé le '+new Date(r.rappelJ7Envoye).toLocaleDateString('fr-BE')+'">📨 J-7</span>';
     if(r.rappelEnvoye)html+='<span class="badge badge-gray" title="Rappel envoyé le '+new Date(r.rappelEnvoye).toLocaleDateString('fr-BE')+'">✉️ Rappelé</span>';
@@ -1775,7 +1887,7 @@ function renderRes(){
       html+='<button class="btn btn-green btn-full" style="margin-top:10px;font-size:0.8rem" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">💬 Rappel aller'+labelDiff2+'</button>';
     }
     // Bouton message J-7 (disponible tant que la course est à plus de 3 jours — pour rassurer tôt)
-    if(diff2>3&&r.clientTel){
+    if(diff2>3&&diff2<=10&&!r.rappelJ7Envoye&&r.clientTel){
       html+='<button class="btn btn-outline btn-full" style="margin-top:8px;font-size:0.8rem;color:var(--gold2);border-color:var(--gold)" data-id="'+rid+'" onclick="event.stopPropagation();sendRappel(this.dataset.id,&quot;aller&quot;)">📨 Message J-7 (dans '+Math.ceil(diff2)+'j)</button>';
     }
     // Bouton rappel retour pour ar-diff (J-3 à J-0)
@@ -1924,7 +2036,111 @@ function imprimerRelevePartenaire(nom,mois){
   if(w){w.document.open();w.document.write(html);w.document.close();return;}
   const blob=new Blob([html],{type:'text/html'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='releve_'+nom.replace(/[^a-z0-9]+/gi,'_')+'_'+mois+'.html';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},500);
 }
+/* ===== PARTENAIRES MOIS PAR MOIS =====
+   Montant d'une course vu de moi : + il me doit / à lui facturer, − je lui dois. Mêmes règles que les soldes existants. */
+function montantPartCourse(r){
+  if(estConfiee(r))return confDu(Object.assign({},r,{confieRegle:false}));
+  if(r.partnerType==='commission')return -(parseFloat(r.commission)||0);
+  if(r.partnerType==='prepaye')return parseFloat(r.prix)||0;
+  return 0;
+}
+function coursePartReglee(r){
+  if(estConfiee(r))return !!r.confieRegle||confDu(r)===0;
+  if(r.partnerType==='commission')return !!r.commissionPayee||!(parseFloat(r.commission)>0);
+  if(r.partnerType==='prepaye')return !!r.facturePaye;
+  return true;
+}
+function libellePartCourse(r){
+  var px=fmt(parseFloat(r.prix)||0);
+  if(estConfiee(r)){
+    var t=confTrajet(r)?' ('+confTrajet(r)+')':'';
+    if(confMien(r))return (r.confieEncaisse==='moi'?'Ta camionnette · tu as encaissé, tu le paies '+fmt(confPaye(r)):'Ta camionnette · il encaisse '+fmt(prixConfie(r))+', garde '+fmt(confPaye(r)))+t;
+    return (r.confieEncaisse==='moi'?'Sa voiture · payé chez toi, tu lui reverses':'Sa voiture · ta commission')+t;
+  }
+  if(r.partnerType==='commission')return 'Client envoyé par lui · commission à lui verser';
+  if(r.partnerType==='prepaye')return 'Client prépayé chez lui · à lui facturer ('+px+')';
+  return '';
+}
+function coursesPartMois(nom,key){
+  return (db.reservations||[]).filter(function(r){return r.statut!=='annule'&&(r.confieA===nom||r.source===nom)&&moisKeyRes(r)===key;})
+    .sort(function(a,b){return ((a.dateAller||'')+(a.heure||'')).localeCompare((b.dateAller||'')+(b.heure||''));});
+}
+function bilanPartMois(nom,key){
+  var L=coursesPartMois(nom,key),ouvert=0,total=0,nbOuv=0;
+  L.forEach(function(r){var m=montantPartCourse(r);total+=m;if(!coursePartReglee(r)){ouvert+=m;nbOuv++;}});
+  return {courses:L,ouvert:Math.round(ouvert*100)/100,total:Math.round(total*100)/100,regle:L.length>0&&nbOuv===0};
+}
+function cleMois(m,y){return y+'-'+String(m+1).padStart(2,'0');}
+function texteSolde(nom,v){return v>0?nom+' te doit':(v<0?'Tu dois à '+nom:'Soldé');}
 function renderPartners(){
+  var el=g('partners-list');if(!el)return;sv('part-month',MOIS[curMonth]+' '+curYear);
+  if(!db.partners.length){el.innerHTML='<div class="card" style="text-align:center;color:var(--text2);font-size:0.85rem">Aucun partenaire. Ajoute ton chauffeur ou un taxi avec « + Ajouter ».</div>';return;}
+  var key=cleMois(curMonth,curYear),ouv=[],reg=[],sans=[],plus=0,moins=0;
+  db.partners.forEach(function(p){
+    var b=bilanPartMois(p.nom,key);
+    if(!b.courses.length){sans.push(p.nom);return;}
+    if(b.regle||Math.abs(b.ouvert)<0.005)reg.push({p:p,b:b});else{ouv.push({p:p,b:b});if(b.ouvert>0)plus+=b.ouvert;else moins+=-b.ouvert;}
+  });
+  var ini=function(n){var w=String(n).trim().split(/\s+/);return ((w[0]||'')[0]||'').toUpperCase()+(w.length>1?((w[1]||'')[0]||'').toUpperCase():'');};
+  var ligne=function(x,regle){
+    var n=x.b.courses.length,v=x.b.ouvert;
+    var droite=regle?'<span style="font-size:0.78rem;font-weight:800;color:var(--green2)">✓ réglé</span>':'<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><b style="font-size:1rem;color:'+(v>0?'var(--green2)':'var(--red2)')+'">'+fmt(Math.abs(v))+'</b><span style="font-size:0.7rem;color:var(--text2)">'+(v>0?(x.b.courses.every(function(r){return coursePartReglee(r)||r.partnerType==='prepaye';})?'à facturer':'te doit'):'tu lui dois')+'</span></span>';
+    return '<button class="part-ligne" data-nom="'+escH(x.p.nom)+'" onclick="ouvrirPartMois(this.dataset.nom)"><span class="part-ini">'+escH(ini(x.p.nom))+'</span><span class="plus-txt"><b>'+escH(x.p.nom)+'</b><span>'+n+' course'+(n>1?'s':'')+'</span></span>'+droite+'</button>';
+  };
+  var h='<div class="card acc-mois" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div class="acc-k">On te doit</div><div style="font-size:1.4rem;font-weight:900;color:#4ade80">'+fmt(plus)+'</div></div><div><div class="acc-k">Tu dois</div><div style="font-size:1.4rem;font-weight:900;color:#fca5a5">'+fmt(moins)+'</div></div></div>';
+  if(ouv.length)h+='<div class="plus-label">À régler</div><div class="plus-list">'+ouv.map(function(x){return ligne(x,false);}).join('')+'</div>';
+  if(reg.length)h+='<div class="plus-label">Réglé</div><div class="plus-list">'+reg.map(function(x){return ligne(x,true);}).join('')+'</div>';
+  if(!ouv.length&&!reg.length)h+='<div class="card" style="text-align:center;color:var(--text2);font-size:0.85rem">Aucune course avec un partenaire en '+MOIS[curMonth].toLowerCase()+'.</div>';
+  if(sans.length)h+='<div style="font-size:0.78rem;color:var(--text2);margin:4px 6px 10px">Pas de course ce mois : '+sans.map(escH).join(', ')+'</div>';
+  el.innerHTML=h;
+}
+function ouvrirPartMois(nom,key){
+  window._partSel={nom:nom,key:key||cleMois(curMonth,curYear)};renderPartMois();openModal('m-part-mois');
+}
+function partMoisNav(d){
+  var s0=window._partSel;if(!s0)return;var y=+s0.key.slice(0,4),m=+s0.key.slice(5,7)-1+d;if(m<0){m=11;y--;}if(m>11){m=0;y++;}
+  s0.key=cleMois(m,y);renderPartMois();
+}
+function renderPartMois(){
+  var s0=window._partSel;if(!s0)return;var nom=s0.nom,key=s0.key,p=db.partners.find(function(x){return x.nom===nom;});
+  var y=+key.slice(0,4),m=+key.slice(5,7)-1;sv('pm-titre',nom);sv('pm-mois',MOIS[m]+' '+y);
+  var bm=g('pm-modifier');if(bm)bm.onclick=function(){closeModal('m-part-mois');if(p)openPartnerModal(p.id);};
+  var b=bilanPartMois(nom,key),h='';
+  if(!b.courses.length)h+='<div class="card" style="text-align:center;color:var(--text2);font-size:0.85rem">Aucune course avec '+escH(nom)+' en '+MOIS[m].toLowerCase()+'.</div>';
+  else{
+    h+='<div class="card" style="padding:4px 14px">'+b.courses.map(function(r){
+      var v=montantPartCourse(r),ok=coursePartReglee(r);
+      return '<div class="pm-ligne" data-id="'+r.id+'" onclick="closeModal(\'m-part-mois\');showDetailRes(this.dataset.id)"><span class="plus-txt"><b>'+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit'})+' · '+escH(r.clientNom||'Client')+'</b><span>'+escH(libellePartCourse(r))+'</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><b style="color:'+(v>=0?'var(--green2)':'var(--red2)')+'">'+(v>0?'+':(v<0?'−':''))+fmt(Math.abs(v))+'</b>'+(ok?'<span style="font-size:0.68rem;color:var(--green2)">✓ réglé</span>':'')+'</span></div>';
+    }).join('')+'</div>';
+    var v=b.regle?0:b.ouvert;
+    h+='<div class="card acc-mois" style="display:flex;justify-content:space-between;align-items:center"><div><div class="acc-k">Solde '+(/^[aeiou]/i.test(MOIS[m])?'d\'':'de ')+MOIS[m].toLowerCase()+'</div><div style="font-weight:700;margin-top:2px">'+(b.regle?'Tout est réglé':escH(texteSolde(nom,v)))+'</div></div><div style="font-family:Playfair Display,serif;font-size:1.7rem;font-weight:900;color:'+(b.regle?'#4ade80':(v>=0?'#4ade80':'#fca5a5'))+'">'+(b.regle?'✓':fmt(Math.abs(v)))+'</div></div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+    if(!b.regle)h+='<button class="btn btn-green" data-nom="'+escH(nom)+'" data-k="'+key+'" onclick="reglerMoisPartenaire(this.dataset.nom,this.dataset.k);renderPartMois();renderPartners()">✓ Marquer réglé</button>';
+    h+='<button class="btn btn-outline" data-nom="'+escH(nom)+'" data-k="'+key+'" onclick="envoyerRelevePart(this.dataset.nom,this.dataset.k)"'+(b.regle?' style="grid-column:1/-1"':'')+'>Envoyer le relevé</button></div>';
+  }
+  /* mois précédents (les 6 derniers où il y a eu des courses) */
+  var autres=[];for(var i=1;i<=12&&autres.length<6;i++){var mm=m-i,yy=y;while(mm<0){mm+=12;yy--;}var k2=cleMois(mm,yy),b2=bilanPartMois(nom,k2);if(b2.courses.length)autres.push({k:k2,m:mm,y:yy,b:b2});}
+  if(autres.length){
+    h+='<div class="plus-label">Mois précédents</div><div class="plus-list">'+autres.map(function(a){
+      var v2=a.b.ouvert;return '<button class="plus-row" style="min-height:48px" data-k="'+a.k+'" onclick="window._partSel.key=this.dataset.k;renderPartMois()"><span class="plus-txt"><b style="font-weight:600">'+MOIS[a.m]+' '+a.y+' · '+a.b.courses.length+' course'+(a.b.courses.length>1?'s':'')+'</b></span>'+(a.b.regle||Math.abs(v2)<0.005?'<span style="font-size:0.78rem;font-weight:800;color:var(--green2)">✓ réglé</span>':'<span style="font-size:0.8rem;font-weight:800;color:'+(v2>0?'var(--green2)':'var(--red2)')+'">'+(v2>0?'te doit ':'tu dois ')+fmt(Math.abs(v2))+'</span>')+'</button>';
+    }).join('')+'</div>';
+  }
+  if(p&&p.tel)h+='<a class="btn btn-ghost btn-full" href="tel:'+escH(p.tel)+'" style="margin-top:4px">📞 Appeler '+escH(nom)+'</a>';
+  if(p)h+='<div style="text-align:center;margin-top:10px"><button class="btn btn-ghost btn-xs" style="color:var(--text3)" data-id="'+p.id+'" onclick="remettreAZeroPartenaire(this.dataset.id);renderPartMois();renderPartners()">Remise à zéro…</button></div>';
+  var c=g('pm-contenu');if(c)c.innerHTML=h;
+}
+/* Relevé du mois envoyé par WhatsApp (ou partagé) — écrit du point de vue du partenaire */
+function envoyerRelevePart(nom,key){
+  var p=db.partners.find(function(x){return x.nom===nom;}),b=bilanPartMois(nom,key),y=+key.slice(0,4),m=+key.slice(5,7)-1;
+  var t='Bonjour '+nom+',\n\nRelevé '+MOIS[m].toLowerCase()+' '+y+' — Facciolini Mobility\n';
+  b.courses.forEach(function(r){var v=montantPartCourse(r);t+='\n• '+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit'})+' '+(r.clientNom||'')+' : '+(v>0?'tu me dois ':(v<0?'je te dois ':''))+fmt(Math.abs(v))+(coursePartReglee(r)?' (réglé)':'');});
+  var v=b.ouvert;t+='\n\n'+(b.regle||Math.abs(v)<0.005?'Tout est réglé pour ce mois. Merci !':(v>0?'Solde : tu me dois '+fmt(v)+'.':'Solde : je te dois '+fmt(-v)+'.'))+'\n\nJean-François';
+  var tel=p&&p.tel?String(p.tel).replace(/[^\d+]/g,'').replace(/^0/,'32').replace(/^\+/,''):'';
+  if(tel)window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(t),'_blank');
+  else if(navigator.share)navigator.share({text:t}).catch(function(){});
+  else if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){if(typeof showToast==='function')showToast('Relevé copié');});
+}
+function renderPartnersAncien(){
   var soldes=calcPartnerSoldes();
   var pl=document.getElementById('partners-list');
   if(pl){
@@ -3023,6 +3239,13 @@ function showDetailRes(id){
     h+='<a href="waze://?q='+depEnc+'" class="btn btn-outline btn-sm" style="flex:1;text-align:center">🗺️ Waze</a>';
     h+='<a href="https://www.google.com/maps/dir/?api=1&destination='+depEnc+'" target="_blank" class="btn btn-outline btn-sm" style="flex:1;text-align:center">📍 Maps</a>';
     h+='</div>';}
+    {var _tel=(r.clientTel||'').replace(/[^\d+]/g,''),_wa=_tel.replace(/^\+/,'').replace(/^0/,'32'),_dest=encodeURIComponent((r.statut==='termine'?r.arrivee:r.depart)||'');
+     var rap='<div class="rap-grid">';
+     rap+=_tel?'<a class="rap-btn" href="tel:'+escH(_tel)+'"><svg viewBox="0 0 24 24" stroke="#1a1a1a"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>Appeler</a>':'<span class="rap-btn" style="opacity:.4">Pas de n°</span>';
+     rap+=_tel?'<a class="rap-btn" href="https://wa.me/'+escH(_wa)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" stroke="#15803d"><path d="M21 12a9 9 0 01-13.5 7.8L3 21l1.3-4.4A9 9 0 1121 12z"/></svg>WhatsApp</a>':'<span class="rap-btn" style="opacity:.4">—</span>';
+     rap+=r.depart?'<a class="rap-btn" href="waze://?q='+_dest+'"><svg viewBox="0 0 24 24" stroke="#1d4ed8"><path d="M3 11l18-8-8 18-2-8z"/></svg>Waze</a>':'<span class="rap-btn" style="opacity:.4">—</span>';
+     rap+=(parseFloat(r.prix)>0&&r.statut!=='annule')?'<button class="rap-btn" data-id="'+r.id+'" onclick="openQrPaiement(this.dataset.id)"><svg viewBox="0 0 24 24" stroke="#8a6d1f"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 17h4v4h-4"/></svg>QR</button>':'<span class="rap-btn" style="opacity:.4">—</span>';
+     h=rap+'</div>'+h;}
     dc.innerHTML=h;
   }
   var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
@@ -3878,6 +4101,56 @@ function wrapItemsWithSwipe(){
     wrap.appendChild(item);
     initSwipe(wrap);
   });
+}
+function setFinTab(t){
+  document.querySelectorAll('#fin-seg .seg-btn').forEach(function(b){b.classList.toggle('active',b.dataset.t===t);});
+  ['res','dep','pay'].forEach(function(k){var p=g('fin-pane-'+k);if(p)p.style.display=k===t?'block':'none';});
+  try{var ct=document.querySelector('.content');if(ct)ct.scrollTop=0;}catch(e){}
+}
+function setResTab(f){
+  resFilter=f;payFilter='tous';
+  if(f==='passees'){var _n=new Date();if(curYear>_n.getFullYear()||(curYear===_n.getFullYear()&&curMonth>_n.getMonth())){curMonth=_n.getMonth();curYear=_n.getFullYear();}}
+  document.querySelectorAll('#res-seg .seg-btn').forEach(function(b){b.classList.toggle('active',b.dataset.f===f);});
+  var vb=g('res-msg-veille');if(vb)vb.style.outline=f==='veille'?'2px solid #15803d':'none';
+  var pt=g('res-passees-tools');if(pt)pt.style.display=f==='passees'?'block':'none';
+  document.querySelectorAll('#pay-filter-bar .chip-pay').forEach(function(c,i){c.classList.toggle('active',i===0);});
+  renderRes();try{var ct=document.querySelector('.content');if(ct)ct.scrollTop=0;}catch(e){}
+}
+function titreJour(iso){
+  var d=new Date(iso+'T12:00'),t0=new Date();t0.setHours(12,0,0,0);var dj=Math.round((d-t0)/86400000);
+  var txt=d.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'});
+  return (dj===0?"Aujourd'hui · ":dj===1?'Demain · ':'')+txt;
+}
+function coursesDuJour(iso){
+  var out=[];(db.reservations||[]).forEach(function(r){
+    if(r.statut==='annule')return;
+    if(r.dateAller===iso)out.push({r:r,sens:'aller',heure:r.heure||''});
+    if(r.type==='ar-diff'&&r.dateRetour===iso)out.push({r:r,sens:'retour',heure:r.heureRetour||''});
+  });
+  return out.sort(function(a,b){return a.heure.localeCompare(b.heure);});
+}
+function majBadgeVeille(){var el=g('chip-veille-count');if(!el)return;var n=coursesDuJour(jourISO(1)).filter(function(x){return !x.r.rappelEnvoye&&x.r.clientTel;}).length;el.textContent=n?'('+n+')':'';}
+function ligneAccueil(x,demain){
+  var r=x.r,dep=x.sens==='retour'?(r.departRetour||r.arrivee):r.depart,arr=x.sens==='retour'?(r.arriveeRetour||r.depart):r.arrivee;
+  var badge='';
+  if(estConfiee(r)&&confieSens(r,x.sens))badge='<span class="acc-badge" style="color:#8a6d1f;background:#f6eed6">🤝 '+escH(r.confieA)+'</span>';
+  else if(!demain&&r.paiement==='aconfirmer'&&courseCommencee(r))badge='<span class="acc-badge" style="color:#b45309;background:#fdf0dc">à encaisser</span>';
+  else if(r.rappelEnvoye)badge='<span class="acc-badge" style="color:#15803d;background:#e3f5e8">rappel envoyé</span>';
+  var h='<div class="acc-ligne" data-id="'+r.id+'" onclick="showDetailRes(this.dataset.id)"><span class="acc-h">'+escH(x.heure||'—')+'</span><span class="acc-c"><b>'+escH(r.clientNom||'Client')+'</b><span>'+escH(lieuCourt(dep))+' → '+escH(lieuCourt(arr))+(x.sens==='retour'?' · retour':'')+'</span></span>'+badge+'</div>';
+  if(demain&&!r.rappelEnvoye&&r.clientTel&&!(estConfiee(r)&&confieSens(r,x.sens)))h+='<button class="btn btn-green btn-full" style="margin:2px 0 8px;font-size:0.82rem" data-id="'+r.id+'" onclick="sendRappel(this.dataset.id,&quot;'+x.sens+'&quot;)">💬 Envoyer le rappel à '+escH(((r.clientNom||'').split(' ').pop())||'client')+'</button>';
+  return h;
+}
+function renderAccueil(){
+  var el=g('acc-jour');if(!el)return;
+  var auj=coursesDuJour(jourISO(0)),dem=coursesDuJour(jourISO(1));
+  var carte=function(t,L,demain,vide){return '<div class="card acc-carte"><div class="acc-tete"><b>'+t+'</b><span>'+(L.length?L.length+' course'+(L.length>1?'s':''):'')+'</span></div>'+(L.length?L.map(function(x){return ligneAccueil(x,demain);}).join(''):'<div class="acc-vide">'+vide+'</div>')+'</div>';};
+  el.innerHTML=carte("Aujourd'hui",auj,false,'Pas de course aujourd’hui.')+carte('Demain',dem,true,'Pas de course demain.');
+  var items=[];
+  var nP=(typeof getPaiementsAConfirmer==='function')?getPaiementsAConfirmer().length:0;if(nP)items.push(['#ea580c',nP+' paiement'+(nP>1?'s':'')+' à confirmer','Encaisser',"showPage('encaisser')"]);
+  var nV=(typeof aVirementEnAttente==='function')?db.reservations.filter(aVirementEnAttente).length:0;if(nV)items.push(['#dc2626',nV+' virement'+(nV>1?'s':'')+' pas encore reçu'+(nV>1?'s':''),'Voir',"showPage('encaisser')"]);
+  var nJ=(typeof getRelancesJ7==='function')?getRelancesJ7().length:0;if(nJ)items.push(['#2563eb',nJ+' message'+(nJ>1?'s':'')+' J-7 à envoyer','Envoyer','openRelanceJ7()']);
+  var af=g('acc-afaire');if(af)af.innerHTML=items.length?'<div class="card acc-carte"><div class="acc-tete"><b>À faire</b></div>'+items.map(function(i){return '<button class="acc-todo" onclick="'+i[3]+'"><span class="acc-pt" style="background:'+i[0]+'"></span><span style="flex:1">'+i[1]+'</span><span class="acc-go">'+i[2]+' &#x203a;</span></button>';}).join('')+'</div>':'';
+  var _r=getResultatMois(curMonth,curYear);sv('acc-prov',fmt(_r.provision));
 }
 function setResFilter(f,el){resFilter=f;payFilter='tous';document.querySelectorAll('#page-res .chip:not(.chip-pay)').forEach(c=>c.classList.remove('active'));el.classList.add('active');document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.toggle('active',c.textContent.includes('Tous')||c.getAttribute('onclick')?.includes("'tous'")));renderRes();}
 function setPayFilter(f,el){payFilter=f;document.querySelectorAll('#page-res .chip-pay').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderRes();}
@@ -6877,6 +7150,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<!-- PARTENAIRE : UN MOIS -->
+<div class="overlay" id="m-part-mois"><div class="modal">
+<div class="modal-handle"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div class="modal-title" id="pm-titre" style="margin:0">Partenaire</div><button class="btn btn-outline btn-sm" id="pm-modifier">Modifier</button></div>
+<div class="mnav" style="margin:12px 0"><div class="mnav-btn" onclick="partMoisNav(-1)">&#x2039;</div><div class="mnav-name" id="pm-mois"></div><div class="mnav-btn" onclick="partMoisNav(1)">&#x203a;</div></div>
+<div id="pm-contenu"></div>
+<div class="modal-actions" style="margin-top:12px"><button class="btn btn-outline btn-full" onclick="closeModal('m-part-mois')">Fermer</button></div>
+</div></div>
 <!-- QR CODE DE PAIEMENT -->
 <div class="overlay" id="m-qr-reglages"><div class="modal">
 <div class="modal-handle"></div><div class="modal-title">&#x1f4b3; Paiement par QR code</div>
@@ -6894,7 +7176,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <div id="qr-zone" style="background:#fff;border-radius:16px;padding:14px;max-width:300px;margin:6px auto 8px"></div>
 <div id="qr-legende" style="text-align:center;font-size:0.8rem;color:var(--text2);line-height:1.5"></div>
 <div style="text-align:center;font-size:0.72rem;color:var(--text3);margin-top:6px;line-height:1.5">Le client ouvre l'appli de sa banque (KBC, Belfius, BNP, ING, Argenta…), choisit « scanner » et confirme le virement.</div>
-<div class="modal-actions" style="margin-top:14px"><button class="btn btn-outline btn-full" onclick="closeModal('m-qr-pay')">Fermer</button></div>
+<div id="qr-paye-box" style="margin-top:12px"></div>
+<div class="modal-actions" style="margin-top:10px"><button class="btn btn-outline btn-full" onclick="closeModal('m-qr-pay')">Fermer</button></div>
 </div></div>
 <script id="qrcode-lib">
 /* QR Code Generator for JavaScript — Copyright (c) 2009 Kazuhiko Arase — MIT license (qrcode-generator 1.4.4) */
@@ -6932,14 +7215,7 @@ function qrSvg(texte){
   var q=qrcode(0,'M');qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];q.addData(texte,'Byte');q.make();
   return q.createSvgTag({cellSize:6,margin:2,scalable:true});
 }
-function lieuCourt(a){
-  a=String(a||'').trim();if(!a)return '';
-  var l=a.toLowerCase();if(/a[ée]roport|airport|luchthaven|terminal|zaventem|\bcrl\b|\bbru\b/.test(l)){if(/charleroi|gosselies|\bcrl\b|brussels south/.test(l))return 'Aéroport de Charleroi';if(/zaventem|brussels airport|\bbru\b|nationa/.test(l))return 'Brussels Airport';}
-  var p=a.split(',').map(function(x){return x.trim();}).filter(Boolean);
-  var ville=p.length>1?p[p.length-1].replace(/^\d{4}\s*/,''):p[0];
-  if(/^(belgique|belgium|belgië|france)$/i.test(ville)&&p.length>2)ville=p[p.length-2].replace(/^\d{4}\s*/,'');
-  return ville;
-}
+
 var _qrRes=null;
 function openQrPaiement(id){
   var r=(db.reservations||[]).find(function(x){return x.id===id;});if(!r)return;
@@ -6955,6 +7231,69 @@ function openQrPaiement(id){
   g('qr-montant').value=prix.toFixed(2);g('qr-comm').value=qrCommunication(r,'tout');
   openModal('m-qr-pay');majQrPaiement();
 }
+/* QR pour un montant quelconque (sans course) */
+function openQrLibre(){
+  if(!qrCfg().iban){openQrReglages(openQrLibre);return;}
+  _qrRes=null;const c=g('qr-pay-chips');c.innerHTML='';c.style.display='none';
+  g('qr-montant').value='';g('qr-comm').value='Facciolini Mobility - Trajet';
+  openModal('m-qr-pay');majQrPaiement();setTimeout(function(){var m=g('qr-montant');if(m)m.focus();},250);
+}
+function qrMarquerPaye(){
+  if(!_qrRes)return;var id=_qrRes.id;closeModal('m-qr-pay');
+  confirmerPaiement(id,'virement');try{renderEncaisser();}catch(e){}
+}
+/* ===== ONGLET ENCAISSER ===== */
+
+/* Courses que JE dois encaisser (pas annulées, pas prépayées, pas encaissées par un partenaire), avec la date du jour où on les encaisse */
+function coursesAEncaisser(){
+  return (db.reservations||[]).filter(function(r){
+    if(r.statut==='annule'||!(parseFloat(r.prix)>0))return false;
+    if(r.paiement!=='aconfirmer')return false;
+    if(r.partnerType==='prepaye')return false;
+    if(estConfiee(r)&&!confMien(r)&&r.confieEncaisse!=='moi'&&!confTrajet(r))return false;
+    return true;
+  });
+}
+function carteEncaisser(r,options){
+  var heure=r.heure||'',d=r.dateAller?new Date(r.dateAller).toLocaleDateString('fr-BE',{weekday:'short',day:'2-digit',month:'short'}):'';
+  var trajet=escH(lieuCourt(r.depart))+' → '+escH(lieuCourt(r.arrivee));
+  var h='<div class="card" style="padding:14px 14px 12px;margin-bottom:10px">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="min-width:0"><div style="font-weight:700;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(r.clientNom||'Client')+'</div>';
+  h+='<div style="font-size:0.76rem;color:var(--text3);margin-top:2px">'+(options.jour?'':d+' · ')+(heure?heure+' · ':'')+trajet+(r.type==='ar-diff'?' · A/R':'')+'</div></div>';
+  h+='<div style="font-family:Playfair Display,serif;font-size:1.35rem;font-weight:700;color:var(--gold);white-space:nowrap">'+fmt(r.prix)+'</div></div>';
+  h+='<div style="display:flex;gap:8px;margin-top:12px">';
+  h+='<button class="btn btn-gold" style="flex:1" data-id="'+r.id+'" onclick="openQrPaiement(this.dataset.id)">&#x1f4f2; Montrer le QR</button>';
+  h+='<button class="btn btn-outline btn-sm" data-id="'+r.id+'" onclick="confirmerPaiement(this.dataset.id,\'virement\');renderEncaisser()" title="Le client a payé par QR / virement">&#x2713; Payé</button>';
+  h+='<button class="btn btn-ghost btn-sm" data-id="'+r.id+'" onclick="confirmerPaiement(this.dataset.id,\'cash\');renderEncaisser()" title="Le client a payé en cash">&#x1f4b5;</button>';
+  h+='</div></div>';
+  return h;
+}
+
+function renderPlus(){
+  var el=g('plus-part-badge');if(!el)return;var net=0;
+  try{var s0=calcPartnerSoldes();Object.keys(s0).forEach(function(k){var x=s0[k];net+=(x.confNet||0)+(x.aFacturer||0)-(x.commissionsDues||0);});}catch(e){}
+  el.innerHTML=Math.abs(net)>=0.01?'<span style="font-size:0.72rem;font-weight:700;border-radius:10px;padding:4px 8px;'+(net>0?'color:#15803d;background:#e3f5e8">+':'color:#b91c1c;background:#fdecec">')+fmt(net)+'</span>':'';
+}
+function renderEncaisser(){
+  var el=g('enc-contenu');if(!el)return;var h='';var c=qrCfg();
+  if(!c.iban)h+='<div class="card" style="border:1.5px solid var(--gold);text-align:center;padding:18px"><div style="font-weight:700;margin-bottom:6px">&#x1f4b3; Une seule fois : ton compte</div><div style="font-size:0.8rem;color:var(--text2);margin-bottom:12px;line-height:1.5">Indique l\'IBAN qui reçoit les paiements. Ensuite, chaque course a son QR prêt à montrer.</div><button class="btn btn-gold" onclick="openQrReglages(renderEncaisser)">Configurer mon compte</button></div>';
+  var L=coursesAEncaisser(),auj=jourISO(0),dem=jourISO(1);
+  var aujL=L.filter(function(r){return r.dateAller===auj||(r.type==='ar-diff'&&r.dateRetour===auj);}).sort(function(a,b){return (a.heure||'').localeCompare(b.heure||'');});
+  var avant=L.filter(function(r){return aujL.indexOf(r)<0&&(r.dateAller||'')<auj;}).sort(function(a,b){return (b.dateAller||'').localeCompare(a.dateAller||'');});
+  var bientot=L.filter(function(r){return aujL.indexOf(r)<0&&(r.dateAller||'')>auj&&(r.dateAller||'')<=jourISO(3);}).sort(function(a,b){return ((a.dateAller||'')+(a.heure||'')).localeCompare((b.dateAller||'')+(b.heure||''));});
+  var titre=function(t,n,coul){return '<div class="stitle" style="margin-top:14px'+(coul?';color:'+coul:'')+'">'+t+(n?' ('+n+')':'')+'</div>';};
+  h+=titre('Aujourd\'hui',aujL.length);
+  h+=aujL.length?aujL.map(function(r){return carteEncaisser(r,{jour:true});}).join(''):'<div style="font-size:0.82rem;color:var(--text3);padding:6px 2px 4px">Rien à encaisser aujourd\'hui.</div>';
+  if(avant.length){h+=titre('Pas encore payé',avant.length,'var(--orange2)');h+=avant.slice(0,30).map(function(r){return carteEncaisser(r,{});}).join('');}
+  if(bientot.length){h+=titre('Prochains jours',bientot.length);h+=bientot.map(function(r){return carteEncaisser(r,{});}).join('');}
+  /* Total reçu par QR / virement ce mois-ci */
+  var m=new Date().getMonth(),y=new Date().getFullYear(),tot=0,nb=0;
+  (db.reservations||[]).forEach(function(r){if(r.statut==='annule'||!r.dateAller)return;var d=new Date(r.dateAller);if(d.getMonth()!==m||d.getFullYear()!==y)return;
+    if(r.paiement==='virement'){tot+=parseFloat(r.prix)||0;nb++;}else if(r.paiement==='mixte'&&r.paiementDetail){var v=parseFloat(r.paiementDetail.virement)||0;if(v>0){tot+=v;nb++;}}});
+  h+='<div class="card card-sm" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:0.8rem;color:var(--text2)">&#x1f3e6; Reçu par QR / virement en '+MOIS[m].toLowerCase()+'</span><b style="color:var(--green2)">'+fmt(tot)+'</b></div>';
+  if(c.iban)h+='<div style="text-align:center;font-size:0.72rem;color:var(--text3);margin-top:10px">Paiements vers '+escH(ibanJoli(c.iban))+' · <a href="#" onclick="openQrReglages(renderEncaisser);return false" style="color:var(--gold)">modifier</a></div>';
+  el.innerHTML=h;
+}
 function qrCommunication(r,sens){
   var d=r.dateAller?new Date(r.dateAller).toLocaleDateString('fr-BE'):'';
   var dep=lieuCourt(r.depart),arr=lieuCourt(r.arrivee);
@@ -6967,11 +7306,17 @@ function choisirQrMontant(el){
 }
 function majQrPaiement(){
   var c=qrCfg(),m=parseFloat(g('qr-montant').value),z=g('qr-zone'),l=g('qr-legende');
-  if(!(m>0)||m>999999){z.innerHTML='';l.textContent='Indique un montant.';return;}
+  if(!(m>0)||m>999999){z.innerHTML='';l.textContent='Indique un montant.';var pb0=g('qr-paye-box');if(pb0)pb0.innerHTML='';return;}
   try{z.innerHTML=qrSvg(epcTexte(c.nom,c.iban,m,g('qr-comm').value));var sv0=z.querySelector('svg');if(sv0){sv0.style.width='100%';sv0.style.height='auto';sv0.style.display='block';}}
   catch(e){z.innerHTML='';l.textContent='Impossible de créer le QR code : '+e.message;return;}
   l.innerHTML='<b style="font-size:1.25rem;color:var(--text)">'+fmt(m)+'</b><br>vers '+escH(c.nom)+' · '+escH(ibanJoli(c.iban));
+  var pb=g('qr-paye-box');if(pb){
+    if(_qrRes&&_qrRes.paiement==='aconfirmer'&&Math.abs(m-(parseFloat(_qrRes.prix)||0))<0.005)pb.innerHTML='<button class="btn btn-green btn-full" onclick="qrMarquerPaye()">&#x2713; Le client a payé</button>';
+    else if(_qrRes&&_qrRes.paiement==='aconfirmer')pb.innerHTML='<div style="font-size:0.72rem;color:var(--text3);text-align:center">Paiement d\'une partie seulement : indique-le ensuite dans la course (paiement « Mixte »).</div>';
+    else pb.innerHTML='';
+  }
 }
+try{if(document.getElementById('page-dash').classList.contains('active'))renderAccueil();}catch(e){}
 </script>
 </body>
 </html>
