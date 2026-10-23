@@ -3098,6 +3098,7 @@ function saveReservationCore(){
   if(r.stopNom||r.stopAdresse)trackUsage('2eme-passager');
   save();
   renderAll();
+  window._resConfId=r.id;
   try{genResSummary();}catch(e){console.error('genResSummary:',e);}
   const confSec=g('res-confirm-section');
   if(confSec){confSec.style.display='block';}
@@ -3107,6 +3108,92 @@ function saveReservationCore(){
   if(editId&&!estVehiculeSecondaire(r)&&estConfiee(r)){const _pl=progMsgsListe(r).filter(x=>x.dest==='partenaire'&&!x.tard&&!(r.progMsgs&&r.progMsgs[x.cle]));if(_pl.length&&(_confChange||r.dateAller!==existingR.dateAller||r.dateRetour!==existingR.dateRetour))setTimeout(()=>{try{openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},600);}
   if(!editId){setTimeout(()=>{if(confirm("Ajouter au calendrier ?"))exportICS(r);setTimeout(()=>{try{if(!estVehiculeSecondaire(r))openProgMsgs(r.id);}catch(e){console.error('openProgMsgs:',e);}},700);},600);}
 }
+/* Message de confirmation au client (FR / EN / NL), à partir d'une course */
+function msgConfirmation(r,vip){
+  var lang=(r.langue==='en'||r.langue==='nl')?r.langue:'fr';
+  var T={
+    fr:{bj:'Bonjour',conf:'Votre réservation est confirmée',a:'à',dep:'Départ',arr:'Arrivée',stop:'Arrêt',vol:'Vol',
+        aller:'ALLER (dépose)',ret1:'RETOUR (récupération)',arrAR:"ARRIVÉE (prise en charge à l'aéroport)",
+        r2:'🛬 *RETOUR*',r2rec:"✈️ *DÉPART (dépose à l'aéroport)*",volR:'Vol retour',volRrec:'Vol de départ',
+        pax:function(n){return n+' passager'+(n>1?'s':'');},gv:function(n){return n+' grande'+(n>1?'s':'')+' valise'+(n>1?'s':'');},pv:function(n){return n+' petite'+(n>1?'s':'')+' valise'+(n>1?'s':'');},
+        sieges:'Sièges enfants prévus : ',total:'Prix total',ala:"À l'aller",solde:'Solde au retour',
+        vip:function(p){return '⭐ Merci pour votre fidélité ! Tarif fidélité (-'+p+' %) appliqué.';},fin:'À très bientôt !',loc:'fr-BE'},
+    en:{bj:'Hello',conf:'Your booking is confirmed',a:'at',dep:'From',arr:'To',stop:'Stop',vol:'Flight',
+        aller:'OUTBOUND (drop-off)',ret1:'RETURN (pickup)',arrAR:'ARRIVAL (airport pickup)',
+        r2:'🛬 *RETURN*',r2rec:'✈️ *DEPARTURE (airport drop-off)*',volR:'Return flight',volRrec:'Departure flight',
+        pax:function(n){return n+' passenger'+(n>1?'s':'');},gv:function(n){return n+' large suitcase'+(n>1?'s':'');},pv:function(n){return n+' small suitcase'+(n>1?'s':'');},
+        sieges:'Child seats provided: ',total:'Total price',ala:'At departure',solde:'Balance on return',
+        vip:function(p){return '⭐ Thank you for your loyalty! Loyalty rate (-'+p+'%) applied.';},fin:'See you soon!',loc:'en-GB'},
+    nl:{bj:'Hallo',conf:'Uw reservering is bevestigd',a:'om',dep:'Van',arr:'Naar',stop:'Tussenstop',vol:'Vlucht',
+        aller:'HEENREIS (afzetten)',ret1:'TERUGREIS (ophalen)',arrAR:'AANKOMST (ophalen op de luchthaven)',
+        r2:'🛬 *TERUGREIS*',r2rec:'✈️ *VERTREK (afzetten op de luchthaven)*',volR:'Terugvlucht',volRrec:'Vertrekvlucht',
+        pax:function(n){return n+' passagier'+(n>1?'s':'');},gv:function(n){return n+' grote koffer'+(n>1?'s':'');},pv:function(n){return n+' kleine koffer'+(n>1?'s':'');},
+        sieges:'Kinderzitjes voorzien: ',total:'Totaalprijs',ala:'Bij vertrek',solde:'Saldo bij terugkeer',
+        vip:function(p){return '⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+p+'%) toegepast.';},fin:'Tot binnenkort!',loc:'nl-BE'}
+  }[lang];
+  var sep=lang==='fr'?' : ':': ';
+  function jour(d,h){if(!d)return h||'';var t=new Date(d+'T12:00:00').toLocaleDateString(T.loc,{weekday:'long',day:'numeric',month:'long'});t=t.charAt(0).toUpperCase()+t.slice(1);return t+(h?' '+T.a+' '+h:'');}
+  var type=r.type||'aller',rec=r.service==='recuperation',arT=type==='ar-diff'||type==='ar-jour';
+  var prix=parseFloat(r.prix)||0,comm=r.partnerType==='commission'?(parseFloat(r.commission)||0):0,acompte=parseFloat(r.acompte)||0;
+  var netS=Math.max(0,prix-comm),encA=type==='ar-diff'?(acompte>0?Math.min(acompte,netS):Math.round(netS/2*100)/100):netS,encR=type==='ar-diff'?Math.max(0,Math.round((netS-encA)*100)/100):0;
+  var m=T.bj+' '+(r.clientNom||'').trim()+' 👋\n\n✅ *'+T.conf+'*\n\n';
+  m+=(rec?'🛬':'✈️')+' *'+(rec?(arT?T.arrAR:T.ret1):T.aller)+'*\n';
+  m+='📅 '+jour(r.dateAller,r.heure)+'\n';
+  m+='🚗 '+T.dep+sep+(r.depart||'—')+'\n';
+  if(r.stopAdresse)m+='📍 '+T.stop+sep+r.stopAdresse+(r.stopNom?' ('+r.stopNom+')':'')+'\n';
+  texteArretsSup(r).forEach(function(x){m+='📍 '+T.stop+sep+x+'\n';});
+  m+='📍 '+T.arr+sep+(r.arrivee||'—')+'\n';
+  if(r.vol)m+='✈️ '+T.vol+sep+r.vol+'\n';
+  if(arT){
+    var dR=type==='ar-diff'?r.dateRetour:r.dateAller;
+    m+='\n'+(rec?T.r2rec:T.r2)+'\n';
+    m+='📅 '+jour(dR,r.heureRetour)+'\n';
+    m+='🚗 '+T.dep+sep+(r.departRetour||r.arrivee||'—')+'\n';
+    m+=(rec?'📍 ':'🏠 ')+T.arr+sep+(r.arriveeRetour||r.depart||'—')+'\n';
+    if(r.volRetour)m+='✈️ '+(rec?T.volRrec:T.volR)+sep+r.volRetour+'\n';
+  }
+  var pax=parseInt(r.passagers)||1,gv=parseInt(r.grandesValises)||0,pv=parseInt(r.petitesValises)||0;
+  m+='\n👥 '+T.pax(pax)+((gv||pv)?' · 🧳 '+[gv?T.gv(gv):'',pv?T.pv(pv):''].filter(Boolean).join(' + '):'')+'\n';
+  var sg='';try{sg=siegesTexte(r,lang);}catch(e){}
+  if(sg)m+='👶 '+T.sieges+sg+'\n';
+  if((r.notes||'').trim())m+='📝 '+r.notes.trim()+'\n';
+  m+='\n💶 *'+T.total+sep+fmt(prix)+'*\n';
+  if(type==='ar-diff')m+='💳 '+T.ala+sep+fmt(encA)+' · '+T.solde+sep+fmt(encR)+'\n';
+  if(vip)m+='\n'+T.vip(db.settings.vip.reduc)+'\n';
+  m+='\n'+T.fin+'\nJean-François\nFacciolini Mobility · 📞 '+MOI.tel;
+  return m;
+}
+/* Envoyer / renvoyer la confirmation depuis la fiche d'une course */
+function envoyerConfirmation(id){
+  var r=db.reservations.find(function(x){return x.id===id;});if(!r)return;
+  var msg=msgConfirmation(r,isVip(r.clientNom));
+  var tel=(r.clientTel||'').replace(/[^+\d]/g,'');
+  var old=g('conf-popup');if(old)old.remove();
+  var pop=document.createElement('div');pop.id='conf-popup';
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)';
+  pop.innerHTML='<div style="background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px 28px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 -4px 30px rgba(0,0,0,0.4)">'
+    +'<div style="text-align:center;font-weight:800;font-size:1.02rem">Confirmation au client</div>'
+    +'<div style="text-align:center;font-size:0.8rem;color:var(--text3);margin:4px 0 12px">'+escH(r.clientNom||'')+(tel?' · '+escH(r.clientTel):' · ⚠️ pas de numéro')+'</div>'
+    +'<div class="wa-preview" style="overflow:auto;max-height:46vh;white-space:pre-wrap;margin-bottom:12px">'+escH(msg)+'</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +'<button id="cf-wa" style="flex:1;padding:14px 6px;background:#25D366;color:#fff;border:none;border-radius:14px;font-weight:700;font-size:0.92rem">💬 WhatsApp</button>'
+    +'<button id="cf-sms" style="flex:1;padding:14px 6px;background:var(--gold);color:#000;border:none;border-radius:14px;font-weight:700;font-size:0.92rem">📱 SMS</button>'
+    +'<button id="cf-cp" style="flex:0 0 auto;padding:14px 14px;background:var(--border);color:var(--text);border:none;border-radius:14px;font-weight:700">📋</button></div>'
+    +'<button id="cf-x" style="width:100%;padding:12px;background:var(--border);color:var(--text2);border:none;border-radius:14px">Fermer</button></div>';
+  pop.onclick=function(e){if(e.target===pop)pop.remove();};
+  document.body.appendChild(pop);
+  function fait(){r.confEnvoyee=new Date().toISOString();save();try{if(currentDetailId===r.id)showDetailRes(r.id);}catch(e){}}
+  pop.querySelector('#cf-wa').onclick=function(){pop.remove();trackUsage('confirmation-fiche:wa');window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');fait();};
+  pop.querySelector('#cf-sms').onclick=function(){pop.remove();trackUsage('confirmation-fiche:sms');var t=encodeURIComponent(msg.replace(/\*/g,''));window.location.href=tel?'sms:'+tel+'?body='+t:'sms:?body='+t;fait();};
+  pop.querySelector('#cf-cp').onclick=function(){copierTexte(msg);showToast('Message copié');};
+  pop.querySelector('#cf-x').onclick=function(){pop.remove();};
+}
+/* Copie dans le presse-papiers, même sans navigator.clipboard */
+function copierTexte(t){
+  try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).catch(function(){copierTexteVieux(t);});return;}}catch(e){}
+  copierTexteVieux(t);
+}
+function copierTexteVieux(t){try{var ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}}
 function genResSummary(){
   const vipC=isVip(g('r-client-nom')?.value?.trim()||'');
   const source=g('r-source').value,pt=g('r-partner-type').value,comm=parseFloat(g('r-commission')?.value||0);
@@ -3128,31 +3215,25 @@ function genResSummary(){
   const nomC=g('r-client-nom').value;
   const rs=g('res-summary');
   if(rs)rs.innerHTML='<div class="dr"><span class="dr-label">Client</span><span class="dr-val">'+nomC+(isVip(nomC)?' ⭐':'')+'</span></div><div class="dr"><span class="dr-label">Source</span><span class="dr-val">'+(source==='direct'?'Direct':'🤝 '+source)+'</span></div>'+(source!=='direct'?'<div class="dr"><span class="dr-label">Partenaire</span><span class="dr-val">'+(pt==='commission'?'Commission -'+fmt(comm):'Prépayé')+'</span></div>':'')+'<div class="dr"><span class="dr-label">Type</span><span class="dr-val">'+tLabel+'</span></div><div class="dr"><span class="dr-label">Date aller</span><span class="dr-val">'+g('r-date-aller').value+' '+g('r-heure-aller').value+'</span></div>'+(isAR?'<div class="dr"><span class="dr-label">Date retour</span><span class="dr-val">'+(dateRet||'—')+' '+heureRet+'</span></div>':'')+'<div class="dr"><span class="dr-label">Trajet aller</span><span class="dr-val">'+dep.substring(0,20)+' → '+arr.substring(0,20)+'</span></div>'+(isAR?'<div class="dr"><span class="dr-label">Trajet retour</span><span class="dr-val">'+depRet.substring(0,20)+' → '+arrRet.substring(0,20)+'</span></div>':'')+'<div class="dr"><span class="dr-label">Km facturés</span><span class="dr-val c-blue">'+fmtKm(kmC)+'</span></div><div class="dr"><span class="dr-label">Km réels</span><span class="dr-val c-purple">'+fmtKm(kmR)+'</span></div><div class="dr"><span class="dr-label">Prix total</span><span class="dr-val c-gold" style="font-family:\'Playfair Display\',serif;font-size:1rem">'+fmt(prix)+'</span></div>'+(type==='ar-diff'?'<div class="pay-split pay-aller" style="margin:4px 0">✅ À l\'aller : <b>'+fmt(encA)+'</b></div><div class="pay-split pay-retour" style="margin:4px 0">⏳ Au retour : <b>'+fmt(encR)+'</b></div>':'')+'<div class="dr"><span class="dr-label">Bénéfice comptable</span><span class="dr-val '+(benef>=0?'c-green':'c-red')+'">'+fmt(benef)+'</span></div><div class="dr" style="border-bottom:none"><span class="dr-label">Bénéfice réel</span><span class="dr-val '+(benefR>=0?'c-green':'c-red')+'">'+fmt(benefR)+'</span></div>';
-  const date=g('r-date-aller').value?new Date(g('r-date-aller').value).toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}):'';
-  const heure=g('r-heure-aller').value||'',lang=g('r-langue').value||'fr';
-  const fmtDL=(ds,hs)=>ds?new Date(ds).toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})+' à '+hs:'';
-  // Dépose (✈️ décolle) ou Récupération (🛬 atterrit) pour le 1er trajet
-  const svcAller=g('r-service')?.value||'depose';
-  const isRecAller=svcAller==='recuperation';
-  const legEmoji=isRecAller?'🛬':'✈️';
-  const arT=(type==='ar-diff'||type==='ar-jour');
-  const legLabelFR=isRecAller?(arT?'ARRIVÉE (prise en charge à l\'aéroport)':'RETOUR (récupération)'):'ALLER (dépose)';
-  const legLabelEN=isRecAller?(arT?'ARRIVAL (airport pickup)':'RETURN (pickup)'):'OUTBOUND (drop-off)';
-  const legLabelNL=isRecAller?(arT?'AANKOMST (ophalen op de luchthaven)':'TERUGREIS (ophalen)'):'HEENREIS (afzetten)';
-  const leg2FR=isRecAller?'✈️ DÉPART (dépose à l\'aéroport)':'🛬 RETOUR',leg2EN=isRecAller?'✈️ DEPARTURE (airport drop-off)':'🛬 RETURN',leg2NL=isRecAller?'✈️ VERTREK (afzetten op de luchthaven)':'🛬 TERUGREIS';
-  const volR_FR=isRecAller?'Vol de départ':'Vol retour',volR_EN=isRecAller?'Departure flight':'Return flight',volR_NL=isRecAller?'Vertrekvlucht':'Terugvlucht';
-  const volAller=(g('r-vol')?.value||'').toUpperCase();
-  const volA_FR=volAller?'\n✈️ Vol : '+volAller:'',volA_EN=volAller?'\n✈️ Flight: '+volAller:'',volA_NL=volAller?'\n✈️ Vlucht: '+volAller:'';
-  let msg='';
-  if(lang==='en'){msg='Hello '+nomC+',\n\nI confirm your booking:\n\n'+legEmoji+' '+legLabelEN+'\n📅 '+date+' at '+heure+'\n🚗 From: '+dep+'\n📍 To: '+arr+volA_EN;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2EN+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 From: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' To: '+arrRet+(volRetour?'\n✈️ '+volR_EN+': '+volRetour:'');msg+='\n\n💶 Total: '+fmt(prix)+(type==='ar-diff'?'\n💳 At departure: '+fmt(encA)+' — Balance on return: '+fmt(encR):'');}else msg+='\n\n💶 Total: '+fmt(prix);msg+='\n\nSee you soon!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Thank you for your loyalty! Loyalty rate (-'+db.settings.vip.reduc+'%) applied.':'');}
-  else if(lang==='nl'){msg='Hallo '+nomC+',\n\nIk bevestig uw reservering:\n\n'+legEmoji+' '+legLabelNL+'\n📅 '+date+' om '+heure+'\n🚗 Van: '+dep+'\n📍 Naar: '+arr+volA_NL;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2NL+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Van: '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Naar: '+arrRet+(volRetour?'\n✈️ '+volR_NL+': '+volRetour:'');msg+='\n\n💶 Totaal: '+fmt(prix)+(type==='ar-diff'?'\n💳 Bij vertrek: '+fmt(encA)+' — Saldo bij terugkeer: '+fmt(encR):'');}else msg+='\n\n💶 Totaal: '+fmt(prix);msg+='\n\nTot binnenkort!\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Bedankt voor uw trouw! Loyaliteitstarief (-'+db.settings.vip.reduc+'%) toegepast.':'');}
-  else{const stopInfo=(acC['r-stop-adresse']&&g('r-stop-adresse')?.value?'\n📍 Arrêt : '+g('r-stop-adresse').value+(g('r-stop-nom')?.value?' ('+g('r-stop-nom').value+')':''):'')+arretsSupValides().map(function(x){return '\n📍 Arrêt : '+x.adresse;}).join('');msg='Bonjour '+nomC+',\n\nJe confirme votre réservation :\n\n'+legEmoji+' '+legLabelFR+'\n📅 '+date+' à '+heure+'\n🚗 Départ : '+dep+stopInfo+'\n📍 Arrivée : '+arr+volA_FR;if(type==='ar-diff'||type==='ar-jour'){msg+='\n\n'+leg2FR+'\n📅 '+fmtDL(dateRet,heureRet)+'\n🚗 Départ : '+depRet+'\n'+(isRecAller?'📍':'🏠')+' Arrivée : '+arrRet+(volRetour?'\n✈️ '+volR_FR+' : '+volRetour:'');msg+='\n\n💶 Prix total : '+fmt(prix)+(type==='ar-diff'?'\n💳 À l\'aller : '+fmt(encA)+' — Solde au retour : '+fmt(encR):'');}else msg+='\n\n💶 Prix total : '+fmt(prix);msg+='\n\nÀ bientôt !\nFacciolini Mobility\n📞 '+MOI.tel+(vipC?'\n\n⭐ Merci pour votre fidélité ! Tarif fidélité (-'+db.settings.vip.reduc+'%) appliqué.':'');}
-  {const _sg=siegesTexte({siegesCoque:g('r-siege-coque')?.value,siegesAuto:g('r-siege-auto')?.value,siegesRehausseur:g('r-siege-rehausseur')?.value,siegesBebe:g('r-sieges-legacy')?.value},lang);if(_sg){const _lab=lang==='en'?'Child seats provided: ':(lang==='nl'?'Kinderzitjes voorzien: ':'Sièges enfants prévus : ');msg=msg.replace('\n\n💶','\n\n👶 '+_lab+_sg+'\n💶');}}
+  const _st=g('r-stop-box')&&g('r-stop-box').style.display!=='none';
+  const _r={clientNom:nomC,langue:g('r-langue').value||'fr',type,service:g('r-service')?.value||'depose',
+    dateAller:g('r-date-aller').value,heure:g('r-heure-aller').value||'',
+    dateRetour:type==='ar-diff'?(g('r-date-retour')?.value||''):'',heureRetour:type==='ar-diff'?(g('r-heure-retour')?.value||''):(g('r-heure-retour-jour')?.value||''),
+    depart:g('r-depart')?.value||'',arrivee:g('r-arrivee')?.value||'',
+    departRetour:type==='ar-diff'?(g('r-depart-retour')?.value||''):'',arriveeRetour:type==='ar-diff'?(g('r-arrivee-retour')?.value||''):'',
+    vol:(g('r-vol')?.value||'').toUpperCase(),volRetour,prix,acompte,source,partnerType:pt,commission:pt==='commission'?comm:0,
+    stopAdresse:_st?(g('r-stop-adresse')?.value||'').trim():'',stopNom:_st?(g('r-stop-nom')?.value||'').trim():'',
+    arretsSup:arretsSupValides().map(function(x){return {adresse:x.adresse};}),
+    passagers:parseInt(g('r-passagers')?.value||1)||1,grandesValises:parseInt(g('r-grandes-valises')?.value||0)||0,petitesValises:parseInt(g('r-petites-valises')?.value||0)||0,
+    siegesCoque:g('r-siege-coque')?.value,siegesAuto:g('r-siege-auto')?.value,siegesRehausseur:g('r-siege-rehausseur')?.value,siegesBebe:g('r-sieges-legacy')?.value,
+    notes:g('r-notes')?.value||''};
+  const msg=msgConfirmation(_r,vipC);
   sv('wa-preview',msg);acC['wa-msg']=msg;acC['wa-tel']=(g('r-client-tel').value||'').replace(/[^+\d]/g,'');
 }
-function sendWA(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
-function sendSMS(){const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.location.href=tel?'sms:'+tel+'?body='+encodeURIComponent(msg):'sms:?body='+encodeURIComponent(msg);}
-function copyMsg(){navigator.clipboard?.writeText(acC['wa-msg']||'').then(()=>alert('Message copié !'));}
+function marquerConfEnvoyee(){try{const id=window._resConfId;const r=id&&db.reservations.find(x=>x.id===id);if(r){r.confEnvoyee=new Date().toISOString();save();}}catch(e){}}
+function sendWA(){marquerConfEnvoyee();const msg=acC['wa-msg']||'',tel=acC['wa-tel']||'';window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
+function sendSMS(){marquerConfEnvoyee();const msg=(acC['wa-msg']||'').replace(/\*/g,''),tel=acC['wa-tel']||'';window.location.href=tel?'sms:'+tel+'?body='+encodeURIComponent(msg):'sms:?body='+encodeURIComponent(msg);}
+function copyMsg(){copierTexte(acC['wa-msg']||'');showToast('Message copié');}
 function showDetailRes(id){
   currentDetailId=id;
   var r=db.reservations.find(function(x){return x.id===id;});if(!r)return;
@@ -3245,7 +3326,13 @@ function showDetailRes(id){
      rap+=_tel?'<a class="rap-btn" href="https://wa.me/'+escH(_wa)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" stroke="#15803d"><path d="M21 12a9 9 0 01-13.5 7.8L3 21l1.3-4.4A9 9 0 1121 12z"/></svg>WhatsApp</a>':'<span class="rap-btn" style="opacity:.4">—</span>';
      rap+=r.depart?'<a class="rap-btn" href="waze://?q='+_dest+'"><svg viewBox="0 0 24 24" stroke="#1d4ed8"><path d="M3 11l18-8-8 18-2-8z"/></svg>Waze</a>':'<span class="rap-btn" style="opacity:.4">—</span>';
      rap+=(parseFloat(r.prix)>0&&r.statut!=='annule')?'<button class="rap-btn" data-id="'+r.id+'" onclick="openQrPaiement(this.dataset.id)"><svg viewBox="0 0 24 24" stroke="#8a6d1f"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 17h4v4h-4"/></svg>QR</button>':'<span class="rap-btn" style="opacity:.4">—</span>';
-     h=rap+'</div>'+h;}
+     rap+='</div>';
+     if(r.statut!=='annule'&&r.statut!=='termine'&&!(typeof estVehiculeSecondaire==='function'&&estVehiculeSecondaire(r))){
+       var _ce=r.confEnvoyee?new Date(r.confEnvoyee):null;
+       rap+='<button class="btn btn-outline btn-full" data-id="'+r.id+'" onclick="envoyerConfirmation(this.dataset.id)" style="margin:0 0 4px;border-color:#25D366;color:#15803d;font-weight:700">'+(_ce?'Renvoyer la confirmation':'Envoyer la confirmation au client')+'</button>'
+         +'<div style="text-align:center;font-size:0.74rem;color:var(--text3);margin-bottom:12px">'+(_ce?'✅ Envoyée le '+_ce.toLocaleDateString('fr-BE',{day:'numeric',month:'short'})+' à '+_ce.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'}):'Le message est prêt, tu peux le relire avant d\'envoyer')+'</div>';
+     }
+     h=rap+h;}
     dc.innerHTML=h;
   }
   var deb=g('dr-edit-btn');if(deb)deb.onclick=function(){closeModal('m-detail-res');editRes(id);};
@@ -3406,6 +3493,34 @@ function editRes(id){
   setTimeout(()=>{const s=g('res-form-scroll');if(s)s.scrollTop=0;},100);
 }
 var currentDetailId=null;
+/* Tous les liens wa.me de l'app passent ici.
+   - Le numéro est remis au format international (0470… → 32470…), sinon WhatsApp ne trouve pas le contact.
+   - Sur Mac / PC, WhatsApp Desktop abîme les emojis reçus par le lien : on copie le message
+     et on ouvre la conversation vide ; il suffit de coller (⌘V) puis Entrée. */
+(function(){
+  var _open=window.open;
+  function surOrdi(){var ua=navigator.userAgent||'';if(/Android|iPhone|iPad|iPod|Mobile/i.test(ua))return false;if(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)return false;return true;}
+  window.open=function(url){
+    try{
+      if(typeof url==='string'&&/^https:\/\/wa\.me\//.test(url)){
+        var m=url.match(/^https:\/\/wa\.me\/([^?]*)(?:\?text=(.*))?$/);
+        if(m){
+          var tel=decodeURIComponent(m[1]||'').replace(/[^\d+]/g,'');
+          if(tel.indexOf('+')===0)tel=tel.slice(1);else if(tel.indexOf('00')===0)tel=tel.slice(2);else if(tel.indexOf('0')===0)tel='32'+tel.slice(1);
+          var txt=m[2]!=null?decodeURIComponent(m[2]):'';
+          if(txt&&surOrdi()){
+            copierTexte(txt);
+            showToast('Message copié ✅ Dans WhatsApp : ⌘V puis Entrée');
+            try{clearTimeout(window._toastTimer);window._toastTimer=setTimeout(function(){var t=g('app-toast');if(t)t.classList.remove('show');},6000);}catch(e){}
+            return _open.call(window,'https://wa.me/'+tel,'_blank');
+          }
+          return _open.call(window,'https://wa.me/'+tel+(txt?'?text='+encodeURIComponent(txt):''),'_blank');
+        }
+      }
+    }catch(e){console.error('wa.me',e);}
+    return _open.apply(window,arguments);
+  };
+})();
 function showToast(msg){
   var t=g('app-toast');
   if(!t){
