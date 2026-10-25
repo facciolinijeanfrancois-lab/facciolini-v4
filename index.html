@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta name="fm-build" content="202610251328">
+<meta name="fm-build" content="202610251651">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Facciolini Mobility</title>
@@ -2047,26 +2047,29 @@ function imprimerRelevePartenaire(nom,mois){
 }
 /* ===== PARTENAIRES MOIS PAR MOIS =====
    Montant d'une course vu de moi : + il me doit / à lui facturer, − je lui dois. Mêmes règles que les soldes existants. */
-function montantPartCourse(r){
-  if(estConfiee(r))return confDu(Object.assign({},r,{confieRegle:false}));
+/* Une course peut concerner deux partenaires : celui qui envoie le client (source) et celui qui la roule (confieA).
+   nom = le partenaire dont on regarde le compte : chacun ne voit que sa part. */
+function rolePart(r,nom){if(estConfiee(r)&&(nom==null||r.confieA===nom))return 'confie';return 'source';}
+function montantPartCourse(r,nom){
+  if(rolePart(r,nom)==='confie')return confDu(Object.assign({},r,{confieRegle:false}));
   if(r.partnerType==='commission')return -(parseFloat(r.commission)||0);
   if(r.partnerType==='prepaye')return parseFloat(r.prix)||0;
   return 0;
 }
-function coursePartReglee(r){
-  if(estConfiee(r))return !!r.confieRegle||confDu(r)===0;
+function coursePartReglee(r,nom){
+  if(rolePart(r,nom)==='confie')return !!r.confieRegle||confDu(r)===0;
   if(r.partnerType==='commission')return !!r.commissionPayee||!(parseFloat(r.commission)>0);
   if(r.partnerType==='prepaye')return !!r.facturePaye;
   return true;
 }
-function libellePartCourse(r){
+function libellePartCourse(r,nom){
   var px=fmt(parseFloat(r.prix)||0);
-  if(estConfiee(r)){
+  if(rolePart(r,nom)==='confie'){
     var t=confTrajet(r)?' ('+confTrajet(r)+')':'';
     if(confMien(r))return (r.confieEncaisse==='moi'?'Ta camionnette · tu as encaissé, tu le paies '+fmt(confPaye(r)):'Ta camionnette · il encaisse '+fmt(prixConfie(r))+', garde '+fmt(confPaye(r)))+t;
     return (r.confieEncaisse==='moi'?'Sa voiture · payé chez toi, tu lui reverses':'Sa voiture · ta commission')+t;
   }
-  if(r.partnerType==='commission')return 'Client envoyé par lui · commission à lui verser';
+  if(r.partnerType==='commission')return 'Client envoyé par lui · commission à lui verser'+(estConfiee(r)?' (course roulée par '+r.confieA+')':'');
   if(r.partnerType==='prepaye')return 'Client prépayé chez lui · à lui facturer ('+px+')';
   return '';
 }
@@ -2076,7 +2079,7 @@ function coursesPartMois(nom,key){
 }
 function bilanPartMois(nom,key){
   var L=coursesPartMois(nom,key),ouvert=0,total=0,nbOuv=0;
-  L.forEach(function(r){var m=montantPartCourse(r);total+=m;if(!coursePartReglee(r)){ouvert+=m;nbOuv++;}});
+  L.forEach(function(r){var m=montantPartCourse(r,nom);total+=m;if(!coursePartReglee(r,nom)){ouvert+=m;nbOuv++;}});
   return {courses:L,ouvert:Math.round(ouvert*100)/100,total:Math.round(total*100)/100,regle:L.length>0&&nbOuv===0};
 }
 function cleMois(m,y){return y+'-'+String(m+1).padStart(2,'0');}
@@ -2093,7 +2096,7 @@ function renderPartners(){
   var ini=function(n){var w=String(n).trim().split(/\s+/);return ((w[0]||'')[0]||'').toUpperCase()+(w.length>1?((w[1]||'')[0]||'').toUpperCase():'');};
   var ligne=function(x,regle){
     var n=x.b.courses.length,v=x.b.ouvert;
-    var droite=regle?'<span style="font-size:0.78rem;font-weight:800;color:var(--green2)">✓ réglé</span>':'<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><b style="font-size:1rem;color:'+(v>0?'var(--green2)':'var(--red2)')+'">'+fmt(Math.abs(v))+'</b><span style="font-size:0.7rem;color:var(--text2)">'+(v>0?(x.b.courses.every(function(r){return coursePartReglee(r)||r.partnerType==='prepaye';})?'à facturer':'te doit'):'tu lui dois')+'</span></span>';
+    var droite=regle?'<span style="font-size:0.78rem;font-weight:800;color:var(--green2)">✓ réglé</span>':'<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><b style="font-size:1rem;color:'+(v>0?'var(--green2)':'var(--red2)')+'">'+fmt(Math.abs(v))+'</b><span style="font-size:0.7rem;color:var(--text2)">'+(v>0?(x.b.courses.every(function(r){return coursePartReglee(r,x.p.nom)||r.partnerType==='prepaye';})?'à facturer':'te doit'):'tu lui dois')+'</span></span>';
     return '<button class="part-ligne" data-nom="'+escH(x.p.nom)+'" onclick="ouvrirPartMois(this.dataset.nom)"><span class="part-ini">'+escH(ini(x.p.nom))+'</span><span class="plus-txt"><b>'+escH(x.p.nom)+'</b><span>'+n+' course'+(n>1?'s':'')+'</span></span>'+droite+'</button>';
   };
   var h='<div class="card acc-mois" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div class="acc-k">On te doit</div><div style="font-size:1.4rem;font-weight:900;color:#4ade80">'+fmt(plus)+'</div></div><div><div class="acc-k">Tu dois</div><div style="font-size:1.4rem;font-weight:900;color:#fca5a5">'+fmt(moins)+'</div></div></div>';
@@ -2118,8 +2121,8 @@ function renderPartMois(){
   if(!b.courses.length)h+='<div class="card" style="text-align:center;color:var(--text2);font-size:0.85rem">Aucune course avec '+escH(nom)+' en '+MOIS[m].toLowerCase()+'.</div>';
   else{
     h+='<div class="card" style="padding:4px 14px">'+b.courses.map(function(r){
-      var v=montantPartCourse(r),ok=coursePartReglee(r);
-      return '<div class="pm-ligne" data-id="'+r.id+'" onclick="closeModal(\'m-part-mois\');showDetailRes(this.dataset.id)"><span class="plus-txt"><b>'+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit'})+' · '+escH(r.clientNom||'Client')+'</b><span>'+escH(libellePartCourse(r))+'</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><b style="color:'+(v>=0?'var(--green2)':'var(--red2)')+'">'+(v>0?'+':(v<0?'−':''))+fmt(Math.abs(v))+'</b>'+(ok?'<span style="font-size:0.68rem;color:var(--green2)">✓ réglé</span>':'')+'</span></div>';
+      var v=montantPartCourse(r,nom),ok=coursePartReglee(r,nom);
+      return '<div class="pm-ligne" data-id="'+r.id+'" onclick="closeModal(\'m-part-mois\');showDetailRes(this.dataset.id)"><span class="plus-txt"><b>'+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit'})+' · '+escH(r.clientNom||'Client')+'</b><span>'+escH(libellePartCourse(r,nom))+'</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><b style="color:'+(v>=0?'var(--green2)':'var(--red2)')+'">'+(v>0?'+':(v<0?'−':''))+fmt(Math.abs(v))+'</b>'+(ok?'<span style="font-size:0.68rem;color:var(--green2)">✓ réglé</span>':'')+'</span></div>';
     }).join('')+'</div>';
     var v=b.regle?0:b.ouvert;
     h+='<div class="card acc-mois" style="display:flex;justify-content:space-between;align-items:center"><div><div class="acc-k">Solde '+(/^[aeiou]/i.test(MOIS[m])?'d\'':'de ')+MOIS[m].toLowerCase()+'</div><div style="font-weight:700;margin-top:2px">'+(b.regle?'Tout est réglé':escH(texteSolde(nom,v)))+'</div></div><div style="font-family:Playfair Display,serif;font-size:1.7rem;font-weight:900;color:'+(b.regle?'#4ade80':(v>=0?'#4ade80':'#fca5a5'))+'">'+(b.regle?'✓':fmt(Math.abs(v)))+'</div></div>';
@@ -2142,7 +2145,7 @@ function renderPartMois(){
 function envoyerRelevePart(nom,key){
   var p=db.partners.find(function(x){return x.nom===nom;}),b=bilanPartMois(nom,key),y=+key.slice(0,4),m=+key.slice(5,7)-1;
   var t='Bonjour '+nom+',\n\nRelevé '+MOIS[m].toLowerCase()+' '+y+' — Facciolini Mobility\n';
-  b.courses.forEach(function(r){var v=montantPartCourse(r);t+='\n• '+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit'})+' '+(r.clientNom||'')+' : '+(v>0?'tu me dois ':(v<0?'je te dois ':''))+fmt(Math.abs(v))+(coursePartReglee(r)?' (réglé)':'');});
+  b.courses.forEach(function(r){var v=montantPartCourse(r,nom);t+='\n• '+new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit'})+' '+(r.clientNom||'')+' : '+(v>0?'tu me dois ':(v<0?'je te dois ':''))+fmt(Math.abs(v))+(coursePartReglee(r)?' (réglé)':'');});
   var v=b.ouvert;t+='\n\n'+(b.regle||Math.abs(v)<0.005?'Tout est réglé pour ce mois. Merci !':(v>0?'Solde : tu me dois '+fmt(v)+'.':'Solde : je te dois '+fmt(-v)+'.'))+'\n\nJean-François';
   var tel=p&&p.tel?String(p.tel).replace(/[^\d+]/g,'').replace(/^0/,'32').replace(/^\+/,''):'';
   if(tel)window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(t),'_blank');
