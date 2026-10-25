@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta name="fm-build" content="202610251651">
+<meta name="fm-build" content="202610251657">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Facciolini Mobility</title>
@@ -1404,8 +1404,12 @@ function notifTitre(r,sens,base){if(!estConfiee(r))return base;var t=confTrajet(
 function telPartenaire(nom){var p=(db.partners||[]).find(function(x){return x.nom===nom;});return p&&p.tel?p.tel:'';}
 function getKmClient(r){if(estConfieeTout(r)&&!confMien(r))return 0;var t=confTrajetKm(r);let km=t==='aller'?0:parseFloat(r.distance||0);if((r.type==='ar-jour'||r.type==='ar-diff')&&t!=='retour')km+=parseFloat(r.distanceRetour||r.distance||0);return km;}
 function getKmReels(r){if(estConfieeTout(r)&&!confMien(r))return 0;var t=confTrajetKm(r);let km=t==='aller'?0:parseFloat(r.kmPickup||0)+parseFloat(r.distance||0)+parseFloat(r.kmVideAller||0);if(t!=='retour'){if(r.type==='ar-jour'){km+=(t==='aller'?parseFloat(r.kmPickupRetour||0):0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}else if(r.type==='ar-diff'){km+=parseFloat(r.kmPickupRetour||0)+parseFloat(r.distanceRetour||r.distance||0)+parseFloat(r.kmVideRetour||0);}}return km;}
-function getBenef(r){const v=getV(r.vehicule);return prixMoi(r)-confPaye(r)-getKmClient(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
-function getBenefReel(r){const v=getV(r.vehicule);return prixMoi(r)-confPaye(r)-getKmReels(r)*v.cout-parseFloat(r.peages||0)-parseFloat(r.parking||0)-parseFloat(r.commission||0);}
+/* Course entièrement confiée à mon chauffeur avec ma camionnette : il paie lui-même péages et parking
+   (c'est compris dans ce qu'il garde) → ce n'est pas une dépense pour moi. */
+function chauffeurPaiePP(r){return !!r&&estConfiee(r)&&confMien(r)&&!confTrajet(r);}
+function ppMoi(r){return chauffeurPaiePP(r)?0:(parseFloat(r.peages)||0)+(parseFloat(r.parking)||0);}
+function getBenef(r){const v=getV(r.vehicule);return prixMoi(r)-confPaye(r)-getKmClient(r)*v.cout-ppMoi(r)-parseFloat(r.commission||0);}
+function getBenefReel(r){const v=getV(r.vehicule);return prixMoi(r)-confPaye(r)-getKmReels(r)*v.cout-ppMoi(r)-parseFloat(r.commission||0);}
 function getV(idx){return db.settings.vehicles[parseInt(idx||0)]||db.settings.vehicles[0];}
 function getMonthRes(m,y){return db.reservations.filter(r=>{if(r.statut==='annule')return false;const da=new Date(r.dateAller);if(da.getMonth()===m&&da.getFullYear()===y)return true;if(r.type==='ar-diff'&&r.dateRetour){const dr=new Date(r.dateRetour);if(dr.getMonth()===m&&dr.getFullYear()===y)return true;}return false;});}
 // getMonthResAller : uniquement les courses dont l'ALLER est ce mois
@@ -1465,7 +1469,7 @@ function completerKmAuto(r){
   if(auto.length)r.kmAuto=auto;
   return r;
 }
-function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!(estConfieeTout(r)&&!confMien(r))).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+(parseFloat(r.peages||0)+parseFloat(r.parking||0))*k:s;},0);}
+function getPeagesParkingMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&!(estConfieeTout(r)&&!confMien(r))).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+ppMoi(r)*k:s;},0);}
 function getChauffeurMois(m,y){return db.reservations.filter(r=>r.statut!=='annule'&&confMien(r)).reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+confPaye(r)*k:s;},0);}
 function getCABrutMois(m,y){return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{const k=getRatioMois(r,m,y);return k?s+prixHT(r)*k:s;},0);}
 function moisActif(m,y){
@@ -2689,7 +2693,7 @@ function aVirementEnAttente(r){if(r.vmtRecu||r.statut==='annule')return false;if
 function debutCourse(r){const d=new Date((r.dateAller||'')+'T'+(r.heure||'00:00'));return isNaN(d)?null:d;}
 function courseCommencee(r){const d=debutCourse(r);return !!d&&d.getTime()<=Date.now();}
 const SEUIL_RENTA=0.50;
-function rentaKm(r){const km=getKmReels(r);if(!(km>0))return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return (prixHT(r)-comm-(parseFloat(r.peages)||0)-(parseFloat(r.parking)||0))/km;}
+function rentaKm(r){const km=getKmReels(r);if(!(km>0))return null;const comm=(r.partnerType==='commission')?parseFloat(r.commission||0):0;return (prixHT(r)-comm-ppMoi(r))/km;}
 function getPaiementsAConfirmer(){return db.reservations.filter(r=>r.statut!=='annule'&&!(estConfieeTout(r)&&!confMien(r))&&(r.paiement==='aconfirmer')&&courseCommencee(r)).sort((a,b)=>(a.dateAller||'').localeCompare(b.dateAller||''));}
 function confirmerPaiement(id,mode){
   const r=db.reservations.find(x=>x.id===id);if(!r)return;
@@ -3317,7 +3321,8 @@ function showDetailRes(id){
     if(r.paiement==='aconfirmer'&&r.statut!=='annule')h+='<div style="background:var(--bg3);border:1px solid var(--orange2);border-radius:var(--radius-sm);padding:8px 10px;margin:6px 0"><div style="font-size:0.78rem;font-weight:700;margin-bottom:6px">⏳ Comment le client a-t-il payé ?</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+[['cash','💵 Cash'],['virement','🏦 QR / virement'],['carte','💳 Carte'],['mixte','🔀 Mixte']].map(function(x){return '<button class="btn btn-ghost btn-xs" data-id="'+r.id+'" onclick="closeModal(\'m-detail-res\');confirmerPaiement(this.dataset.id,\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div></div>';
     var _rk2=rentaKm(r);if(_rk2!==null)h+='<div class="dr"><span class="dr-label">Gain par km roulé</span><span class="dr-val" style="color:'+(_rk2<SEUIL_RENTA?'var(--red2)':'var(--green2)')+'">'+_rk2.toFixed(2).replace('.',',')+' €/km · '+Math.round(getKmReels(r))+' km'+(Array.isArray(r.kmAuto)&&r.kmAuto.length?' (estimés)':'')+'</span></div>';
     h+='<div class="dr"><span class="dr-label">Paiement</span><span class="dr-val">'+payLabel+(_aVmt?(r.vmtRecu?' ✅':' ⏳'):'')+' <button class="btn btn-green btn-xs" data-id="'+r.id+'" onclick="markVmt(this.dataset.id)" style="'+(_aVmt&&!r.vmtRecu?'':'display:none')+'">✓ Reçu</button></span></div>';
-    if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
+    if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0&&chauffeurPaiePP(r))h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-text2">'+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+' · payé par '+escH(r.confieA)+'</span></div>';
+    else if(parseFloat(r.peages||0)+parseFloat(r.parking||0)>0)h+='<div class="dr"><span class="dr-label">Péages + parking</span><span class="dr-val c-red">- '+fmt(parseFloat(r.peages||0)+parseFloat(r.parking||0))+'</span></div>';
     if(parseFloat(r.commission||0)>0){
       h+='<div class="dr"><span class="dr-label">Commission partenaire</span><span class="dr-val c-red">- '+fmt(r.commission)+'</span></div>';
       var netEnc=Math.max(0,prixMoi(r)-parseFloat(r.commission||0));
@@ -4943,7 +4948,7 @@ function genNoteFrais(){
   const charges=db.charges.reduce((s,c)=>s+parseFloat(c.montant||0),0);
   const diesel=carbs.reduce((s,c)=>s+parseFloat(c.prix||0),0),fraisT=frais.reduce((s,f)=>s+parseFloat(f.montant||0),0);
   const resA2=getMonthResAller(curMonth,curYear);
-  const peages=resA2.reduce((s,r)=>s+parseFloat(r.peages||0),0),parkings=resA2.reduce((s,r)=>s+parseFloat(r.parking||0),0);
+  const peages=resA2.reduce((s,r)=>s+(chauffeurPaiePP(r)?0:parseFloat(r.peages||0)),0),parkings=resA2.reduce((s,r)=>s+(chauffeurPaiePP(r)?0:parseFloat(r.parking||0)),0);
   const benef=getResultatMois(curMonth,curYear).benef;
   const benefR=benef;
   const kmReel=getKmReelsMois(curMonth,curYear);
