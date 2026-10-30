@@ -412,6 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 </div>
 <div class="content">
 <div class="page active" id="page-dash">
+  <div id="acc-demandes"></div>
   <div id="acc-jour"></div>
   <div id="acc-afaire"></div>
   <div id="d-alerts"></div>
@@ -535,6 +536,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   </div>
   <div class="plus-label">Outils</div>
   <div class="plus-list">
+    <button class="plus-row" onclick="showPage('demandes')"><span class="plus-ico" style="background:#e3f5e8"><svg viewBox="0 0 24 24" stroke="#15803d"><path d="M4 13h4l2 3h4l2-3h4M4 13l2-8h12l2 8v6H4z"/></svg></span><span class="plus-txt"><b>Demandes du site <span id="dem-badge-plus"></span></b><span>Réservations faites sur facciolinimobility.be</span></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
     <button class="plus-row" onclick="openCampagne()"><span class="plus-ico" style="background:#e6eefc"><svg viewBox="0 0 24 24" stroke="#1d4ed8"><path d="M3 11l18-8-8 18-2-8z"/></svg></span><span class="plus-txt"><b>Campagnes clients</b><span>Toussaint, Fêtes, Carnaval, merci</span></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
   </div>
   <div class="plus-label">Application</div>
@@ -542,6 +544,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
     <button class="plus-row" onclick="showPage('params')"><span class="plus-ico" style="background:var(--bg3)"><svg viewBox="0 0 24 24" stroke="#44403c"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span><span class="plus-txt"><b>Réglages</b><span>Véhicules, tarifs, QR, sauvegarde, synchro</span></span><span style="color:var(--text3);font-size:1.3rem">&#x203a;</span></button>
   </div>
 </div>
+<div class="page" id="page-demandes">
+  <div class="sec" style="padding-top:8px"><span class="sec-title">Demandes du site</span></div>
+  <div id="dem-contenu"></div>
+</div>
+<div class="overlay" id="m-demande"><div class="modal">
+<div class="modal-handle"></div>
+<div id="dem-detail"></div>
+</div></div>
 <div class="page" id="page-encaisser">
   <div class="sec" style="padding-top:8px"><span class="sec-title">Encaisser</span><button class="btn btn-gold btn-sm" onclick="openQrLibre()">&#x1f4f2; Montant libre</button></div>
   <div id="enc-contenu"></div>
@@ -662,6 +672,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
   <button class="nav-btn" onclick="showPage('res',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Courses</button>
   <button class="nav-btn" onclick="showPage('encaisser',this)"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg>Encaisser</button>
   <button class="nav-btn" onclick="showPage('clients',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Clients</button>
+  <button class="nav-btn nav-desk" onclick="showPage('demandes',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 13h4l2 3h4l2-3h4M4 13l2-8h12l2 8v6H4z"/></svg>Demandes <span id="dem-badge-nav"></span></button>
   <button class="nav-btn nav-desk" onclick="showPage('fin',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Finances</button>
   <button class="nav-btn nav-desk" onclick="showPage('partners',this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Partenaires</button>
   <button class="nav-btn nav-desk" onclick="showPage('params',this)"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>R&#xe9;glages</button>
@@ -2547,6 +2558,7 @@ function updResType(){
   acC['_lastType']=type;
 }
 function openNewRes(){
+  window._demandeEnCours=null;
   g('res-edit-id').value='';
   sv('res-modal-title','Nouvelle course');
   sv('res-modal-subtitle','');
@@ -3110,7 +3122,7 @@ function saveReservationCore(){
     }
   }catch(e){console.error('conflits:',e);}
   _creerClient();
-  if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;trackUsage('reservation-modifiee');}else{db.reservations.push(r);trackUsage('reservation-nouvelle');}
+  if(editId){const i=db.reservations.findIndex(x=>x.id===editId);if(i!==-1)db.reservations[i]=r;trackUsage('reservation-modifiee');}else{db.reservations.push(r);trackUsage('reservation-nouvelle');try{if(window._demandeEnCours&&window.FMDemandes){window.FMDemandes.acceptee(window._demandeEnCours,r.id);window._demandeEnCours=null;}}catch(e){console.error('demande:',e);}}
   if(r.stopNom||r.stopAdresse)trackUsage('2eme-passager');
   save();
   renderAll();
@@ -7492,6 +7504,236 @@ function majQrPaiement(){
   }
 }
 try{if(document.getElementById('page-dash').classList.contains('active'))renderAccueil();}catch(e){}
+</script>
+<script>
+/* =====================================================================
+   DEMANDES DU SITE — réservations faites sur facciolinimobility.be
+   ---------------------------------------------------------------------
+   - Le site dépose chaque demande dans Firestore : collection "demandes"
+     (le site peut seulement en créer, jamais lire — règles Firebase).
+   - Ici, une fois connecté, on écoute les demandes au statut "nouvelle".
+   - "Créer la course" ouvre le formulaire habituel déjà rempli :
+     Jean-François vérifie / corrige (souvent l'heure de prise en charge)
+     puis enregistre → la demande passe en "acceptee".
+   - "Refuser" ouvre WhatsApp avec un message prêt, qu'il relit et envoie
+     lui-même, puis la demande passe en "refusee".
+   - Rien n'est jamais effacé automatiquement : les demandes douteuses
+     vont dans "À vérifier".
+   ===================================================================== */
+(function(){
+'use strict';
+var L={liste:[],unsub:null,uid:null,err:'',pret:false};
+var SIEGES={'1bebe':{coque:1},'2bebes':{coque:2},'1enfant':{auto:1},'2enfants':{auto:2},'1rehausseur':{rehausseur:1}};
+var SIEGES_TXT={'1bebe':'1 siège bébé','2bebes':'2 sièges bébé','1enfant':'1 siège enfant','2enfants':'2 sièges enfant','1rehausseur':'1 rehausseur','mix':'plusieurs sièges (voir notes)'};
+function T(){return window.FMSync&&window.FMSync._t&&window.FMSync._t.S;}
+function e(x){return (typeof escH==='function')?escH(x==null?'':String(x)):String(x==null?'':x);}
+function jour(d){if(!d)return '';try{return new Date(d+'T12:00').toLocaleDateString('fr-BE',{weekday:'short',day:'numeric',month:'short'});}catch(x){return d;}}
+function ilya(ms){if(!ms)return '';var m=Math.round((Date.now()-ms)/60000);if(m<1)return 'à l\'instant';if(m<60)return 'il y a '+m+' min';var h=Math.round(m/60);if(h<24)return 'il y a '+h+' h';var j=Math.round(h/24);return j===1?'hier':'il y a '+j+' jours';}
+function ms(d){return d.recu&&typeof d.recu.toMillis==='function'?d.recu.toMillis():0;}
+function nomComplet(d){return ((d.prenom||'')+' '+(d.nom||'')).trim()||'Sans nom';}
+function estAeroport(t){return /a[ée]roport|airport|zaventem|brussels airport|bruxelles-national|gosselies|charleroi-bruxelles-sud|brussels south|\bCRL\b|\bBRU\b|terminal/i.test(t||'');}
+function telWa(t){return String(t||'').replace(/[^\d+]/g,'').replace(/^00/,'').replace(/^\+/,'').replace(/^0/,'32');}
+
+/* ---------- écoute Firestore ---------- */
+function brancher(){
+  var S=T();
+  if(!S||!S.fb||!S.fs||!S.user||!S.ready){
+    if(L.unsub&&(!S||!S.user)){try{L.unsub();}catch(x){}L.unsub=null;L.uid=null;L.liste=[];afficher();}
+    return;
+  }
+  if(L.unsub&&L.uid===S.user.uid)return;
+  if(L.unsub){try{L.unsub();}catch(x){}}
+  var fb=S.fb;L.uid=S.user.uid;
+  var q=fb.query(fb.collection(S.fs,'demandes'),fb.where('statut','==','nouvelle'));
+  L.unsub=fb.onSnapshot(q,function(snap){
+    var avant={};L.liste.forEach(function(d){avant[d.id]=1;});
+    var nouv=[];
+    L.liste=snap.docs.map(function(x){var d=x.data()||{};d.id=x.id;return d;}).sort(function(a,b){return ms(b)-ms(a);});
+    if(L.pret)L.liste.forEach(function(d){if(!avant[d.id]&&!d.suspect)nouv.push(d);});
+    L.pret=true;L.err='';afficher();
+    if(nouv.length)notifier(nouv);
+  },function(err){
+    console.warn('[demandes]',err);
+    L.err=(err&&err.code==='permission-denied')?'regles':'reseau';
+    try{L.unsub&&L.unsub();}catch(x){}L.unsub=null;L.uid=null;afficher();
+  });
+}
+function notifier(nouv){
+  var d=nouv[0],t='📥 Nouvelle demande : '+nomComplet(d)+(d.date?' · '+jour(d.date):'');
+  try{if(typeof showToast==='function')showToast(t);}catch(x){}
+  try{if(window.Notification&&Notification.permission==='granted'&&document.visibilityState!=='visible')new Notification('Facciolini — demande du site',{body:t.replace('📥 ','')});}catch(x){}
+}
+function majStatut(id,statut,extra){
+  var S=T();if(!S||!S.fb)return Promise.reject(new Error('non connecté'));
+  var fb=S.fb,upd=Object.assign({statut:statut,traite:fb.serverTimestamp()},extra||{});
+  return fb.updateDoc(fb.doc(S.fs,'demandes',id),upd);
+}
+
+/* ---------- affichage ---------- */
+function ligne(d){
+  var conf=conflit(d);
+  return '<button class="dem-ligne" onclick="FMDemandes.ouvrir(\''+e(d.id)+'\')">'
+    +'<div class="dem-l1"><b>'+e(nomComplet(d))+'</b><b>'+(d.prix?e(d.prix)+' €':'—')+'</b></div>'
+    +'<div class="dem-l2">'+e(jour(d.date))+(d.pickup?' · '+e(d.pickup):'')+' · '+e(court(d.depart))+' → '+e(court(d.arrivee))+(d.type==='ar'?' A/R':'')+'</div>'
+    +'<div class="dem-l3">'+e(d.passagers||1)+' pers'+(d.grandes?' · '+e(d.grandes)+' grande'+(d.grandes>1?'s':'')+' valise'+(d.grandes>1?'s':''):'')+(d.vehicule==='minivan'?' · minivan':'')+' · reçue '+e(ilya(ms(d)))+'</div>'
+    +(d.suspect?'<div class="dem-warn">'+e(d.raison||'demande inhabituelle')+'</div>':'')
+    +(!d.suspect&&conf?'<div class="dem-warn">⚠️ '+e(conf)+'</div>':'')
+    +'</button>';
+}
+function court(a){a=String(a||'');if(estAeroport(a)){if(/zaventem|brussels airport|bruxelles-national|\bBRU\b/i.test(a))return 'Zaventem';if(/charleroi|gosselies|\bCRL\b|brussels south/i.test(a))return 'Charleroi aéroport';}
+  var p=a.split(',').map(function(x){return x.trim();}).filter(Boolean);var v=p.length>1?p[p.length-1]:p[0]||'';v=v.replace(/^\d{4}\s*/,'');if(/belgi/i.test(v)&&p.length>2)v=p[p.length-2].replace(/^\d{4}\s*/,'');return v||a.slice(0,25);}
+function conflit(d){
+  try{
+    if(typeof detecterConflits!=='function'||!d.date||!d.pickup)return '';
+    var r={id:'__dem',dateAller:d.date,heure:d.pickup,type:d.type==='ar'?'ar-diff':'aller',dateRetour:d.dateRetour||'',heureRetour:d.heureRetour||'',vehicule:d.vehicule==='minivan'?1:0,distance:d.km||0,duree:d.km?Math.round(d.km)+30:90,depart:d.depart,arrivee:d.arrivee};
+    var c=detecterConflits(r,null);if(!c||!c.length)return '';
+    var x=c[0],o=x.res||{};
+    return (x.type==='chevauchement'?'Conflit':'Créneau serré')+(o.clientNom?' avec '+o.clientNom:'')+(o.heure?' à '+o.heure:'');
+  }catch(x){return '';}
+}
+function afficher(){
+  var n=L.liste.filter(function(d){return !d.suspect;}).length,nv=L.liste.length-n;
+  ['dem-badge-plus','dem-badge-nav'].forEach(function(i){var b=document.getElementById(i);if(b)b.innerHTML=L.liste.length?'<span class="dem-pastille">'+L.liste.length+'</span>':'';});
+  var a=document.getElementById('acc-demandes');
+  if(a)a.innerHTML=n?'<div class="card acc-carte"><button class="acc-todo" onclick="showPage(\'demandes\')"><span class="acc-pt" style="background:#15803d"></span><span style="flex:1"><b>'+n+' demande'+(n>1?'s':'')+' du site</b> à traiter</span><span class="acc-go">Voir &#x203a;</span></button></div>':'';
+  var c=document.getElementById('dem-contenu');if(!c)return;
+  var S=T(),h='';
+  if(!S||!S.user){c.innerHTML='<div class="card dem-vide">Connecte-toi à la synchronisation (Réglages) pour recevoir les demandes du site.</div>';return;}
+  if(L.err==='regles'){c.innerHTML='<div class="card dem-vide">Les demandes du site ne sont pas encore autorisées dans Firebase. Il reste à coller les règles de sécurité dans la console Firebase.</div>';return;}
+  if(L.err==='reseau'){c.innerHTML='<div class="card dem-vide">Impossible de charger les demandes (pas de réseau ?). Réessaie dans un instant.</div>';return;}
+  var bons=L.liste.filter(function(d){return !d.suspect;}),dout=L.liste.filter(function(d){return d.suspect;});
+  h+='<div class="acc-k" style="margin:4px 2px 8px">Nouvelles · '+bons.length+'</div>';
+  h+=bons.length?'<div class="card dem-liste">'+bons.map(ligne).join('')+'</div>':'<div class="card dem-vide">Aucune nouvelle demande. Elles apparaîtront ici dès qu\'un client réserve sur le site.</div>';
+  if(dout.length){h+='<div class="acc-k" style="margin:16px 2px 8px">À vérifier · '+dout.length+'</div><div class="dem-aide">Demandes qui ressemblent à un robot. Rien n\'est supprimé : ouvre-les et décide.</div><div class="card dem-liste">'+dout.map(ligne).join('')+'</div>';}
+  c.innerHTML=h;
+}
+
+/* ---------- détail ---------- */
+function trouver(id){return L.liste.find(function(d){return d.id===id;});}
+function ouvrir(id){
+  var d=trouver(id);if(!d)return;
+  var cl=(window.db&&db.clients||[]).find(function(c){var a=telWa(c.tel),b=telWa(d.tel);return (a&&b&&a===b)||(c.nom||'').toLowerCase()===nomComplet(d).toLowerCase();});
+  var lig=function(ic,t){return t?'<div class="dem-info"><span>'+ic+'</span><span>'+t+'</span></div>':'';};
+  var bag=[];if(d.grandes)bag.push(d.grandes+' grande'+(d.grandes>1?'s':'')+' valise'+(d.grandes>1?'s':''));if(d.petites)bag.push(d.petites+' petite'+(d.petites>1?'s':''));
+  if(d.equipement&&d.equipement!=='aucun')bag.push(d.equipement==='ski'?'matériel ski/sport':d.equipement==='velo'?'vélo':d.equipement);
+  var conf=conflit(d);
+  var h='<div class="dem-tete"><div class="modal-title" style="margin:0">'+e(nomComplet(d))+'</div>'+(cl?'<span class="dem-tag">Client connu</span>':'<span class="dem-tag dem-tag-n">Nouveau client</span>')+'</div>'
+    +(d.suspect?'<div class="dem-warn" style="margin:10px 0">À vérifier : '+e(d.raison||'demande inhabituelle')+'</div>':'')
+    +'<div class="dem-infos">'
+    +lig('📱',e(d.tel)+(d.email?'<br><span class="dem-gris">'+e(d.email)+'</span>':''))
+    +lig('📅',e(jour(d.date))+(d.heureVol?' · décollage '+e(d.heureVol):'')+(d.pickup?'<br><span class="dem-gris">Prise en charge proposée par le site : '+e(d.pickup)+(d.marge?' (marge '+Math.round(d.marge/60*10)/10+' h)':'')+'</span>':''))
+    +lig('📍',e(d.depart))+lig('🏁',e(d.arrivee))
+    +(d.type==='ar'?lig('↩️','Retour '+e(jour(d.dateRetour))+(d.heureRetour?' à '+e(d.heureRetour):'')+(d.volRetour?' · vol '+e(d.volRetour):'')):'')
+    +lig('✈️',d.vol?'Vol '+e(d.vol):'')
+    +lig('👥',e(d.passagers||1)+' passager'+((d.passagers||1)>1?'s':'')+(bag.length?' · '+e(bag.join(', ')):''))
+    +lig('🧒',d.sieges&&d.sieges!=='non'?e(SIEGES_TXT[d.sieges]||d.sieges):'')
+    +lig('🚗',d.vehicule==='minivan'?'Minivan':'Berline')
+    +lig('💬',d.notes?e(d.notes):'')
+    +'</div>'
+    +'<div class="dem-prix"><span>Prix calculé par le site'+(d.estime?' (estimation)':'')+'</span><b>'+(d.prix?e(d.prix)+' €':'—')+'</b></div>'
+    +(conf?'<div class="dem-warn" style="margin-top:8px">⚠️ '+e(conf)+'</div>':(d.pickup?'<div class="dem-ok">✓ Aucun conflit ce jour-là</div>':''))
+    +'<div class="modal-actions" style="margin-top:14px;flex-wrap:wrap">'
+    +'<button class="btn btn-gold btn-full" onclick="FMDemandes.creer(\''+e(d.id)+'\')">Créer la course</button>'
+    +'<div style="font-size:0.75rem;color:var(--text3);width:100%;text-align:center;margin:-2px 0 4px">Le formulaire s\'ouvre déjà rempli : vérifie l\'heure, puis enregistre.</div>'
+    +'<button class="btn btn-outline" style="flex:1;color:var(--red,#b91c1c)" onclick="FMDemandes.refuser(\''+e(d.id)+'\')">Refuser</button>'
+    +(d.suspect?'<button class="btn btn-outline" style="flex:1" onclick="FMDemandes.vraie(\''+e(d.id)+'\')">C\'est un vrai client</button><button class="btn btn-outline" style="flex:1" onclick="FMDemandes.spam(\''+e(d.id)+'\')">Spam</button>':'')
+    +'<button class="btn btn-outline" style="flex:1" onclick="closeModal(\'m-demande\')">Fermer</button>'
+    +'</div>';
+  document.getElementById('dem-detail').innerHTML=h;
+  openModal('m-demande');
+}
+
+/* ---------- créer la course : formulaire habituel pré-rempli ---------- */
+function setVal(id,v){var x=g(id);if(x)x.value=(v==null?'':v);}
+function creer(id){
+  var d=trouver(id);if(!d)return;
+  closeModal('m-demande');
+  openNewRes();
+  window._demandeEnCours=d.id;
+  sv('res-modal-subtitle','Demande du site — vérifie l\'heure de prise en charge');
+  var nom=nomComplet(d);
+  var cl=(db.clients||[]).find(function(c){var a=telWa(c.tel),b=telWa(d.tel);return a&&b&&a===b;});
+  if(cl)nom=cl.nom;
+  setVal('r-client-nom',nom);setVal('r-client-tel',d.tel||(cl&&cl.tel)||'');
+  if(cl&&cl.langue)try{setChips('r-langue-chips','r-langue',cl.langue);}catch(x){}
+  var type=d.type==='ar'?'ar-diff':'aller';
+  setChips('r-type-chips','r-type',type);acC['_lastType']=type;
+  var service=estAeroport(d.depart)&&!estAeroport(d.arrivee)?'recuperation':(estAeroport(d.arrivee)?'depose':'autre');
+  setChips('r-service-chips','r-service',service);
+  setVal('r-date-aller',d.date||'');updDtDisplay('r-date-aller',d.date||'');
+  var h=d.pickup||d.heureVol||'';
+  if(service==='recuperation')h=d.heureVol||d.pickup||'';
+  setVal('r-heure-aller',h);updDtDisplay('r-heure-aller',h);
+  setVal('r-depart',d.depart||'');setVal('r-arrivee',d.arrivee||'');
+  setVal('r-distance',d.km||'');setVal('r-vol',(d.vol||'').toUpperCase());
+  setVal('r-vehicule',d.vehicule==='minivan'?1:0);
+  setVal('r-passagers',d.passagers||1);setVal('r-grandes-valises',d.grandes||0);setVal('r-petites-valises',d.petites||0);
+  var si=SIEGES[d.sieges]||{};setVal('r-siege-coque',si.coque||0);setVal('r-siege-auto',si.auto||0);setVal('r-siege-rehausseur',si.rehausseur||0);
+  try{majSiegesTotal();}catch(x){}
+  if(type==='ar-diff'){
+    setVal('r-date-retour',d.dateRetour||'');updDtDisplay('r-date-retour',d.dateRetour||'');
+    setVal('r-heure-retour',d.heureRetour||'');updDtDisplay('r-heure-retour',d.heureRetour||'');
+    setVal('r-depart-retour',d.arrivee||'');setVal('r-arrivee-retour',d.depart||'');
+    setVal('r-distance-retour',d.km||'');setVal('r-vol-retour',(d.volRetour||'').toUpperCase());
+  }
+  var notes=[];
+  if(d.notes)notes.push(d.notes);
+  if(d.heureVol&&service!=='recuperation')notes.push('Décollage '+d.heureVol+(d.marge?' (marge souhaitée '+Math.floor(d.marge/60)+'h'+String(d.marge%60).padStart(2,'0')+')':''));
+  if(d.sieges==='mix')notes.push('Sièges enfants : combinaison, voir avec le client');
+  if(d.equipement&&d.equipement!=='aucun')notes.push('Équipement : '+(d.equipement==='ski'?'ski/sport':d.equipement==='velo'?'vélo':d.equipement));
+  setVal('r-notes',notes.join(' — '));
+  var ni=g('r-notes-interne');if(ni)ni.value='Réservé sur le site'+(d.email?' · '+d.email:'');
+  if(d.prix){setVal('r-prix',d.prix);acC['prixManual']=true;}
+  try{updResType();}catch(x){}try{updVolField();}catch(x){}try{checkCapaciteApp();}catch(x){}
+  if(d.notes||ni){var adv=g('res-advanced');if(adv)adv.style.display='block';var ba=g('btn-adv-toggle');if(ba)ba.textContent='⚙️ Masquer les options';}
+  try{trackUsage('demande-site:ouverte');}catch(x){}
+}
+function acceptee(id,resaId){
+  L.liste=L.liste.filter(function(d){return d.id!==id;});afficher();
+  majStatut(id,'acceptee',{resaId:String(resaId||'')}).catch(function(x){console.warn('[demandes] statut',x);});
+  try{trackUsage('demande-site:acceptee');}catch(x){}
+}
+
+/* ---------- refuser : message prêt, envoyé par Jean-François lui-même ---------- */
+function refuser(id){
+  var d=trouver(id);if(!d)return;
+  var p=(d.prenom||'').trim();
+  var msg='Bonjour'+(p?' '+p:'')+',\n\nMerci pour votre demande de réservation'+(d.date?' du '+jour(d.date):'')+(d.pickup?' à '+d.pickup:'')+'.\n\nMalheureusement, je ne suis pas disponible à ce moment-là et je ne peux pas assurer ce trajet. Je suis désolé.\n\nN\'hésitez pas à me recontacter pour un prochain déplacement.\n\nJean-François — Facciolini Mobility';
+  var tel=telWa(d.tel);
+  window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  setTimeout(function(){
+    if(confirm('As-tu envoyé le message au client ?\n\nOK = la demande est classée comme refusée.\nAnnuler = elle reste dans la liste.')){
+      L.liste=L.liste.filter(function(x){return x.id!==id;});afficher();closeModal('m-demande');
+      majStatut(id,'refusee').catch(function(x){console.warn(x);});
+      try{trackUsage('demande-site:refusee');}catch(x){}
+    }
+  },800);
+}
+function vraie(id){
+  var d=trouver(id);if(!d)return;d.suspect=false;afficher();ouvrir(id);
+  var S=T();if(S&&S.fb)S.fb.updateDoc(S.fb.doc(S.fs,'demandes',id),{suspect:false}).catch(function(x){console.warn(x);});
+}
+function spam(id){
+  if(!confirm('Classer cette demande comme spam ?\nElle disparaît de la liste (elle reste gardée dans Firebase).'))return;
+  L.liste=L.liste.filter(function(x){return x.id!==id;});afficher();closeModal('m-demande');
+  majStatut(id,'spam').catch(function(x){console.warn(x);});
+}
+
+/* ---------- branchement dans l'app ---------- */
+var _sp=window.showPage;
+if(typeof _sp==='function'){
+  window.showPage=function(name,btn){var r=_sp.apply(this,arguments);if(name==='demandes'){try{var vis=[].some.call(document.querySelectorAll('.nav-btn.active'),function(b){return getComputedStyle(b).display!=='none';});var pb=g('nav-plus');if(!vis&&pb)pb.classList.add('active');}catch(x){}afficher();brancher();}return r;};
+  try{showPage=window.showPage;}catch(x){}
+}
+var st=document.createElement('style');
+st.textContent='.dem-liste{padding:0;overflow:hidden}.dem-ligne{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--border,#e7e5e4);padding:11px 14px;font:inherit;color:inherit;cursor:pointer}.dem-ligne:first-child{border-top:0}.dem-l1{display:flex;justify-content:space-between;gap:8px}.dem-l2{font-size:0.82rem;color:var(--text2,#57534e);margin-top:2px}.dem-l3{font-size:0.75rem;color:var(--text3,#a8a29e);margin-top:2px}.dem-warn{display:inline-block;margin-top:6px;background:rgba(240,112,32,0.12);color:var(--orange2,#b45309);font-size:0.75rem;padding:3px 8px;border-radius:8px}.dem-ok{margin-top:8px;font-size:0.78rem;color:#15803d}.dem-vide{font-size:0.85rem;color:var(--text2,#57534e)}.dem-aide{font-size:0.75rem;color:var(--text3,#a8a29e);margin:-4px 2px 8px}.dem-pastille{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:#15803d;color:#fff;font-size:0.7rem;line-height:18px;text-align:center;margin-left:4px;vertical-align:1px}.dem-tete{display:flex;justify-content:space-between;align-items:center;gap:10px}.dem-tag{font-size:0.72rem;padding:2px 8px;border-radius:8px;background:var(--bg3,#f5f5f4);color:var(--text2,#57534e);white-space:nowrap}.dem-tag-n{background:#e3f5e8;color:#15803d}.dem-infos{margin-top:12px;display:grid;gap:7px}.dem-info{display:grid;grid-template-columns:24px 1fr;gap:6px;font-size:0.86rem;line-height:1.35}.dem-gris{color:var(--text3,#a8a29e);font-size:0.78rem}.dem-prix{margin-top:12px;display:flex;justify-content:space-between;align-items:center;background:var(--bg3,#f5f5f4);border-radius:10px;padding:10px 12px;font-size:0.82rem}.dem-prix b{font-size:1.15rem}';
+document.head.appendChild(st);
+setInterval(brancher,3000);
+setTimeout(brancher,1500);
+afficher();
+window.FMDemandes={ouvrir:ouvrir,creer:creer,refuser:refuser,acceptee:acceptee,vraie:vraie,spam:spam,_L:L,_brancher:brancher};
+})();
+
 </script>
 </body>
 </html>
