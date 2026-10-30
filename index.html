@@ -680,6 +680,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 </nav>
 </div></div>
 
+<!-- COURSES EN NEGATIF -->
+<div class="overlay" id="m-negatives"><div class="modal">
+<div class="modal-handle"></div>
+<div class="modal-title">Courses en négatif</div>
+<div id="neg-contenu"></div>
+<div class="modal-actions" style="margin-top:12px"><button class="btn btn-outline btn-full" onclick="closeModal('m-negatives')">Fermer</button></div>
+</div></div>
 <!-- MODAL RESERVATION -->
 <div class="overlay" id="m-res"><div class="modal">
 <div class="modal-handle"></div>
@@ -1644,6 +1651,36 @@ function getCAMois(m,y){
     return s+Math.round(net*ratio*100)/100;
   },0);
 }
+/* Bandeau "course(s) avec bénéfice négatif" : liste des courses concernées et pourquoi */
+function voirCoursesNegatives(m,y){
+  var L=getMonthResAller(m,y).filter(function(r){return getBenef(r)<0;}).sort(function(a,b){return (a.dateAller+a.heure).localeCompare(b.dateAller+b.heure);});
+  var f=function(v){return (Math.round(v*100)/100).toFixed(2).replace('.',',')+' €';};
+  var h=L.map(function(r){
+    var v=getV(r.vehicule),pm=prixMoi(r),cp=confPaye(r),km=getKmClient(r),ck=km*v.cout,pp=ppMoi(r),co=parseFloat(r.commission||0)||0,b=getBenef(r);
+    var lignes=[['Tu touches',pm,1]];
+    if(cp)lignes.push(['Payé au chauffeur ('+escH(r.confieA||'')+')',cp,-1]);
+    if(ck)lignes.push(['Kilomètres : '+Math.round(km)+' km × '+String(v.cout).replace('.',',')+' €',ck,-1]);
+    if(pp)lignes.push(['Péages et parking',pp,-1]);
+    if(co)lignes.push(['Commission ('+escH(r.source||'')+')',co,-1]);
+    var pourquoi='';
+    if(pm<5)pourquoi='Prix de '+f(parseFloat(r.prix||0)||0)+' : probablement une faute de frappe ou un prix oublié.';
+    else if(cp>=pm)pourquoi='Le chauffeur est payé plus que ce que tu touches sur cette course.';
+    else if(co>=pm)pourquoi='La commission est plus élevée que le prix.';
+    else if(ck>pm*0.6)pourquoi='Beaucoup de kilomètres pour ce prix : vérifie la distance ou le prix.';
+    var d=new Date(r.dateAller+'T12:00').toLocaleDateString('fr-BE',{weekday:'short',day:'numeric',month:'short'});
+    return '<div class="card card-sm" style="margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+escH(r.clientNom||'Sans nom')+'</b><b style="color:var(--red2,#b91c1c)">'+f(b)+'</b></div>'
+      +'<div style="font-size:0.8rem;color:var(--text2);margin-top:2px">'+escH(d)+(r.heure?' · '+escH(r.heure):'')+' · '+escH(v.nom||'')+'</div>'
+      +'<div style="font-size:0.78rem;color:var(--text3);margin-top:2px">'+escH((r.depart||'').split(',')[0])+' → '+escH((r.arrivee||'').split(',')[0])+(r.type&&r.type!=='aller'?' (A/R)':'')+'</div>'
+      +(pourquoi?'<div style="margin-top:8px;font-size:0.8rem;background:rgba(220,38,38,0.08);color:var(--red2,#b91c1c);padding:6px 9px;border-radius:8px">'+pourquoi+'</div>':'')
+      +'<div style="margin-top:8px;font-size:0.8rem;display:grid;gap:3px">'+lignes.map(function(x){return '<div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--text2)">'+x[0]+'</span><span>'+(x[2]<0?'− ':'')+f(x[1])+'</span></div>';}).join('')
+      +'<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding-top:4px;margin-top:2px"><b>Bénéfice</b><b style="color:var(--red2,#b91c1c)">'+f(b)+'</b></div></div>'
+      +'<button class="btn btn-gold btn-full" style="margin-top:10px" onclick="closeModal(\'m-negatives\');showDetailRes(\''+escH(r.id)+'\')">Ouvrir la course</button>'
+      +'</div>';
+  }).join('');
+  g('neg-contenu').innerHTML=h||'<div class="card card-sm">Plus aucune course en négatif ce mois-ci.</div>';
+  openModal('m-negatives');
+}
 function getBenefMois(m,y){
   return db.reservations.filter(r=>r.statut!=='annule').reduce((s,r)=>{
     const ratio=getRatioMois(r,m,y);
@@ -1817,7 +1854,7 @@ function renderDash(){
     if(kmRestant>0&&kmRestant<3000)alerts.push('<div class="alert alert-orange">🔧 '+e.type+' dans ~'+Math.round(kmRestant)+' km !</div>');
     else if(kmRestant<=0)alerts.push('<div class="alert alert-red">🔧 '+e.type+' dépassé de '+Math.round(Math.abs(kmRestant))+' km !</div>');
   });
-  const resAlerteB=getMonthResAller(curMonth,curYear);const sc=resAlerteB.filter(r=>getBenef(r)<0);if(sc.length)alerts.push('<div class="alert alert-red">⚠️ '+sc.length+' course'+(sc.length>1?'s':'')+' avec bénéfice négatif !</div>');
+  const resAlerteB=getMonthResAller(curMonth,curYear);const sc=resAlerteB.filter(r=>getBenef(r)<0);if(sc.length)alerts.push('<div class="alert alert-red" style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center" onclick="voirCoursesNegatives('+curMonth+','+curYear+')"><span>⚠️ '+sc.length+' course'+(sc.length>1?'s':'')+' avec bénéfice négatif</span><span style="white-space:nowrap;text-decoration:underline">Voir '+(sc.length>1?'lesquelles':'laquelle')+' &#x203a;</span></div>');
   const al=g('d-alerts');if(al)al.innerHTML=alerts.join('');
   const bars=[];for(let i=5;i>=0;i--){let m=curMonth-i,y=curYear;if(m<0){m+=12;y--;}const gv=getEncaisseMois(m,y);bars.push({m:MOIS_S[m],g:gv,cur:i===0});}
   const maxG=Math.max(...bars.map(b=>b.g),1),totalChart=bars.reduce((s,b)=>s+b.g,0);
